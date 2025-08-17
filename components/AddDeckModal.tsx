@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
@@ -21,6 +22,17 @@ interface AddDeckModalProps {
   onDeckAdded: () => void;
 }
 
+const DECK_COLORS = [
+  { name: 'Bleu', value: '#007AFF' },
+  { name: 'Vert', value: '#34C759' },
+  { name: 'Orange', value: '#FF9500' },
+  { name: 'Rouge', value: '#FF3B30' },
+  { name: 'Violet', value: '#AF52DE' },
+  { name: 'Rose', value: '#FF2D92' },
+  { name: 'Indigo', value: '#5856D6' },
+  { name: 'Teal', value: '#5AC8FA' },
+];
+
 export default function AddDeckModal({ 
   visible, 
   onClose, 
@@ -28,17 +40,37 @@ export default function AddDeckModal({
 }: AddDeckModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedColor, setSelectedColor] = useState(DECK_COLORS[0].value);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
   const handleAddDeck = async () => {
     console.log('=== DÉBUT handleAddDeck ===');
-    console.log('Nom:', name);
-    console.log('Description:', description);
-    console.log('User ID:', user?.id);
     
-    if (!name.trim()) {
+    // Validation et nettoyage des inputs
+    const cleanName = name.trim();
+    const cleanDescription = description.trim();
+    
+    // Validation de longueur
+    if (!cleanName) {
       Alert.alert('Erreur', 'Veuillez donner un nom à votre collection');
+      return;
+    }
+    
+    if (cleanName.length > 15) {
+      Alert.alert('Erreur', 'Le nom ne peut pas dépasser 15 caractères');
+      return;
+    }
+    
+    if (cleanDescription.length > 500) {
+      Alert.alert('Erreur', 'La description ne peut pas dépasser 500 caractères');
+      return;
+    }
+    
+    // Validation de la couleur (sécurité)
+    const validColors = DECK_COLORS.map(c => c.value);
+    if (!validColors.includes(selectedColor)) {
+      Alert.alert('Erreur', 'Couleur non valide');
       return;
     }
 
@@ -54,9 +86,10 @@ export default function AddDeckModal({
       console.log('Tentative d\'insertion dans Supabase...');
       
       const insertData = {
-        name: name.trim(),
-        description: description.trim() || null,
-        user_id: user.id // ✅ Utilise le vrai user_id
+        name: cleanName,
+        description: cleanDescription || null,
+        color: selectedColor,
+        user_id: user.id
       };
       
       console.log('Données à insérer:', insertData);
@@ -85,6 +118,7 @@ export default function AddDeckModal({
       console.log('Réinitialisation des champs...');
       setName('');
       setDescription('');
+      setSelectedColor(DECK_COLORS[0].value);
       console.log('Champs réinitialisés');
       
       console.log('=== AVANT CALLBACKS ===');
@@ -124,6 +158,7 @@ export default function AddDeckModal({
     // Réinitialiser les champs lors de la fermeture
     setName('');
     setDescription('');
+    setSelectedColor(DECK_COLORS[0].value);
     setLoading(false);
     onClose();
   };
@@ -162,73 +197,100 @@ export default function AddDeckModal({
           </Pressable>
         </View>
 
-        {/* Form */}
-        <View style={styles.form}>
-          {/* Nom de la collection */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nom de la collection *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={name}
-              onChangeText={setName}
-              placeholder="Ex: Vocabulaire anglais, Histoire..."
-              autoFocus
-              editable={!loading}
-            />
-          </View>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Form */}
+          <View style={styles.form}>
+            {/* Nom de la collection */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nom de la collection *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={name}
+                onChangeText={setName}
+                placeholder="Ex: Vocabulaire anglais, Histoire..."
+                autoFocus
+                editable={!loading}
+                maxLength={100}
+              />
+            </View>
 
-          {/* Description */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description (optionnel)</Text>
-            <TextInput
-              style={[styles.textInput, styles.textArea]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Décrivez brièvement le contenu de cette collection..."
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              editable={!loading}
-            />
-          </View>
+            {/* Description */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Description (optionnel)</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Décrivez brièvement le contenu de cette collection..."
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                editable={!loading}
+                maxLength={500}
+              />
+            </View>
 
-          {/* Preview */}
-          <View style={styles.previewSection}>
-            <Text style={styles.previewTitle}>Aperçu</Text>
-            <View style={styles.previewCard}>
-              <View style={styles.previewHeader}>
-                <Text style={[
-                  styles.previewName,
-                  { color: name ? '#333' : '#999', fontStyle: name ? 'normal' : 'italic' }
-                ]}>
-                  {name || 'Nom de la collection'}
-                </Text>
-                <Ionicons name="chevron-forward" size={20} color="#666" />
+            {/* Sélection de couleur */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Couleur du thème</Text>
+              <View style={styles.colorGrid}>
+                {DECK_COLORS.map((color) => (
+                  <Pressable
+                    key={color.value}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color.value },
+                      selectedColor === color.value && styles.colorOptionSelected
+                    ]}
+                    onPress={() => setSelectedColor(color.value)}
+                    disabled={loading}
+                  >
+                    {selectedColor === color.value && (
+                      <Ionicons name="checkmark" size={20} color="#fff" />
+                    )}
+                  </Pressable>
+                ))}
               </View>
-              {(description || !name) && (
-                <Text style={[
-                  styles.previewDescription,
-                  { color: description ? '#666' : '#999', fontStyle: description ? 'normal' : 'italic' }
-                ]}>
-                  {description || 'Description de la collection (optionnel)'}
-                </Text>
-              )}
-              <Text style={styles.previewDate}>
-                Créé le {new Date().toLocaleDateString('fr-FR')}
+              <Text style={styles.colorName}>
+                {DECK_COLORS.find(c => c.value === selectedColor)?.name}
+              </Text>
+            </View>
+
+            {/* Preview */}
+            <View style={styles.previewSection}>
+              <Text style={styles.previewTitle}>Aperçu</Text>
+              <View style={[styles.previewCard, { borderLeftColor: selectedColor }]}>
+                <View style={styles.previewHeader}>
+                  <Text style={[
+                    styles.previewName,
+                    { color: name ? '#333' : '#999', fontStyle: name ? 'normal' : 'italic' }
+                  ]}>
+                    {name || 'Nom de la collection'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={20} color="#666" />
+                </View>
+                {(description || !name) && (
+                  <Text style={[
+                    styles.previewDescription,
+                    { color: description ? '#666' : '#999', fontStyle: description ? 'normal' : 'italic' }
+                  ]}>
+                    {description || 'Description de la collection (optionnel)'}
+                  </Text>
+                )}
+              </View>
+            </View>
+
+            {/* Tips */}
+            <View style={styles.tipsSection}>
+              <Text style={styles.tipsTitle}>💡 Conseils</Text>
+              <Text style={styles.tipsText}>
+                • Choisissez un nom descriptif{'\n'}
+                • Sélectionnez une couleur pour organiser vos collections{'\n'}
+                • Commencez avec 10-20 cartes maximum
               </Text>
             </View>
           </View>
-
-          {/* Tips */}
-          <View style={styles.tipsSection}>
-            <Text style={styles.tipsTitle}>💡 Conseils</Text>
-            <Text style={styles.tipsText}>
-              • Choisissez un nom descriptif{'\n'}
-              • Regroupez les cartes par thème{'\n'}
-              • Commencez avec 10-20 cartes maximum
-            </Text>
-          </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -275,18 +337,20 @@ const styles = StyleSheet.create({
   saveButtonTextDisabled: {
     color: '#999',
   },
-  form: {
+  scrollView: {
     flex: 1,
+  },
+  form: {
     padding: 20,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 25,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   textInput: {
     backgroundColor: '#fff',
@@ -300,8 +364,41 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 100,
   },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 8,
+  },
+  colorOption: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  colorOptionSelected: {
+    transform: [{ scale: 1.1 }],
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  colorName: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
   previewSection: {
-    marginBottom: 30,
+    marginBottom: 25,
   },
   previewTitle: {
     fontSize: 18,
@@ -313,8 +410,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    borderLeftWidth: 8,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

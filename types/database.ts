@@ -11,16 +11,21 @@ export interface Deck {
 export interface Card {
   id: string;
   deck_id: string;
-  front: string;        // ✅ Ajouté
-  back: string;         // ✅ Ajouté
+  front: string;
+  back: string;
   created_at: string;
   updated_at?: string;
-  // Propriétés optionnelles pour la spaced repetition (futures)
+  // Propriétés optionnelles pour la spaced repetition
   next_review?: string;
   difficulty?: number;
   review_count?: number;
-  // Relation avec le deck (pour les jointures)
+  interval?: number;
+  repetitions?: number;
+  ease_factor?: number;
+  last_reviewed?: string;
+  // Relation avec le deck
   decks?: Deck;
+  categories?: string[];
 }
 
 export interface User {

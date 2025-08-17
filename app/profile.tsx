@@ -2,10 +2,12 @@
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Profile() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
 
   const handleSignOut = () => {
     Alert.alert(
@@ -25,8 +27,21 @@ export default function Profile() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
+        {/* Header avec bouton retour intégré */}
+        <View style={styles.headerSection}>
+          <View style={styles.headerRow}>
+            <Pressable style={styles.backButton} onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={24} color="#007AFF" />
+            </Pressable>
+            <View style={styles.titleContainer}>
+              <Text style={styles.mainTitle}>Mon Profil</Text>
+              <View style={styles.titleUnderline} />
+            </View>
+            <View style={styles.placeholder} />
+          </View>
+        </View>
+        {/* User Info */}
+        <View style={styles.userSection}>
           <View style={styles.avatar}>
             <Ionicons name="person" size={40} color="#fff" />
           </View>
@@ -115,13 +130,53 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  headerSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    marginBottom: 10,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  titleContainer: {
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 10,
+  },
+  mainTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    letterSpacing: -0.5,
+    marginBottom: 8,
+  },
+  titleUnderline: {
+    width: 60,
+    height: 3,
+    backgroundColor: '#007AFF',
+    borderRadius: 2,
+  },
+  placeholder: {
+    width: 48,
+    height: 48,
+  },
   content: {
     flex: 1,
-    padding: 20,
   },
-  header: {
+  userSection: {
     alignItems: 'center',
     marginBottom: 30,
+    paddingHorizontal: 20,
   },
   avatar: {
     width: 80,
@@ -144,6 +199,7 @@ const styles = StyleSheet.create({
   },
   statsSection: {
     marginBottom: 30,
+    paddingHorizontal: 20,
   },
   sectionTitle: {
     fontSize: 18,
@@ -186,6 +242,7 @@ const styles = StyleSheet.create({
   },
   settingsSection: {
     marginBottom: 30,
+    paddingHorizontal: 20,
   },
   settingItem: {
     flexDirection: 'row',
@@ -223,10 +280,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FF3B30',
     gap: 8,
+    marginHorizontal: 20,
   },
   logoutText: {
     fontSize: 16,
     color: '#FF3B30',
     fontWeight: '600',
   },
-}); 
+});

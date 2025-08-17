@@ -3,11 +3,12 @@ import { View, Text, StyleSheet, FlatList, Pressable, Alert } from 'react-native
 import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { Deck } from '../types/database';
 import AddDeckModal from '../components/AddDeckModal';
 import { useAuth } from '../contexts/AuthContext';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 
 export default function Decks() {
   const [decks, setDecks] = useState<Deck[]>([]);
@@ -15,6 +16,14 @@ export default function Decks() {
   const [showAddModal, setShowAddModal] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        fetchDecks();
+      }
+    }, [user])
+  );
 
   useEffect(() => {
     if (user) {
@@ -52,19 +61,24 @@ export default function Decks() {
 
   const renderDeck = ({ item }: { item: Deck }) => (
     <Pressable 
-      style={styles.deckCard}
+      style={[
+        styles.deckCard,
+        { borderLeftColor: item.color || '#007AFF' }
+      ]}
       onPress={() => router.push(`/deck/${item.id}`)}
     >
       <View style={styles.deckHeader}>
-        <Text style={styles.deckName}>{item.name}</Text>
-        <Ionicons name="chevron-forward" size={20} color="#666" />
+        <Text 
+          style={styles.deckName}
+          numberOfLines={3}
+          ellipsizeMode="tail"
+        >
+          {item.name}
+        </Text>
       </View>
       {item.description && (
         <Text style={styles.deckDescription}>{item.description}</Text>
       )}
-      <Text style={styles.deckDate}>
-        Créé le {new Date(item.created_at).toLocaleDateString('fr-FR')}
-      </Text>
     </Pressable>
   );
 
@@ -78,37 +92,44 @@ export default function Decks() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header amélioré avec bouton retour */}
-      <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#007AFF" />
-        </Pressable>
-        <Text style={styles.title}>Mes Collections 🧠</Text>
-        <Pressable 
-          style={styles.addButton}
-          onPress={() => setShowAddModal(true)}
-        >
-          <Ionicons name="add" size={24} color="#fff" />
-        </Pressable>
-      </View>
-
-      {decks.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="albums-outline" size={80} color="#ccc" />
-          <Text style={styles.emptyText}>Aucun deck trouvé</Text>
-          <Text style={styles.emptySubtext}>
-            Créez votre premier deck pour commencer !
-          </Text>
+      <View style={styles.content}>
+        {/* Header avec bouton retour intégré */}
+        <View style={styles.headerSection}>
+          <View style={styles.headerRow}>
+            <Pressable style={styles.backButton} onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={24} color="#007AFF" />
+            </Pressable>
+            <View style={styles.titleContainer}>
+              <Text style={styles.mainTitle}>Mes Collections</Text>
+              <View style={styles.titleUnderline} />
+            </View>
+            <Pressable 
+              style={styles.addButton}
+              onPress={() => setShowAddModal(true)}
+            >
+              <Ionicons name="add" size={24} color="#fff" />
+            </Pressable>
+          </View>
         </View>
-      ) : (
-        <FlatList
-          data={decks}
-          renderItem={renderDeck}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+
+        {decks.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="albums-outline" size={80} color="#ccc" />
+            <Text style={styles.emptyText}>Aucune collection trouvée</Text>
+            <Text style={styles.emptySubtext}>
+              Créez-en une pour commencer !
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={decks}
+            renderItem={renderDeck}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
 
       {/* Modal d'ajout de deck */}
       <AddDeckModal
@@ -125,15 +146,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  header: {
+  content: {
+    flex: 1,
+  },
+  headerSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    marginBottom: 10,
+  },
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   backButton: {
     width: 48,
@@ -143,13 +167,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+  titleContainer: {
+    alignItems: 'center',
     flex: 1,
-    textAlign: 'center',
     marginHorizontal: 10,
+  },
+  mainTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    letterSpacing: -0.5,
+    marginBottom: 8,
+  },
+  titleUnderline: {
+    width: 60,
+    height: 3,
+    backgroundColor: '#007AFF',
+    borderRadius: 2,
   },
   addButton: {
     backgroundColor: '#007AFF',
@@ -181,6 +215,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 12,
     marginBottom: 15,
+    borderLeftWidth: 8,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -193,14 +228,17 @@ const styles = StyleSheet.create({
   deckHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'center', // Retour à 'center' pour centrer la flèche
     marginBottom: 8,
+    minHeight: 24, // Hauteur minimum pour éviter que la flèche sorte
   },
   deckName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     flex: 1,
+    marginRight: 12, // Un peu plus d'espace
+    lineHeight: 24, // Hauteur de ligne cohérente
   },
   deckDescription: {
     fontSize: 14,
