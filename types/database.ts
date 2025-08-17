@@ -33,3 +33,18 @@ export interface User {
   email: string;
   created_at: string;
 }
+
+export interface UserStats {
+  id: string;
+  user_id: string;
+  collections_created: number;
+  cards_studied: number;
+  current_streak: number;
+  longest_streak: number;
+  last_study_date: string | null;
+  total_reviews: number;
+  correct_reviews: number;
+  success_rate: number;
+  created_at: string;
+  updated_at: string;
+}
