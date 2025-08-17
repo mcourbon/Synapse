@@ -25,9 +25,10 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "webpack"
     },
     "plugins": ["expo-router"],
-    "scheme": "synapse"
+    "scheme": "synapse",
+    "platforms": ["ios", "android", "web"]
   }
 }
