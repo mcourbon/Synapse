@@ -1,5 +1,5 @@
 // app/profile.tsx
-import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -147,7 +147,11 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header avec bouton retour intégré */}
         <View style={styles.headerSection}>
           <View style={styles.headerRow}>
@@ -267,7 +271,7 @@ export default function Profile() {
           <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
           <Text style={styles.logoutText}>Se déconnecter</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -276,6 +280,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 30, // Ajoute un padding en bas pour éviter que le contenu soit coupé
   },
   headerSection: {
     paddingHorizontal: 20,
@@ -316,9 +326,6 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 48,
     height: 48,
-  },
-  content: {
-    flex: 1,
   },
   userSection: {
     alignItems: 'center',
