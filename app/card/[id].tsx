@@ -533,6 +533,8 @@ export default function CardReview() {
         )}
       </Pressable>
 
+      // Remplacez la section Modal dans votre composant par ceci :
+
       {/* Modal de fin de session */}
       <Modal
         visible={showEndSessionModal}
@@ -542,39 +544,55 @@ export default function CardReview() {
       >
         <View style={styles.endSessionOverlay}>
           <View style={styles.endSessionModal}>
-            <Ionicons name="checkmark-circle" size={60} color="#34C759" />
-            
+            {/* Icône avec animation ou alternatives */}
+            <View style={styles.iconContainer}>
+              {/* Gradient coloré avec check*/}
+              <View style={styles.gradientIcon}>
+                <Ionicons name="checkmark-circle" size={64} color="#fff" />
+              </View>
+            </View>
+
             <Text style={styles.endSessionTitle}>
-              Session terminée !
+              Bravo ! 🎉
+            </Text>
+            
+            <Text style={styles.endSessionSubtitle}>
+              Vous avez terminé toutes les cartes
             </Text>
             
             <Text style={styles.endSessionMessage}>
-              Vous avez révisé toutes les cartes de ce deck.{'\n'}
-              Que souhaitez-vous faire ?
+              Continuez pour réviser à nouveau ou terminez votre session.
             </Text>
             
             <View style={styles.endSessionButtons}>
-              <Pressable 
-                style={[styles.endSessionButton, styles.continueButton]}
-                onPress={handleContinueReview}
-              >
-                <Ionicons name="refresh" size={20} color="#fff" />
-                <Text style={styles.continueButtonText}>Continuer</Text>
-                <Text style={styles.continueButtonSubtext}>Remélanger et recommencer</Text>
-              </Pressable>
-              
+              {/* Bouton Terminer */}
               <Pressable 
                 style={[styles.endSessionButton, styles.stopButton]}
                 onPress={handleEndReview}
               >
-                <Ionicons name="stop" size={20} color="#fff" />
+                <View style={styles.buttonIconContainer}>
+                  <Ionicons name="home-outline" size={22} color="#666" />
+                </View>
                 <Text style={styles.stopButtonText}>Terminer</Text>
                 <Text style={styles.stopButtonSubtext}>Retour au deck</Text>
+              </Pressable>
+              
+              {/* Bouton Continuer */}
+              <Pressable 
+                style={[styles.endSessionButton, styles.continueButton]}
+                onPress={handleContinueReview}
+              >
+                <View style={styles.buttonIconContainer}>
+                  <Ionicons name="refresh-outline" size={22} color="#fff" />
+                </View>
+                <Text style={styles.continueButtonText}>Continuer</Text>
+                <Text style={styles.continueButtonSubtext}>Remélanger</Text>
               </Pressable>
             </View>
           </View>
         </View>
       </Modal>
+
     </SafeAreaView>
   );
 }
@@ -781,7 +799,7 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
-  endSessionOverlay: {
+endSessionOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
@@ -790,69 +808,109 @@ const styles = StyleSheet.create({
   },
   endSessionModal: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 30,
+    borderRadius: 24,
+    padding: 32,
     width: '100%',
-    maxWidth: 350,
+    maxWidth: 360,
     alignItems: 'center',
     shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 16,
+  },
+  iconContainer: {
+    marginBottom: 24,
+    padding: 8,
+  },
+  gradientIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#007AFF',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // Pour le web
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#007AFF',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
-    elevation: 12,
+    elevation: 8,
   },
-  endSessionTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginTop: 15,
-    marginBottom: 10,
-  },
-  endSessionMessage: {
-    fontSize: 16,
+  endSessionSubtitle: {
+    fontSize: 18,
+    fontWeight: '600',
     color: '#666',
     textAlign: 'center',
+    marginBottom: 12,
+  },
+  endSessionTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  endSessionMessage: {
+    fontSize: 15,
+    color: '#888',
+    textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 30,
+    marginBottom: 32,
+    paddingHorizontal: 16,
   },
   endSessionButtons: {
     width: '100%',
-    gap: 12,
+    flexDirection: 'row',
+    gap: 16,
   },
   endSessionButton: {
-    flexDirection: 'row',
+    flex: 1,
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    gap: 8,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    minHeight: 100,
   },
   continueButton: {
     backgroundColor: '#007AFF',
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   stopButton: {
-    backgroundColor: '#666',
+    backgroundColor: '#f8f9fa',
+    borderWidth: 2,
+    borderColor: '#e9ecef',
+  },
+  buttonIconContainer: {
+    marginBottom: 8,
+    padding: 4,
   },
   continueButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
+    marginBottom: 2,
   },
   continueButtonSubtext: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
-    marginLeft: 4,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 13,
+    textAlign: 'center',
   },
   stopButtonText: {
-    color: '#fff',
-    fontSize: 16,
+    color: '#666',
+    fontSize: 17,
     fontWeight: 'bold',
+    marginBottom: 2,
   },
   stopButtonSubtext: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
-    marginLeft: 4,
+    color: '#999',
+    fontSize: 13,
+    textAlign: 'center',
   },
 });
