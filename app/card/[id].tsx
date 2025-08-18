@@ -1,5 +1,5 @@
 // app/card/[id].tsx
-import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Modal } from 'react-native';
 import { useEffect, useState, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,18 +7,20 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
-import { SpacedRepetitionSystem, useSpacedRepetition, ReviewResponse } from '../../utils/spacedRepetition';
+import { SpacedRepetitionSystem, useSpacedRepetition } from '../../utils/spacedRepetition';
 
 export default function CardReview() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [card, setCard] = useState<Card | null>(null);
   const [deckCards, setDeckCards] = useState<Card[]>([]);
+  const [deckInfo, setDeckInfo] = useState<{ name: string; id: string } | null>(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showAnswer, setShowAnswer] = useState(false);
   const [selectedDifficulty, setSelectedDifficulty] = useState<'hard' | 'medium' | 'easy' | null>(null);
   const router = useRouter();
   const { user } = useAuth();
+  const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   
   // Animations
   const fadeAnimation = useRef(new Animated.Value(0)).current;
@@ -71,13 +73,30 @@ export default function CardReview() {
         console.error('Erreur cartes deck:', allCardsError);
         setDeckCards([cardData]);
       } else {
-        setDeckCards(allCards || []);
-        // Trouver l'index de la carte actuelle
-        const currentIndex = allCards?.findIndex(c => c.id === id) || 0;
-        setCurrentCardIndex(currentIndex);
+        // Mélanger les cartes pour la révision
+        const shuffledCards = [...(allCards || [])];
+        
+        // Fonction de mélange (Fisher-Yates shuffle)
+        for (let i = shuffledCards.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffledCards[i], shuffledCards[j]] = [shuffledCards[j], shuffledCards[i]];
+        }
+        
+        // S'assurer que la carte actuelle soit la première de la liste mélangée
+        const currentCardIndex = shuffledCards.findIndex(c => c.id === id);
+        if (currentCardIndex > 0) {
+          // Déplacer la carte actuelle en première position
+          const currentCard = shuffledCards[currentCardIndex];
+          shuffledCards.splice(currentCardIndex, 1);
+          shuffledCards.unshift(currentCard);
+        }
+        
+        setDeckCards(shuffledCards);
+        setCurrentCardIndex(0); // Toujours commencer à 0 avec l'ordre mélangé
       }
 
       setCard(cardData);
+      setDeckInfo({ name: cardData.decks.name, id: cardData.decks.id });
     } catch (err) {
       console.error('Erreur:', err);
     } finally {
@@ -115,6 +134,19 @@ export default function CardReview() {
     ]).start();
   };
 
+  // Fonction pour mélanger les cartes
+  const shuffleDeckCards = () => {
+    const shuffledCards = [...deckCards];
+    
+    // Fonction de mélange (Fisher-Yates shuffle)
+    for (let i = shuffledCards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledCards[i], shuffledCards[j]] = [shuffledCards[j], shuffledCards[i]];
+    }
+    
+    return shuffledCards;
+  };
+
   // Fonction pour passer à la carte suivante
   const goToNextCard = () => {
     if (deckCards.length <= 1) {
@@ -123,7 +155,16 @@ export default function CardReview() {
       return;
     }
 
-    const nextIndex = (currentCardIndex + 1) % deckCards.length;
+    const nextIndex = currentCardIndex + 1;
+    
+    // Vérifier si on arrive à la fin du deck
+    if (nextIndex >= deckCards.length) {
+      // On a fini toutes les cartes - proposer les options
+      setShowEndSessionModal(true);
+      return;
+    }
+
+    // Sinon, continuer normalement
     const nextCard = deckCards[nextIndex];
     
     if (nextCard) {
@@ -148,6 +189,39 @@ export default function CardReview() {
     }
   };
 
+  const handleContinueReview = () => {
+    // Remélanger les cartes
+    const shuffledCards = shuffleDeckCards();
+    setDeckCards(shuffledCards);
+    
+    // Repartir à la première carte
+    setCurrentCardIndex(0);
+    setCard(shuffledCards[0]);
+    
+    // Réinitialiser l'état
+    setShowAnswer(false);
+    setSelectedDifficulty(null);
+    fadeAnimation.setValue(0);
+    borderColorAnimation.setValue(0);
+    
+    // Fermer la modal
+    setShowEndSessionModal(false);
+    
+    // Animation d'entrée
+    scaleAnimation.setValue(0.8);
+    Animated.spring(scaleAnimation, {
+      toValue: 1,
+      tension: 100,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleEndReview = () => {
+    setShowEndSessionModal(false);
+    router.back();
+  };
+
   const handleDifficultyResponse = async (difficulty: 'hard' | 'medium' | 'easy') => {
     if (isProcessing || !card) return;
 
@@ -157,11 +231,7 @@ export default function CardReview() {
     setSelectedDifficulty(difficulty);
 
     // ANIMATION DE COULEUR POUR TOUS LES BOUTONS
-    Animated.timing(borderColorAnimation, {
-      toValue: 1,
-      duration: 150,
-      useNativeDriver: false, // false car on anime une propriété non-native (borderColor)
-    }).start();
+    borderColorAnimation.setValue(1);
 
     // Animation additionnelle selon la difficulté
     if (difficulty === 'hard') {
@@ -214,17 +284,17 @@ export default function CardReview() {
       // Traiter la révision
       const result = await processReview(card.id, difficulty, currentStats, updateCard);
 
-      if (result?.success) {
+      if (result?.success && result.stats) {
         console.log('✅ Révision sauvée:', result.message);
 
         // Mettre à jour la carte en mémoire avec les nouvelles stats
         setCard(prevCard => ({
           ...prevCard!,
-          interval: result.stats.interval,
-          repetitions: result.stats.repetitions,
-          ease_factor: result.stats.easeFactor,
-          last_reviewed: result.stats.lastReviewed?.toISOString() || prevCard!.last_reviewed,
-          next_review: result.stats.nextReview?.toISOString() || prevCard!.next_review,
+          interval: result.stats?.interval,
+          repetitions: result.stats?.repetitions,
+          ease_factor: result.stats?.easeFactor,
+          last_reviewed: result.stats?.lastReviewed?.toISOString() || prevCard!.last_reviewed,
+          next_review: result.stats?.nextReview?.toISOString() || prevCard!.next_review,
         }));
 
         setDeckCards(prevCards => 
@@ -232,11 +302,11 @@ export default function CardReview() {
             c.id === card.id 
               ? {
                   ...c,
-                  interval: result.stats.interval,
-                  repetitions: result.stats.repetitions,
-                  ease_factor: result.stats.easeFactor,
-                  last_reviewed: result.stats.lastReviewed?.toISOString() || c.last_reviewed,
-                  next_review: result.stats.nextReview?.toISOString() || c.next_review,
+                  interval: result.stats?.interval,
+                  repetitions: result.stats?.repetitions,
+                  ease_factor: result.stats?.easeFactor,
+                  last_reviewed: result.stats?.lastReviewed?.toISOString() || c.last_reviewed,
+                  next_review: result.stats?.nextReview?.toISOString() || c.next_review,
                 }
               : c
           )
@@ -339,7 +409,7 @@ export default function CardReview() {
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </Pressable>
         <View style={styles.headerCenter}>
-          <Text style={styles.deckName}>{card.decks?.name}</Text>
+          <Text style={styles.deckName}>{deckInfo?.name}</Text>
           {deckCards.length > 1 && (
             <Text style={styles.cardProgress}>
               {currentCardIndex + 1} / {deckCards.length}
@@ -369,7 +439,6 @@ export default function CardReview() {
             <View style={styles.cardContent}>
               {/* Section Question - toujours visible */}
               <View style={styles.questionSection}>
-                <View style={styles.cardHeader}></View>
                 <Text style={[styles.cardText, { color: getTextColor() }]}>
                   {card.front}
                 </Text>
@@ -386,7 +455,6 @@ export default function CardReview() {
                     { opacity: fadeAnimation }
                   ]}
                 >
-                  <View style={styles.cardHeader}></View>
                   <Text style={[styles.cardText, { color: getTextColor() }]}>
                     {card.back}
                   </Text>
@@ -464,6 +532,49 @@ export default function CardReview() {
           </Pressable>
         )}
       </Pressable>
+
+      {/* Modal de fin de session */}
+      <Modal
+        visible={showEndSessionModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowEndSessionModal(false)}
+      >
+        <View style={styles.endSessionOverlay}>
+          <View style={styles.endSessionModal}>
+            <Ionicons name="checkmark-circle" size={60} color="#34C759" />
+            
+            <Text style={styles.endSessionTitle}>
+              Session terminée !
+            </Text>
+            
+            <Text style={styles.endSessionMessage}>
+              Vous avez révisé toutes les cartes de ce deck.{'\n'}
+              Que souhaitez-vous faire ?
+            </Text>
+            
+            <View style={styles.endSessionButtons}>
+              <Pressable 
+                style={[styles.endSessionButton, styles.continueButton]}
+                onPress={handleContinueReview}
+              >
+                <Ionicons name="refresh" size={20} color="#fff" />
+                <Text style={styles.continueButtonText}>Continuer</Text>
+                <Text style={styles.continueButtonSubtext}>Remélanger et recommencer</Text>
+              </Pressable>
+              
+              <Pressable 
+                style={[styles.endSessionButton, styles.stopButton]}
+                onPress={handleEndReview}
+              >
+                <Ionicons name="stop" size={20} color="#fff" />
+                <Text style={styles.stopButtonText}>Terminer</Text>
+                <Text style={styles.stopButtonSubtext}>Retour au deck</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -594,17 +705,6 @@ const styles = StyleSheet.create({
     borderRadius: 1,
     alignSelf: 'stretch',
   },
-  cardHeader: {
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  cardLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#666',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
   cardText: {
     fontSize: 18,
     fontWeight: '500',
@@ -668,14 +768,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginTop: 8,
-    marginBottom: 4,
     textAlign: 'center',
-  },
-  difficultySubtext: {
-    fontSize: 11,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 14,
   },
   cardStatsContainer: {
     marginTop: 16,
@@ -687,5 +780,79 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
+  },
+  endSessionOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  endSessionModal: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 30,
+    width: '100%',
+    maxWidth: 350,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  endSessionTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  endSessionMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 30,
+  },
+  endSessionButtons: {
+    width: '100%',
+    gap: 12,
+  },
+  endSessionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 8,
+  },
+  continueButton: {
+    backgroundColor: '#007AFF',
+  },
+  stopButton: {
+    backgroundColor: '#666',
+  },
+  continueButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  continueButtonSubtext: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  stopButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  stopButtonSubtext: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    marginLeft: 4,
   },
 });
