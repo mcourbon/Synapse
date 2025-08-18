@@ -533,8 +533,6 @@ export default function CardReview() {
         )}
       </Pressable>
 
-      // Remplacez la section Modal dans votre composant par ceci :
-
       {/* Modal de fin de session */}
       <Modal
         visible={showEndSessionModal}
