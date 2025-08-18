@@ -20,7 +20,8 @@ export default function Home() {
   const [showCreateDeckForm, setShowCreateDeckForm] = useState(false);
   const [newDeckName, setNewDeckName] = useState('');
   const [newDeckDescription, setNewDeckDescription] = useState('');
-  const [category, setCategory] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
+  const [currentCategoryInput, setCurrentCategoryInput] = useState('');
   const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [showCategorySuggestions, setShowCategorySuggestions] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState<string[]>([]);
@@ -38,17 +39,18 @@ export default function Home() {
   }, [showQuickAddModal, user]);
 
   useEffect(() => {
-  if (category.trim() === '') {
-    setFilteredCategories(existingCategories);
+  if (currentCategoryInput.trim() === '') {
+    setFilteredCategories(existingCategories.filter(cat => !categories.includes(cat)));
     setShowCategorySuggestions(existingCategories.length > 0);
   } else {
     const filtered = existingCategories.filter(cat => 
-      cat.toLowerCase().includes(category.toLowerCase())
+      cat.toLowerCase().includes(currentCategoryInput.toLowerCase()) && 
+      !categories.includes(cat)
     );
     setFilteredCategories(filtered);
-    setShowCategorySuggestions(filtered.length > 0 && !filtered.includes(category));
-    }
-  }, [category, existingCategories]);
+    setShowCategorySuggestions(filtered.length > 0);
+  }
+}, [currentCategoryInput, existingCategories, categories]);
 
   useEffect(() => {
     if (selectedDeckId && showQuickAddModal) {
@@ -183,7 +185,7 @@ export default function Home() {
             deck_id: selectedDeckId,
             front: front.trim(),
             back: back.trim(),
-            category: category.trim() || null,
+            categories: categories.length > 0 ? categories : null,
           }
         ]);
 
@@ -194,7 +196,8 @@ export default function Home() {
       // Réinitialiser les champs
       setFront('');
       setBack('');
-      setCategory('');
+      setCategories([]);
+      setCurrentCategoryInput('');
       
       Alert.alert('Succès', 'Carte ajoutée avec succès !');
       closeModal();
@@ -213,7 +216,8 @@ export default function Home() {
     setShowQuickAddModal(false);
     setFront('');
     setBack('');
-    setCategory('');
+    setCategories([]);
+    setCurrentCategoryInput('');
     setSelectedDeckId('');
     setShowCreateDeckForm(false);
     setNewDeckName('');
@@ -229,6 +233,27 @@ export default function Home() {
     }
     setShowQuickAddModal(true);
   };
+
+  const addCategory = (newCategory: string) => {
+  if (newCategory.trim() && 
+      newCategory.length <= 12 && 
+      categories.length < 3 && 
+      !categories.includes(newCategory.trim())) {
+    setCategories([...categories, newCategory.trim()]);
+    setCurrentCategoryInput('');
+    setShowCategorySuggestions(false);
+  }
+};
+
+const removeCategory = (categoryToRemove: string) => {
+  setCategories(categories.filter(cat => cat !== categoryToRemove));
+};
+
+const handleCategoryInputSubmit = () => {
+  if (currentCategoryInput.trim()) {
+    addCategory(currentCategoryInput);
+  }
+};
 
   // Tableau de phrases motivantes
   const motivationalMessages = [
@@ -275,24 +300,28 @@ export default function Home() {
   try {
     const { data, error } = await supabase
       .from('cards')
-      .select('category')
+      .select('categories')
       .eq('deck_id', selectedDeckId)
       .not('category', 'is', null);
 
     if (error) throw error;
 
-    // Extraire les catégories uniques
-    const categories = [...new Set(data.map(item => item.category))].filter(Boolean);
-    setExistingCategories(categories as string[]);
-    } catch (error) {
-      console.error('Erreur lors du chargement des catégories:', error);
-    }
+    // Extraire et aplatir toutes les catégories uniques
+    const allCategories = data
+      .filter(item => item.categories && Array.isArray(item.categories))
+      .flatMap(item => item.categories)
+      .filter(Boolean);
+    
+    const uniqueCategories = [...new Set(allCategories)];
+    setExistingCategories(uniqueCategories);
+  } catch (error) {
+    console.error('Erreur lors du chargement des catégories:', error);
+  }
   };
 
   const selectCategory = (selectedCategory: string) => {
-    setCategory(selectedCategory);
-    setShowCategorySuggestions(false);
-  };
+  addCategory(selectedCategory);
+};
 
 const renderCategorySuggestion = ({ item }: { item: string }) => (
   <Pressable
@@ -459,62 +488,85 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Catégorie (optionnel)</Text>
-                  <View style={styles.categoryContainer}>
-                    <TextInput
-                      style={[styles.textInput, styles.categoryInput]}
-                      value={category}
-                      onChangeText={setCategory}
-                      placeholder="Tapez ou choisissez une catégorie..."
-                      returnKeyType="done"
-                      autoCapitalize="words"
-                      onFocus={() => {
-                        if (existingCategories.length > 0) {
-                          setShowCategorySuggestions(true);
-                        }
-                      }}
-                    />
-                    
-                    {/* Suggestions de catégories */}
-                    {showCategorySuggestions && filteredCategories.length > 0 && (
-                      <View style={styles.suggestionsContainer}>
-                        <Text style={styles.suggestionsTitle}>Catégories existantes :</Text>
-                        <FlatList
-                          data={filteredCategories}
-                          renderItem={renderCategorySuggestion}
-                          keyExtractor={(item) => item}
-                          style={styles.suggestionsList}
-                          showsVerticalScrollIndicator={false}
-                          nestedScrollEnabled={true}
-                        />
-                      </View>
-                    )}
-                    
-                    {/* Catégories populaires */}
-                    {existingCategories.length > 0 && category === '' && (
-                      <View style={styles.popularCategories}>
-                        <Text style={styles.popularTitle}>Catégories récentes :</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                          <View style={styles.categoryTags}>
-                            {existingCategories.slice(0, 5).map((cat) => (
-                              <Pressable
-                                key={cat}
-                                style={styles.categoryTag}
-                                onPress={() => selectCategory(cat)}
-                              >
-                                <Text style={styles.categoryTagText}>{cat}</Text>
-                              </Pressable>
-                            ))}
-                          </View>
-                        </ScrollView>
-                      </View>
-                    )}
-                  </View>
-                  
-                  <Text style={styles.helperText}>
-                    La catégorie vous aide à organiser vos cartes
-                  </Text>
-                </View>
+  <Text style={styles.label}>
+    Catégories ({categories.length}/3) - max 12 caractères
+  </Text>
+  
+  {/* Tags des catégories sélectionnées */}
+  {categories.length > 0 && (
+    <View style={styles.selectedCategories}>
+      {categories.map((cat, index) => (
+        <View key={index} style={styles.selectedCategoryTag}>
+          <Text style={styles.selectedCategoryText}>{cat}</Text>
+          <Pressable onPress={() => removeCategory(cat)}>
+            <Ionicons name="close-circle" size={18} color="#FF5252" />
+          </Pressable>
+        </View>
+      ))}
+    </View>
+  )}
+
+  {/* Input pour ajouter une catégorie */}
+  {categories.length < 3 && (
+    <View style={styles.categoryContainer}>
+      <TextInput
+        style={[styles.textInput, styles.categoryInput]}
+        value={currentCategoryInput}
+        onChangeText={setCurrentCategoryInput}
+        placeholder="Ajouter une catégorie..."
+        maxLength={20}
+        returnKeyType="done"
+        autoCapitalize="words"
+        onSubmitEditing={handleCategoryInputSubmit}
+        onFocus={() => {
+          if (existingCategories.length > 0) {
+            setShowCategorySuggestions(true);
+          }
+        }}
+      />
+      
+      {/* Suggestions */}
+      {showCategorySuggestions && filteredCategories.length > 0 && (
+        <View style={styles.suggestionsContainer}>
+          <Text style={styles.suggestionsTitle}>Catégories disponibles :</Text>
+          <FlatList
+            data={filteredCategories}
+            renderItem={renderCategorySuggestion}
+            keyExtractor={(item) => item}
+            style={styles.suggestionsList}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled={true}
+          />
+        </View>
+      )}
+    </View>
+  )}
+  
+  {/* Catégories populaires */}
+  {existingCategories.length > 0 && currentCategoryInput === '' && categories.length < 3 && (
+    <View style={styles.popularCategories}>
+      <Text style={styles.popularTitle}>Catégories récentes :</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={styles.categoryTags}>
+          {existingCategories.slice(0, 5).map((cat) => (
+            <Pressable
+              key={cat}
+              style={styles.categoryTag}
+              onPress={() => selectCategory(cat)}
+            >
+              <Text style={styles.categoryTagText}>{cat}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+  )}
+  
+  <Text style={styles.helperText}>
+    Appuyez sur Entrée pour ajouter une catégorie
+  </Text>
+</View>
+
 
                 {/* Aperçu */}
                 {(front || back) && (
@@ -866,5 +918,25 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 5,
     fontStyle: 'italic',
+  },
+    selectedCategories: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  selectedCategoryTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  selectedCategoryText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '600',
   },
 });
