@@ -1,7 +1,7 @@
 // app/card/[id].tsx
-import { View, Text, StyleSheet, Pressable, Animated, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Modal, Dimensions } from 'react-native';
 import { useEffect, useState, useRef } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
     top: 80,
     left: 0,
     right: 0,
-    bottom: 300,
+    bottom: 250,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
