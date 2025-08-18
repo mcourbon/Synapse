@@ -8,6 +8,128 @@ import { supabase } from '../../lib/supabase';
 import { Card } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 import { SpacedRepetitionSystem, useSpacedRepetition } from '../../utils/spacedRepetition';
+import Svg, { Circle, Path, G, Defs, LinearGradient, Stop } from 'react-native-svg';
+
+// Composant pour le cercle de progression animé
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+// Composant d'animation professionnelle
+const ProfessionalProgressCircle = ({ progress, size = 100 }: { progress: Animated.Value, size?: number }) => {
+  const radius = (size - 12) / 2;
+  const circumference = 2 * Math.PI * radius;
+  
+  return (
+    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+      <Svg width={size} height={size} style={{ position: 'absolute' }}>
+        <Defs>
+          {/* Gradient pour le fond */}
+          <LinearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor="#f8f9fa" stopOpacity="1" />
+            <Stop offset="100%" stopColor="#e9ecef" stopOpacity="1" />
+          </LinearGradient>
+          
+          {/* Gradient pour la progression */}
+          <LinearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor="#4CAF50" stopOpacity="1" />
+            <Stop offset="50%" stopColor="#8BC34A" stopOpacity="1" />
+            <Stop offset="100%" stopColor="#CDDC39" stopOpacity="1" />
+          </LinearGradient>
+          
+          {/* Ombre pour la profondeur */}
+          <LinearGradient id="shadowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor="#000000" stopOpacity="0.1" />
+            <Stop offset="100%" stopColor="#000000" stopOpacity="0.05" />
+          </LinearGradient>
+        </Defs>
+        
+        {/* Ombre du cercle de fond */}
+        <Circle
+          cx={size / 2 + 1}
+          cy={size / 2 + 1}
+          r={radius}
+          stroke="url(#shadowGradient)"
+          strokeWidth="8"
+          fill="none"
+          opacity={0.3}
+        />
+        
+        {/* Cercle de fond */}
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="url(#backgroundGradient)"
+          strokeWidth="8"
+          fill="none"
+        />
+        
+        {/* Cercle de progression animé */}
+        <AnimatedCircle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="url(#progressGradient)"
+          strokeWidth="8"
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={progress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [circumference, 0],
+          })}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+        
+        {/* Cercle intérieur pour l'effet 3D */}
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius - 12}
+          stroke="rgba(255, 255, 255, 0.1)"
+          strokeWidth="1"
+          fill="none"
+        />
+      </Svg>
+    </View>
+  );
+};
+
+// Composant pour l'icône de succès animée
+const AnimatedSuccessIcon = ({ scale }: { scale: Animated.Value }) => {
+  return (
+    <Animated.View 
+      style={[
+        {
+          position: 'absolute',
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: 100,
+          height: 100,
+        },
+        {
+          transform: [{ scale }],
+        }
+      ]}
+    >
+      <View style={{
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#4CAF50',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#4CAF50',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+      }}>
+        <Ionicons name="checkmark" size={32} color="#fff" />
+      </View>
+    </Animated.View>
+  );
+};
 
 export default function CardReview() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,6 +153,12 @@ export default function CardReview() {
     medium: useRef(new Animated.Value(1)).current,
     easy: useRef(new Animated.Value(1)).current,
   };
+
+  // Animations pour le modal de fin - améliorées
+  const circleProgressAnimation = useRef(new Animated.Value(0)).current;
+  const checkScaleAnimation = useRef(new Animated.Value(0)).current;
+  const modalBackgroundAnimation = useRef(new Animated.Value(0)).current;
+  const modalScaleAnimation = useRef(new Animated.Value(0.8)).current;
 
   // Hook pour la répétition espacée
   const { processReview, isProcessing } = useSpacedRepetition();
@@ -159,8 +287,48 @@ export default function CardReview() {
     
     // Vérifier si on arrive à la fin du deck
     if (nextIndex >= deckCards.length) {
-      // On a fini toutes les cartes - proposer les options
+      // On a fini toutes les cartes - proposer les options avec animation professionnelle
       setShowEndSessionModal(true);
+      
+      // Animation d'entrée du modal
+      Animated.parallel([
+        Animated.timing(modalBackgroundAnimation, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(modalScaleAnimation, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      
+      // Démarrer l'animation du cercle de progression après un délai
+      setTimeout(() => {
+        // Reset des animations
+        circleProgressAnimation.setValue(0);
+        checkScaleAnimation.setValue(0);
+        
+        // Animation du cercle de progression (2.5 secondes avec easing)
+        Animated.timing(circleProgressAnimation, {
+          toValue: 1,
+          duration: 2500,
+          useNativeDriver: false,
+        }).start();
+        
+        // Animation du check qui apparaît après 2 secondes
+        setTimeout(() => {
+          Animated.spring(checkScaleAnimation, {
+            toValue: 1,
+            tension: 150,
+            friction: 6,
+            useNativeDriver: true,
+          }).start();
+        }, 2000);
+      }, 400);
+      
       return;
     }
 
@@ -204,8 +372,27 @@ export default function CardReview() {
     fadeAnimation.setValue(0);
     borderColorAnimation.setValue(0);
     
-    // Fermer la modal
-    setShowEndSessionModal(false);
+    // Reset des animations du modal
+    circleProgressAnimation.setValue(0);
+    checkScaleAnimation.setValue(0);
+    modalBackgroundAnimation.setValue(0);
+    modalScaleAnimation.setValue(0.8);
+    
+    // Fermer la modal avec animation
+    Animated.parallel([
+      Animated.timing(modalBackgroundAnimation, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalScaleAnimation, {
+        toValue: 0.8,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowEndSessionModal(false);
+    });
     
     // Animation d'entrée
     scaleAnimation.setValue(0.8);
@@ -217,10 +404,33 @@ export default function CardReview() {
     }).start();
   };
 
-  const handleEndReview = () => {
+const handleEndReview = () => {
+  // Animation de sortie du modal
+  Animated.parallel([
+    Animated.timing(modalBackgroundAnimation, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }),
+    Animated.timing(modalScaleAnimation, {
+      toValue: 0.8,
+      duration: 200,
+      useNativeDriver: true,
+    }),
+  ]).start(() => {
+    // Reset des animations du modal
+    circleProgressAnimation.setValue(0);
+    checkScaleAnimation.setValue(0);
+    modalBackgroundAnimation.setValue(0);
+    modalScaleAnimation.setValue(0.8);
     setShowEndSessionModal(false);
-    router.back();
-  };
+    
+    // Utiliser setTimeout pour s'assurer que la navigation se fait après la fermeture du modal
+    setTimeout(() => {
+      router.back();
+    }, 50);
+  });
+};
 
   const handleDifficultyResponse = async (difficulty: 'hard' | 'medium' | 'easy') => {
     if (isProcessing || !card) return;
@@ -533,25 +743,42 @@ export default function CardReview() {
         )}
       </Pressable>
 
-      {/* Modal de fin de session */}
+      {/* Modal de fin de session améliorée */}
       <Modal
         visible={showEndSessionModal}
-        animationType="fade"
+        animationType="none"
         transparent={true}
         onRequestClose={() => setShowEndSessionModal(false)}
       >
-        <View style={styles.endSessionOverlay}>
-          <View style={styles.endSessionModal}>
-            {/* Icône avec animation ou alternatives */}
+        <Animated.View 
+          style={[
+            styles.endSessionOverlay,
+            {
+              opacity: modalBackgroundAnimation,
+            }
+          ]}
+        >
+          <Animated.View 
+            style={[
+              styles.endSessionModal,
+              {
+                transform: [{ scale: modalScaleAnimation }],
+              }
+            ]}
+          >
+            {/* Animation professionnelle avec cercle et icône */}
             <View style={styles.iconContainer}>
-              {/* Gradient coloré avec check*/}
-              <View style={styles.gradientIcon}>
-                <Ionicons name="checkmark-circle" size={64} color="#fff" />
+              <View style={styles.progressCircleContainer}>
+                <ProfessionalProgressCircle 
+                  progress={circleProgressAnimation} 
+                  size={100} 
+                />
+                <AnimatedSuccessIcon scale={checkScaleAnimation} />
               </View>
             </View>
 
             <Text style={styles.endSessionTitle}>
-              Bravo ! 🎉
+              Bravo !
             </Text>
             
             <Text style={styles.endSessionSubtitle}>
@@ -587,8 +814,8 @@ export default function CardReview() {
                 <Text style={styles.continueButtonSubtext}>Remélanger</Text>
               </Pressable>
             </View>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
 
     </SafeAreaView>
@@ -797,7 +1024,7 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
-endSessionOverlay: {
+  endSessionOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
@@ -821,19 +1048,12 @@ endSessionOverlay: {
     marginBottom: 24,
     padding: 8,
   },
-  gradientIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#007AFF',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // Pour le web
+  progressCircleContainer: {
+    width: 100,
+    height: 100,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    position: 'relative',
   },
   endSessionSubtitle: {
     fontSize: 18,

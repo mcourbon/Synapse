@@ -48,9 +48,9 @@ export class SpacedRepetitionSystem {
       case 'medium': // Moyen - réponse correcte mais hésitante
         // 🔥 CORRECTION : Si on vient d'un "hard" (interval = 0), traiter comme nouveau départ
         if (stats.interval === 0 || stats.repetitions === 0) {
-          newInterval = 2; // Dans 2 jours - comme un nouveau départ
+          newInterval = 2; // Dans 2 jours - première réussite
         } else if (stats.repetitions === 1) {
-          newInterval = 4; // Dans 4 jours
+          newInterval = 4; // Dans 4 jours - deuxième réussite
         } else {
           newInterval = Math.round(stats.interval * (stats.easeFactor * 0.85)); // Progression modérée
         }
@@ -62,13 +62,15 @@ export class SpacedRepetitionSystem {
         break;
 
       case 'easy': // Facile - réponse parfaite
-        // 🔥 CORRECTION : Si on vient d'un "hard" (interval = 0), traiter comme nouveau départ
+        // 🆕 MODIFICATION : Séquence 2j -> 4j -> 8j puis progression normale
         if (stats.interval === 0 || stats.repetitions === 0) {
-          newInterval = 4; // Dans 4 jours - comme un nouveau départ
+          newInterval = 2; // Dans 2 jours - première réussite
         } else if (stats.repetitions === 1) {
-          newInterval = 8; // Dans 8 jours
+          newInterval = 4; // Dans 4 jours - deuxième réussite
+        } else if (stats.repetitions === 2) {
+          newInterval = 8; // Dans 8 jours - troisième réussite
         } else {
-          newInterval = Math.round(stats.interval * (stats.easeFactor * 1.1)); // Progression rapide
+          newInterval = Math.round(stats.interval * (stats.easeFactor * 1.1)); // Progression rapide normale
         }
         newRepetitions = stats.repetitions + 1;
         newEaseFactor = Math.min(
