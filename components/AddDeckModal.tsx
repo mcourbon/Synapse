@@ -23,14 +23,16 @@ interface AddDeckModalProps {
 }
 
 const DECK_COLORS = [
-  { name: 'Bleu', value: '#007AFF' },
-  { name: 'Vert', value: '#34C759' },
-  { name: 'Orange', value: '#FF9500' },
-  { name: 'Rouge', value: '#FF3B30' },
-  { name: 'Violet', value: '#AF52DE' },
-  { name: 'Rose', value: '#FF2D92' },
-  { name: 'Indigo', value: '#5856D6' },
-  { name: 'Teal', value: '#5AC8FA' },
+  { name: 'Bleu océan', value: '#007AFF' },
+  { name: 'Vert forêt', value: '#38A169' },
+  { name: 'Orange sunset', value: '#FF6B35' },
+  { name: 'Rouge cardinal', value: '#E53E3E' },
+  { name: 'Violet royal', value: '#805AD5' },
+  { name: 'Rose flamant', value: '#ED64A6' },
+  { name: 'Noir Charbon', value: '#1F2937' },
+  { name: 'Jaune soleil', value: '#FFE600' },
+  { name: 'Marron chocolat', value: '#8B4513' },
+  { name: 'Turquoise', value: '#38B2AC' },
 ];
 
 export default function AddDeckModal({ 
@@ -204,13 +206,18 @@ export default function AddDeckModal({
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Nom de la collection *</Text>
               <TextInput
-                style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    { outlineWidth: 0 }
+                  ]}
                 value={name}
                 onChangeText={setName}
                 placeholder="Ex: Vocabulaire anglais, Histoire..."
                 autoFocus
                 editable={!loading}
                 maxLength={100}
+                underlineColorAndroid="transparent"
+                selectionColor="#007AFF"
               />
             </View>
 
@@ -218,7 +225,7 @@ export default function AddDeckModal({
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Description (optionnel)</Text>
               <TextInput
-                style={[styles.textInput, styles.textArea]}
+                style={[styles.textInput, styles.textArea, { outlineWidth: 0 }]}
                 value={description}
                 onChangeText={setDescription}
                 placeholder="Décrivez brièvement le contenu de cette collection..."
@@ -227,12 +234,14 @@ export default function AddDeckModal({
                 textAlignVertical="top"
                 editable={!loading}
                 maxLength={500}
+                underlineColorAndroid="transparent"
+                selectionColor="#007AFF"
               />
             </View>
 
             {/* Sélection de couleur */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Couleur du thème</Text>
+              <Text style={styles.label}>Couleur de la bordure</Text>
               <View style={styles.colorGrid}>
                 {DECK_COLORS.map((color) => (
                   <Pressable
@@ -286,7 +295,6 @@ export default function AddDeckModal({
               <Text style={styles.tipsText}>
                 • Choisissez un nom descriptif{'\n'}
                 • Sélectionnez une couleur pour organiser vos collections{'\n'}
-                • Commencez avec 10-20 cartes maximum
               </Text>
             </View>
           </View>
@@ -354,8 +362,8 @@ const styles = StyleSheet.create({
   },
   textInput: {
     backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
+    borderWidth: 2,
+    borderColor: '#007AFF',
     borderRadius: 12,
     padding: 15,
     fontSize: 16,

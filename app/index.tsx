@@ -6,20 +6,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { Card, Deck } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
+import AddDeckModal from '../components/AddDeckModal'; // ✅ Import du composant
 
 export default function Home() {
   const router = useRouter();
   const { user } = useAuth();
   const [card, setCard] = useState<Card | null>(null);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
+  const [showAddDeckModal, setShowAddDeckModal] = useState(false); // ✅ Nouvel état
   const [decks, setDecks] = useState<Deck[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
   const [front, setFront] = useState('');
   const [back, setBack] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showCreateDeckForm, setShowCreateDeckForm] = useState(false);
-  const [newDeckName, setNewDeckName] = useState('');
-  const [newDeckDescription, setNewDeckDescription] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
   const [currentCategoryInput, setCurrentCategoryInput] = useState('');
   const [existingCategories, setExistingCategories] = useState<string[]>([]);
@@ -111,52 +110,10 @@ export default function Home() {
     }
   }
 
-  const handleCreateDeck = async () => {
-    if (!newDeckName.trim()) {
-      Alert.alert('Erreur', 'Veuillez donner un nom à votre deck');
-      return;
-    }
-
-    if (!user) {
-      Alert.alert('Erreur', 'Vous devez être connecté pour créer un deck');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const { data, error } = await supabase
-        .from('decks')
-        .insert([
-          {
-            name: newDeckName.trim(),
-            description: newDeckDescription.trim() || null,
-            user_id: user.id, // ✅ Associer le deck à l'utilisateur connecté
-          }
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      // Ajouter le nouveau deck à la liste et le sélectionner
-      setDecks([data, ...decks]);
-      setSelectedDeckId(data.id);
-      
-      // Réinitialiser le formulaire de création
-      setNewDeckName('');
-      setNewDeckDescription('');
-      setShowCreateDeckForm(false);
-      
-      Alert.alert('Succès', 'Deck créé avec succès !');
-    } catch (error: any) {
-      console.error('Erreur:', error);
-      Alert.alert('Erreur', error.message || 'Impossible de créer le deck');
-    } finally {
-      setLoading(false);
-    }
+  // ✅ Nouvelle fonction pour gérer la création de deck via AddDeckModal
+  const handleDeckCreated = async () => {
+    console.log('Deck créé, rafraîchissement...');
+    await fetchDecks(); // Recharger la liste des decks
   };
 
   const handleAddCard = async () => {
@@ -219,9 +176,6 @@ export default function Home() {
     setCategories([]);
     setCurrentCategoryInput('');
     setSelectedDeckId('');
-    setShowCreateDeckForm(false);
-    setNewDeckName('');
-    setNewDeckDescription('');
     setShowCategorySuggestions(false);
     setExistingCategories([]);
   };
@@ -235,15 +189,18 @@ export default function Home() {
   };
 
   const addCategory = (newCategory: string) => {
-  if (newCategory.trim() && 
-      newCategory.length <= 12 && 
-      categories.length < 3 && 
-      !categories.includes(newCategory.trim())) {
-    setCategories([...categories, newCategory.trim()]);
-    setCurrentCategoryInput('');
-    setShowCategorySuggestions(false);
-  }
-};
+    if (newCategory.trim() && 
+        newCategory.length <= 12 && 
+        categories.length < 3 && 
+        !categories.includes(newCategory.trim())) {
+      setCategories([...categories, newCategory.trim()]);
+      setCurrentCategoryInput('');
+      setShowCategorySuggestions(false);
+    } else if (newCategory.length > 12) {
+      // Optionnel : afficher une erreur si nécessaire
+      Alert.alert('Erreur', 'Les catégories sont limitées à 12 caractères');
+    }
+  };
 
 const removeCategory = (categoryToRemove: string) => {
   setCategories(categories.filter(cat => cat !== categoryToRemove));
@@ -382,48 +339,34 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
             </Pressable>
             <Text style={styles.modalTitle}>Ajout rapide</Text>
             <Pressable 
-              onPress={showCreateDeckForm ? handleCreateDeck : handleAddCard}
+              onPress={handleAddCard}
               disabled={loading}
               style={[styles.saveButton, loading && styles.saveButtonDisabled]}
             >
               <Text style={[styles.saveButtonText, loading && styles.saveButtonTextDisabled]}>
-                {loading ? 'Ajout...' : (showCreateDeckForm ? 'Créer' : 'Ajouter')}
+                {loading ? 'Ajout...' : 'Ajouter'}
               </Text>
             </Pressable>
           </View>
 
           <ScrollView style={styles.modalContent}>
-            {/* Sélection/Création de deck */}
+            {/* Sélection de deck */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Deck de destination</Text>
               
-              {decks.length === 0 || showCreateDeckForm ? (
-                // Formulaire de création de deck
-                <View>
-                  <TextInput
-                    style={styles.textInput}
-                    value={newDeckName}
-                    onChangeText={setNewDeckName}
-                    placeholder="Nom du nouveau deck"
-                    autoFocus={decks.length === 0}
-                  />
-                  <TextInput
-                    style={[styles.textInput, styles.textArea, { marginTop: 10 }]}
-                    value={newDeckDescription}
-                    onChangeText={setNewDeckDescription}
-                    placeholder="Description (optionnel)"
-                    multiline
-                    numberOfLines={3}
-                    textAlignVertical="top"
-                  />
-                  {decks.length > 0 && (
-                    <Pressable 
-                      style={styles.switchButton}
-                      onPress={() => setShowCreateDeckForm(false)}
-                    >
-                      <Text style={styles.switchButtonText}>Utiliser un deck existant</Text>
-                    </Pressable>
-                  )}
+              {decks.length === 0 ? (
+                // Aucun deck disponible
+                <View style={styles.noDeckContainer}>
+                  <Text style={styles.noDeckText}>
+                    Vous n'avez pas encore de collection. Créez-en une pour commencer !
+                  </Text>
+                  <Pressable 
+                    style={styles.createDeckButton}
+                    onPress={() => setShowAddDeckModal(true)} // ✅ Ouvrir le modal AddDeck
+                  >
+                    <Ionicons name="add" size={20} color="#fff" />
+                    <Text style={styles.createDeckButtonText}>Créer ma première collection</Text>
+                  </Pressable>
                 </View>
               ) : (
                 // Sélection de deck existant
@@ -449,22 +392,25 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
                   </ScrollView>
                   <Pressable 
                     style={styles.switchButton}
-                    onPress={() => setShowCreateDeckForm(true)}
+                    onPress={() => setShowAddDeckModal(true)} // ✅ Ouvrir le modal AddDeck
                   >
                     <Ionicons name="add" size={16} color="#007AFF" />
-                    <Text style={styles.switchButtonText}>Créer un nouveau deck</Text>
+                    <Text style={styles.switchButtonText}>Créer une nouvelle collection</Text>
                   </Pressable>
                 </View>
               )}
             </View>
 
-            {/* Formulaire de carte (seulement si on n'est pas en train de créer un deck) */}
-            {!showCreateDeckForm && (
+            {/* Formulaire de carte (seulement si un deck est sélectionné) */}
+            {selectedDeckId && (
               <>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Recto</Text>
+                  <Text style={styles.label}>Question</Text>
                   <TextInput
-                    style={styles.textInput}
+                    style={[
+                      styles.textInput,
+                      { outlineWidth: 0 }
+                    ]}
                     value={front}
                     onChangeText={setFront}
                     placeholder="Tapez votre question..."
@@ -475,9 +421,12 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Verso</Text>
+                  <Text style={styles.label}>Réponse</Text>
                   <TextInput
-                    style={styles.textInput}
+                    style={[
+                      styles.textInput,
+                      { outlineWidth: 0 }
+                    ]}
                     value={back}
                     onChangeText={setBack}
                     placeholder="Tapez votre réponse..."
@@ -492,29 +441,32 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
     Catégories ({categories.length}/3) - max 12 caractères
   </Text>
   
-  {/* Tags des catégories sélectionnées */}
+  {/* Affichage des catégories sélectionnées */}
   {categories.length > 0 && (
-    <View style={styles.selectedCategories}>
-      {categories.map((cat, index) => (
-        <View key={index} style={styles.selectedCategoryTag}>
-          <Text style={styles.selectedCategoryText}>{cat}</Text>
-          <Pressable onPress={() => removeCategory(cat)}>
-            <Ionicons name="close-circle" size={18} color="#FF5252" />
+    <View style={styles.categoriesDisplay}>
+      {categories.map((category, index) => (
+        <View key={index} style={styles.categoryChip}>
+          <Text style={styles.categoryChipText}>{category}</Text>
+          <Pressable onPress={() => removeCategory(category)}>
+            <Ionicons name="close" size={16} color="#666" />
           </Pressable>
         </View>
       ))}
     </View>
   )}
-
-  {/* Input pour ajouter une catégorie */}
+  
+  {/* Input pour nouvelle catégorie (si moins de 3) */}
   {categories.length < 3 && (
-    <View style={styles.categoryContainer}>
+    <View style={styles.categoryInputContainer}>
       <TextInput
-        style={[styles.textInput, styles.categoryInput]}
+        style={[styles.textInput, styles.categoryInput, { outlineWidth: 0 }]}
         value={currentCategoryInput}
-        onChangeText={setCurrentCategoryInput}
+        onChangeText={(text) => {
+          if (text.length <= 12) {
+            setCurrentCategoryInput(text);
+          }
+        }}
         placeholder="Ajouter une catégorie..."
-        maxLength={20}
         returnKeyType="done"
         autoCapitalize="words"
         onSubmitEditing={handleCategoryInputSubmit}
@@ -524,21 +476,39 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
           }
         }}
       />
-      
-      {/* Suggestions */}
-      {showCategorySuggestions && filteredCategories.length > 0 && (
-        <View style={styles.suggestionsContainer}>
-          <Text style={styles.suggestionsTitle}>Catégories disponibles :</Text>
-          <FlatList
-            data={filteredCategories}
-            renderItem={renderCategorySuggestion}
-            keyExtractor={(item) => item}
-            style={styles.suggestionsList}
-            showsVerticalScrollIndicator={false}
-            nestedScrollEnabled={true}
-          />
-        </View>
-      )}
+      <Pressable 
+        style={styles.addCategoryButton}
+        onPress={handleCategoryInputSubmit}
+        disabled={!currentCategoryInput.trim()}
+      >
+        <Ionicons name="add" size={20} color="#007AFF" />
+      </Pressable>
+    </View>
+  )}
+
+  {/* Indicateur de caractères restants */}
+  {categories.length < 3 && currentCategoryInput.length > 0 && (
+    <Text style={[
+      styles.characterCount, 
+      currentCategoryInput.length > 10 && styles.characterCountWarning, 
+      currentCategoryInput.length === 12 && styles.characterCountError
+    ]}>
+      {currentCategoryInput.length}/12 caractères
+    </Text>
+  )}
+  
+  {/* Suggestions */}
+  {showCategorySuggestions && filteredCategories.length > 0 && (
+    <View style={styles.suggestionsContainer}>
+      <Text style={styles.suggestionsTitle}>Catégories disponibles :</Text>
+      <FlatList
+        data={filteredCategories}
+        renderItem={renderCategorySuggestion}
+        keyExtractor={(item) => item}
+        style={styles.suggestionsList}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+      />
     </View>
   )}
   
@@ -561,12 +531,7 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
       </ScrollView>
     </View>
   )}
-  
-  <Text style={styles.helperText}>
-    Appuyez sur Entrée pour ajouter une catégorie
-  </Text>
 </View>
-
 
                 {/* Aperçu */}
                 {(front || back) && (
@@ -593,6 +558,13 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      {/* ✅ Modal AddDeck pour créer un nouveau deck */}
+      <AddDeckModal
+        visible={showAddDeckModal}
+        onClose={() => setShowAddDeckModal(false)}
+        onDeckAdded={handleDeckCreated}
+      />
     </SafeAreaView>
   );
 }
@@ -637,33 +609,33 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 0,
     paddingHorizontal: 0,
-    minWidth: 320,      // ✅ Augmenté de 320 à 380
-    maxWidth: '90%',    // ✅ Ajouté pour éviter le débordement sur petits écrans
-    aspectRatio: 5/3,   // ✅ Changé de 16/9 à 5/3 pour un format plus carré
+    minWidth: 320,
+    maxWidth: '90%',
+    aspectRatio: 5/3,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },     // ✅ Ombre plus prononcée
-    shadowOpacity: 0.2,                        // ✅ Ombre plus visible
-    shadowRadius: 16,                          // ✅ Ombre plus diffuse
-    elevation: 12,                             // ✅ Élévation plus importante sur Android
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
     marginBottom: 28,
     overflow: 'hidden',
     zIndex: 2,
     position: 'relative',
-    borderBottomWidth: 12,                      // ✅ Bordure plus épaisse (4 → 12)
-    borderBottomColor: '#007AFF',              // ✅ Couleur bleue cohérente avec l'app
+    borderBottomWidth: 12,
+    borderBottomColor: '#007AFF',
   },
   
   tinycardText: {
     color: '#222',
-    fontSize: 24,    // ✅ Texte légèrement plus grand (22 → 24)
+    fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-    letterSpacing: 0.3,  // ✅ Espacement des lettres légèrement augmenté
-    lineHeight: 32,      // ✅ Ajout d'un line-height pour une meilleure lisibilité
+    letterSpacing: 0.3,
+    lineHeight: 32,
     zIndex: 2,
-    paddingHorizontal: 32, // ✅ Padding horizontal augmenté (24 → 32)
+    paddingHorizontal: 32,
   },
   welcomeOverlay: {
     position: 'absolute',
@@ -675,9 +647,9 @@ const styles = StyleSheet.create({
   welcomeText: {
      fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',  // Couleur sombre au lieu de blanc
+    color: '#333',
     textAlign: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',  // Fond blanc semi-transparent
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 16,
@@ -763,8 +735,8 @@ const styles = StyleSheet.create({
   },
   textInput: {
     backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
+    borderWidth: 2,
+    borderColor: '#007AFF',
     borderRadius: 12,
     padding: 15,
     fontSize: 16,
@@ -772,6 +744,36 @@ const styles = StyleSheet.create({
   },
   textArea: {
     minHeight: 100,
+  },
+  // ✅ Nouveaux styles pour le cas "aucun deck"
+  noDeckContainer: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+  },
+  noDeckText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 15,
+    lineHeight: 22,
+  },
+  createDeckButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  createDeckButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   deckSelector: {
     marginBottom: 10,
@@ -843,10 +845,6 @@ const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 20,
   },
-  categoryInput: {
-    minHeight: 50,
-    paddingVertical: 12,
-  },
   categoryContainer: {
     position: 'relative',
   },
@@ -902,16 +900,14 @@ const styles = StyleSheet.create({
   },
   categoryTag: {
     backgroundColor: '#E3F2FD',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#2196F3',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
   categoryTagText: {
     fontSize: 12,
-    color: '#1976D2',
-    fontWeight: '600',
+    color: '#007AFF',
+    fontWeight: '500',
   },
   helperText: {
     fontSize: 12,
@@ -919,7 +915,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
     fontStyle: 'italic',
   },
-    selectedCategories: {
+  selectedCategories: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
@@ -928,15 +924,66 @@ const styles = StyleSheet.create({
   selectedCategoryTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#E3F2FD',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     gap: 6,
   },
   selectedCategoryText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: '600',
+    fontSize: 14,
+    color: '#007AFF', 
+    fontWeight: '500',
   },
+  categoriesDisplay: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  gap: 8,
+  marginBottom: 10,
+},
+categoryChip: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#E3F2FD',
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+  borderRadius: 16,
+  gap: 6,
+},
+categoryChipText: {
+  fontSize: 14,
+  color: '#007AFF',
+  fontWeight: '500',
+},
+categoryInputContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+},
+categoryInput: {
+  flex: 1,
+  minHeight: 50,
+  paddingVertical: 12,
+},
+addCategoryButton: {
+  width: 50,
+  height: 50,
+  borderRadius: 25,
+  backgroundColor: '#E3F2FD',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+characterCount: {
+  fontSize: 12,
+  color: '#666',
+  marginTop: 4,
+  textAlign: 'right',
+},
+characterCountWarning: {
+  color: '#FF9500',
+},
+characterCountError: {
+  color: '#FF3B30',
+  fontWeight: '600',
+},
 });

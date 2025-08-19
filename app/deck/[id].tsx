@@ -681,7 +681,10 @@ export default function DeckDetail() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Question</Text>
               <TextInput
-                style={styles.textInput}
+                style={[
+                  styles.textInput,
+                  { outlineWidth: 0 }
+                ]}
                 value={front}
                 onChangeText={setFront}
                 placeholder="Tapez votre question..."
@@ -689,24 +692,31 @@ export default function DeckDetail() {
                 numberOfLines={4}
                 textAlignVertical="top"
                 autoFocus
+                underlineColorAndroid="transparent"
+                selectionColor="#007AFF"
               />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Réponse</Text>
               <TextInput
-                style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    { outlineWidth: 0 }
+                  ]}
                 value={back}
                 onChangeText={setBack}
                 placeholder="Tapez votre réponse..."
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
+                underlineColorAndroid="transparent"
+                selectionColor="#007AFF"
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Catégories ({categories.length}/3)</Text>
+              <Text style={styles.label}>Catégories ({categories.length}/3) - max 12 caractères</Text>
               
               {/* Affichage des catégories existantes */}
               {categories.length > 0 && (
@@ -726,13 +736,15 @@ export default function DeckDetail() {
               {categories.length < 3 && (
                 <View style={styles.categoryInputContainer}>
                   <TextInput
-                    style={[styles.textInput, styles.categoryInput]}
+                    style={[styles.textInput, styles.categoryInput, { outlineWidth: 0 }]}
                     value={newCategory}
                     onChangeText={handleNewCategoryChange}
-                    placeholder="Ajouter une catégorie (12 car. max)"
+                    placeholder="Ajouter une catégorie..."
                     returnKeyType="done"
                     autoCapitalize="words"
                     onSubmitEditing={addCategory}
+                    underlineColorAndroid="transparent"
+                    selectionColor="#007AFF"
                   />
                   <Pressable 
                     style={styles.addCategoryButton}
@@ -803,7 +815,10 @@ export default function DeckDetail() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Question</Text>
               <TextInput
-                style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    { outlineWidth: 0 }
+                  ]}
                 value={front}
                 onChangeText={setFront}
                 placeholder="Tapez votre question..."
@@ -811,19 +826,26 @@ export default function DeckDetail() {
                 numberOfLines={4}
                 textAlignVertical="top"
                 autoFocus
+                underlineColorAndroid="transparent"
+                selectionColor="#007AFF"
               />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Réponse</Text>
               <TextInput
-                style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    { outlineWidth: 0 }
+                  ]}
                 value={back}
                 onChangeText={setBack}
                 placeholder="Tapez votre réponse..."
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
+                underlineColorAndroid="transparent"
+                selectionColor="#007AFF"
               />
             </View>
 
@@ -848,13 +870,15 @@ export default function DeckDetail() {
               {categories.length < 3 && (
                 <View style={styles.categoryInputContainer}>
                   <TextInput
-                    style={[styles.textInput, styles.categoryInput]}
+                    style={[styles.textInput, styles.categoryInput, { outlineWidth: 0 }]}
                     value={newCategory}
                     onChangeText={setNewCategory}
                     placeholder="Ajouter une catégorie..."
                     returnKeyType="done"
                     autoCapitalize="words"
                     onSubmitEditing={addCategory}
+                    underlineColorAndroid="transparent"
+                    selectionColor="#007AFF"
                   />
                   <Pressable 
                     style={styles.addCategoryButton}
@@ -1228,8 +1252,8 @@ const styles = StyleSheet.create({
   },
   textInput: {
     backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
+    borderWidth: 2,
+    borderColor: '#007AFF',
     borderRadius: 12,
     padding: 15,
     fontSize: 16,
