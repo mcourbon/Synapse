@@ -483,46 +483,44 @@ export default function DeckDetail() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <View style={styles.mainContent}>
+          <Text style={styles.loadingText}>Chargement...</Text>
+        </View>
       </SafeAreaView>
     );
-  }
+  } 
 
   if (!deck) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.errorText}>Deck introuvable</Text>
+        <View style={styles.mainContent}>
+          <Text style={styles.errorText}>Deck introuvable</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.floatingHeader}>
+      <View style={styles.mainContent}>
+        {/* Header */}
+        <View style={styles.floatingHeader}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </Pressable>
         <Text style={styles.headerTitle}>{deck.name}</Text>
         <Pressable 
-          style={styles.optionsButton} 
-          onPress={() => setShowOptionsModal(true)}
+          style={[styles.optionsButton, editMode && styles.optionsButtonEditMode]} 
+          onPress={editMode ? () => setEditMode(false) : () => setShowOptionsModal(true)}
           disabled={deletingDeck}
         >
-          <Ionicons name="ellipsis-horizontal" size={24} color="#007AFF" />
+          <Ionicons 
+            name={editMode ? "checkmark" : "ellipsis-horizontal"} 
+            size={24} 
+            color={editMode ? "#fff" : "#007AFF"} 
+          />
         </Pressable>
       </View>
-
-      {/* Mode édition indicator */}
-      {editMode && (
-        <View style={styles.editModeIndicator}>
-          <Ionicons name="create" size={16} color="#007AFF" />
-          <Text style={styles.editModeText}>Mode édition activé</Text>
-          <Pressable onPress={() => setEditMode(false)}>
-            <Text style={styles.editModeCancel}>Terminer</Text>
-          </Pressable>
-        </View>
-      )}
 
       {/* Informations du deck */}
       <View style={styles.deckInfo}>
@@ -569,6 +567,15 @@ export default function DeckDetail() {
           showsVerticalScrollIndicator={false}
         />
       )}
+      </View>
+
+      {/* Toast */}
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast({ ...toast, visible: false })}
+      />
 
       {/* Modal d'options */}
       <Modal
@@ -913,14 +920,6 @@ export default function DeckDetail() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
-
-      {/* Toast */}
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onHide={() => setToast({ ...toast, visible: false })}
-      />
     </SafeAreaView>
   );
 }
@@ -930,6 +929,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainContent: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 500,
   },
   loadingText: {
     textAlign: 'center',
@@ -1413,8 +1419,6 @@ const styles = StyleSheet.create({
   toast: {
     position: 'absolute',
     top: 100,
-    left: 20,
-    right: 20,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -1427,6 +1431,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
     zIndex: 1000,
+    width: '90%',
+    maxWidth: 460,
+    alignSelf: 'center',
   },
   toastSuccess: {
     backgroundColor: '#34C759',
@@ -1439,5 +1446,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     flex: 1,
+  },
+  optionsButtonEditMode: {
+    backgroundColor: '#007AFF',
   },
 });

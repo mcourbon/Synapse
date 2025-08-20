@@ -85,58 +85,62 @@ export default function Decks() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <View style={styles.mainContent}>
+          <Text style={styles.loadingText}>Chargement...</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Header avec bouton retour intégré */}
-        <View style={styles.headerSection}>
-          <View style={styles.headerRow}>
-            <Pressable style={styles.backButton} onPress={() => router.back()}>
-              <Ionicons name="chevron-back" size={24} color="#007AFF" />
-            </Pressable>
-            <View style={styles.titleContainer}>
-              <Text style={styles.mainTitle}>Mes Collections</Text>
-              <View style={styles.titleUnderline} />
+      <View style={styles.mainContent}>
+        <View style={styles.content}>
+          {/* Header avec bouton retour intégré */}
+          <View style={styles.headerSection}>
+            <View style={styles.headerRow}>
+              <Pressable style={styles.backButton} onPress={() => router.back()}>
+                <Ionicons name="chevron-back" size={24} color="#007AFF" />
+              </Pressable>
+              <View style={styles.titleContainer}>
+                <Text style={styles.mainTitle}>Mes Collections</Text>
+                <View style={styles.titleUnderline} />
+              </View>
+              <Pressable 
+                style={styles.addButton}
+                onPress={() => setShowAddModal(true)}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </Pressable>
             </View>
-            <Pressable 
-              style={styles.addButton}
-              onPress={() => setShowAddModal(true)}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-            </Pressable>
           </View>
+
+          {decks.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="albums-outline" size={80} color="#ccc" />
+              <Text style={styles.emptyText}>Aucune collection trouvée</Text>
+              <Text style={styles.emptySubtext}>
+                Créez-en une pour commencer !
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={decks}
+              renderItem={renderDeck}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.listContainer}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
         </View>
 
-        {decks.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="albums-outline" size={80} color="#ccc" />
-            <Text style={styles.emptyText}>Aucune collection trouvée</Text>
-            <Text style={styles.emptySubtext}>
-              Créez-en une pour commencer !
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={decks}
-            renderItem={renderDeck}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContainer}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
+        {/* Modal d'ajout de deck */}
+        <AddDeckModal
+          visible={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onDeckAdded={handleDeckAdded}
+        />
       </View>
-
-      {/* Modal d'ajout de deck */}
-      <AddDeckModal
-        visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onDeckAdded={handleDeckAdded}
-      />
     </SafeAreaView>
   );
 }
@@ -145,6 +149,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainContent: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 500, // Largeur maximale pour garder l'aspect mobile
   },
   content: {
     flex: 1,

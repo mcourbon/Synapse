@@ -292,37 +292,39 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Flashcard en fond façon Tinycards */}
-      <View style={styles.tinycardWrapper}>
-        <Pressable
-          style={styles.tinycard}
-          onPress={() => {/* action future : révision, détail, etc. */}}
-        >
-          <Text style={styles.tinycardText}>
-            {card?.front || 'Commencez par créer votre premier deck !'}
-          </Text>
+      <View style={styles.mainContent}>
+        {/* Flashcard en fond façon Tinycards */}
+        <View style={styles.tinycardWrapper}>
+          <Pressable
+            style={styles.tinycard}
+            onPress={() => {/* action future : révision, détail, etc. */}}
+          >
+            <Text style={styles.tinycardText}>
+              {card?.front || 'Commencez par créer votre premier deck !'}
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Message de bienvenue */}
+        <View style={styles.welcomeOverlay}>
+          <Text style={styles.welcomeText}>{getWelcomeMessage()}</Text>
+        </View>
+
+        {/* Bar en haut */}
+        <View style={styles.topBar}>
+          <Pressable style={styles.iconButton} onPress={() => router.push('/decks')}>
+            <Ionicons name="albums" size={28} color="#007AFF" />
+          </Pressable>
+          <Pressable style={styles.iconButton} onPress={() => router.push('/profile')}>
+            <Ionicons name="person" size={28} color="#007AFF" />
+          </Pressable>
+        </View>
+
+        {/* Bouton flottant d'ajout rapide */}
+        <Pressable style={styles.fab} onPress={openQuickAdd}>
+          <Ionicons name="add" size={28} color="#fff" />
         </Pressable>
       </View>
-
-      {/* Message de bienvenue */}
-      <View style={styles.welcomeOverlay}>
-        <Text style={styles.welcomeText}>{getWelcomeMessage()}</Text>
-      </View>
-
-      {/* Bar en haut */}
-      <View style={styles.topBar}>
-        <Pressable style={styles.iconButton} onPress={() => router.push('/decks')}>
-          <Ionicons name="albums" size={28} color="#007AFF" />
-        </Pressable>
-        <Pressable style={styles.iconButton} onPress={() => router.push('/profile')}>
-          <Ionicons name="person" size={28} color="#007AFF" />
-        </Pressable>
-      </View>
-
-      {/* Bouton flottant d'ajout rapide */}
-      <Pressable style={styles.fab} onPress={openQuickAdd}>
-        <Ionicons name="add" size={28} color="#fff" />
-      </Pressable>
 
       {/* Modal d'ajout rapide */}
       <Modal
@@ -573,6 +575,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainContent: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 500, // Largeur maximale pour garder l'aspect mobile
+    position: 'relative',
   },
   topBar: {
     position: 'absolute',
