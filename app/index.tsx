@@ -6,14 +6,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { Card, Deck } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
-import AddDeckModal from '../components/AddDeckModal'; // ✅ Import du composant
+import AddDeckModal from '../components/AddDeckModal';
 
 export default function Home() {
   const router = useRouter();
   const { user } = useAuth();
   const [card, setCard] = useState<Card | null>(null);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
-  const [showAddDeckModal, setShowAddDeckModal] = useState(false); // ✅ Nouvel état
+  const [showAddDeckModal, setShowAddDeckModal] = useState(false);
   const [decks, setDecks] = useState<Deck[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
   const [front, setFront] = useState('');
@@ -61,7 +61,6 @@ export default function Home() {
     if (!user) return;
 
     try {
-      // Récupérer les cartes de l'utilisateur connecté uniquement
       const { data: userCards, error } = await supabase
         .from('cards')
         .select(`
@@ -70,7 +69,7 @@ export default function Home() {
         `)
         .eq('decks.user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(10); // Prendre plus de cartes pour faire un vrai random
+        .limit(10);
 
       if (error) {
         console.error('Erreur lors de la récupération des cartes:', error);
@@ -78,7 +77,6 @@ export default function Home() {
       }
 
       if (userCards && userCards.length > 0) {
-        // Sélectionner une carte aléatoire parmi celles de l'utilisateur
         const randomIndex = Math.floor(Math.random() * userCards.length);
         setCard(userCards[randomIndex]);
       }
@@ -94,7 +92,7 @@ export default function Home() {
       const { data, error } = await supabase
         .from('decks')
         .select('*')
-        .eq('user_id', user.id) // ✅ Filtrer par utilisateur connecté
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -110,10 +108,9 @@ export default function Home() {
     }
   }
 
-  // ✅ Nouvelle fonction pour gérer la création de deck via AddDeckModal
   const handleDeckCreated = async () => {
     console.log('Deck créé, rafraîchissement...');
-    await fetchDecks(); // Recharger la liste des decks
+    await fetchDecks();
   };
 
   const handleAddCard = async () => {
@@ -150,7 +147,6 @@ export default function Home() {
         throw error;
       }
 
-      // Réinitialiser les champs
       setFront('');
       setBack('');
       setCategories([]);
@@ -159,7 +155,6 @@ export default function Home() {
       Alert.alert('Succès', 'Carte ajoutée avec succès !');
       closeModal();
       
-      // Rafraîchir la carte affichée
       fetchRandomCard();
     } catch (error: any) {
       console.error('Erreur:', error);
@@ -197,7 +192,6 @@ export default function Home() {
       setCurrentCategoryInput('');
       setShowCategorySuggestions(false);
     } else if (newCategory.length > 12) {
-      // Optionnel : afficher une erreur si nécessaire
       Alert.alert('Erreur', 'Les catégories sont limitées à 12 caractères');
     }
   };
@@ -212,40 +206,36 @@ const handleCategoryInputSubmit = () => {
   }
 };
 
-  // Tableau de phrases motivantes
   const motivationalMessages = [
-    "Prêt à apprendre quelque chose de nouveau ? 🚀",
-    "Chaque carte révisée vous rapproche de vos objectifs ! 💪",
-    "L'apprentissage est un voyage, pas une destination ✨",
-    "Votre cerveau est votre meilleur allié 🧠",
-    "Aujourd'hui est le jour parfait pour réviser ! 📚",
-    "La connaissance est le pouvoir le plus précieux 💎",
-    "Transformez vos minutes en moments d'apprentissage ⏰",
-    "Chaque révision compte, continuez comme ça ! 🎯",
-    "Votre future version vous remerciera 🌟",
-    "L'excellence est une habitude, pas un accident 🏆",
-    "Apprenez aujourd'hui, brillez demain ! ☀️",
-    "Votre potentiel est illimité 🌈",
-    "La répétition est la mère de l'apprentissage 🔄",
-    "Investissez en vous, c'est le meilleur placement ! 💰",
-    "Petit à petit, l'oiseau fait son nid 🪺",
-    "Votre détermination vous mènera loin 🛤️",
-    "Chaque expert était autrefois un débutant 🌱",
-    "L'apprentissage n'a pas d'âge limite 🎈",
-    "Transformez votre curiosité en connaissance 🔍",
-    "Vous êtes capable de plus que vous ne le pensez ! 💫"
+    "Prêt à apprendre quelque chose de nouveau ?",
+    "Chaque carte révisée vous rapproche de vos objectifs !",
+    "L'apprentissage est un voyage, pas une destination",
+    "Votre cerveau est votre meilleur allié",
+    "Aujourd'hui est le jour parfait pour réviser !",
+    "La connaissance est le pouvoir le plus précieux",
+    "Transformez vos minutes en moments d'apprentissage",
+    "Chaque révision compte, continuez comme ça !",
+    "Votre future version vous remerciera",
+    "L'excellence est une habitude, pas un accident",
+    "Apprenez aujourd'hui, brillez demain !",
+    "Votre potentiel est illimité",
+    "La répétition est la mère de l'apprentissage",
+    "Investissez en vous, c'est le meilleur placement !",
+    "Petit à petit, l'oiseau fait son nid",
+    "Votre détermination vous mènera loin",
+    "Chaque expert était autrefois un débutant",
+    "L'apprentissage n'a pas d'âge limite",
+    "Transformez votre curiosité en connaissance",
+    "Vous êtes capable de plus que vous ne le pensez !"
   ];
 
-  // Message de bienvenue amélioré
   const getWelcomeMessage = () => {
-    if (!user) return 'Bienvenue sur votre app de révision ! 📖';
+    if (!user) return 'Bienvenue sur votre app de révision !';
     
-    // Sélectionner un message aléatoire basé sur la date et l'heure
-    // Cela change le message plusieurs fois par jour
     const now = new Date();
     const startOfYear = new Date(now.getFullYear(), 0, 0);
     const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
-    const hourBlock = Math.floor(now.getHours() / 4); // Change toutes les 4 heures
+    const hourBlock = Math.floor(now.getHours() / 4);
     const index = (dayOfYear + hourBlock) % motivationalMessages.length;
     
     return motivationalMessages[index];
@@ -263,7 +253,6 @@ const handleCategoryInputSubmit = () => {
 
     if (error) throw error;
 
-    // Extraire et aplatir toutes les catégories uniques
     const allCategories = data
       .filter(item => item.categories && Array.isArray(item.categories))
       .flatMap(item => item.categories)
@@ -297,7 +286,7 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
         <View style={styles.tinycardWrapper}>
           <Pressable
             style={styles.tinycard}
-            onPress={() => {/* action future : révision, détail, etc. */}}
+            onPress={() => {}}
           >
             <Text style={styles.tinycardText}>
               {card?.front || 'Commencez par créer votre premier deck !'}
@@ -334,234 +323,234 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
         onRequestClose={closeModal}
       >
         <SafeAreaView style={styles.modalContainer}>
-          {/* Header */}
-          <View style={styles.modalHeader}>
-            <Pressable onPress={closeModal}>
-              <Text style={styles.cancelButton}>Annuler</Text>
-            </Pressable>
-            <Text style={styles.modalTitle}>Ajout rapide</Text>
-            <Pressable 
-              onPress={handleAddCard}
-              disabled={loading}
-              style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-            >
-              <Text style={[styles.saveButtonText, loading && styles.saveButtonTextDisabled]}>
-                {loading ? 'Ajout...' : 'Ajouter'}
-              </Text>
-            </Pressable>
-          </View>
-
-          <ScrollView style={styles.modalContent}>
-            {/* Sélection de deck */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Deck de destination</Text>
-              
-              {decks.length === 0 ? (
-                // Aucun deck disponible
-                <View style={styles.noDeckContainer}>
-                  <Text style={styles.noDeckText}>
-                    Vous n'avez pas encore de collection. Créez-en une pour commencer !
-                  </Text>
-                  <Pressable 
-                    style={styles.createDeckButton}
-                    onPress={() => setShowAddDeckModal(true)} // ✅ Ouvrir le modal AddDeck
-                  >
-                    <Ionicons name="add" size={20} color="#fff" />
-                    <Text style={styles.createDeckButtonText}>Créer ma première collection</Text>
-                  </Pressable>
-                </View>
-              ) : (
-                // Sélection de deck existant
-                <View>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.deckSelector}>
-                    {decks.map((deck) => (
-                      <Pressable
-                        key={deck.id}
-                        style={[
-                          styles.deckOption,
-                          selectedDeckId === deck.id && styles.deckOptionSelected
-                        ]}
-                        onPress={() => setSelectedDeckId(deck.id)}
-                      >
-                        <Text style={[
-                          styles.deckOptionText,
-                          selectedDeckId === deck.id && styles.deckOptionTextSelected
-                        ]}>
-                          {deck.name}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                  <Pressable 
-                    style={styles.switchButton}
-                    onPress={() => setShowAddDeckModal(true)} // ✅ Ouvrir le modal AddDeck
-                  >
-                    <Ionicons name="add" size={16} color="#007AFF" />
-                    <Text style={styles.switchButtonText}>Créer une nouvelle collection</Text>
-                  </Pressable>
-                </View>
-              )}
+          <View style={styles.modalMainContent}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <Pressable onPress={closeModal}>
+                <Text style={styles.cancelButton}>Annuler</Text>
+              </Pressable>
+              <Text style={styles.modalTitle}>Ajout rapide</Text>
+              <Pressable 
+                onPress={handleAddCard}
+                disabled={loading}
+                style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+              >
+                <Text style={[styles.saveButtonText, loading && styles.saveButtonTextDisabled]}>
+                  {loading ? 'Ajout...' : 'Ajouter'}
+                </Text>
+              </Pressable>
             </View>
 
-            {/* Formulaire de carte (seulement si un deck est sélectionné) */}
-            {selectedDeckId && (
-              <>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Question</Text>
-                  <TextInput
-                    style={[
-                      styles.textInput,
-                      { outlineWidth: 0 }
-                    ]}
-                    value={front}
-                    onChangeText={setFront}
-                    placeholder="Tapez votre question..."
-                    multiline
-                    numberOfLines={4}
-                    textAlignVertical="top"
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Réponse</Text>
-                  <TextInput
-                    style={[
-                      styles.textInput,
-                      { outlineWidth: 0 }
-                    ]}
-                    value={back}
-                    onChangeText={setBack}
-                    placeholder="Tapez votre réponse..."
-                    multiline
-                    numberOfLines={4}
-                    textAlignVertical="top"
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-  <Text style={styles.label}>
-    Catégories ({categories.length}/3) - max 12 caractères
-  </Text>
-  
-  {/* Affichage des catégories sélectionnées */}
-  {categories.length > 0 && (
-    <View style={styles.categoriesDisplay}>
-      {categories.map((category, index) => (
-        <View key={index} style={styles.categoryChip}>
-          <Text style={styles.categoryChipText}>{category}</Text>
-          <Pressable onPress={() => removeCategory(category)}>
-            <Ionicons name="close" size={16} color="#666" />
-          </Pressable>
-        </View>
-      ))}
-    </View>
-  )}
-  
-  {/* Input pour nouvelle catégorie (si moins de 3) */}
-  {categories.length < 3 && (
-    <View style={styles.categoryInputContainer}>
-      <TextInput
-        style={[styles.textInput, styles.categoryInput, { outlineWidth: 0 }]}
-        value={currentCategoryInput}
-        onChangeText={(text) => {
-          if (text.length <= 12) {
-            setCurrentCategoryInput(text);
-          }
-        }}
-        placeholder="Ajouter une catégorie..."
-        returnKeyType="done"
-        autoCapitalize="words"
-        onSubmitEditing={handleCategoryInputSubmit}
-        onFocus={() => {
-          if (existingCategories.length > 0) {
-            setShowCategorySuggestions(true);
-          }
-        }}
-      />
-      <Pressable 
-        style={styles.addCategoryButton}
-        onPress={handleCategoryInputSubmit}
-        disabled={!currentCategoryInput.trim()}
-      >
-        <Ionicons name="add" size={20} color="#007AFF" />
-      </Pressable>
-    </View>
-  )}
-
-  {/* Indicateur de caractères restants */}
-  {categories.length < 3 && currentCategoryInput.length > 0 && (
-    <Text style={[
-      styles.characterCount, 
-      currentCategoryInput.length > 10 && styles.characterCountWarning, 
-      currentCategoryInput.length === 12 && styles.characterCountError
-    ]}>
-      {currentCategoryInput.length}/12 caractères
-    </Text>
-  )}
-  
-  {/* Suggestions */}
-  {showCategorySuggestions && filteredCategories.length > 0 && (
-    <View style={styles.suggestionsContainer}>
-      <Text style={styles.suggestionsTitle}>Catégories disponibles :</Text>
-      <FlatList
-        data={filteredCategories}
-        renderItem={renderCategorySuggestion}
-        keyExtractor={(item) => item}
-        style={styles.suggestionsList}
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled={true}
-      />
-    </View>
-  )}
-  
-  {/* Catégories populaires */}
-  {existingCategories.length > 0 && currentCategoryInput === '' && categories.length < 3 && (
-    <View style={styles.popularCategories}>
-      <Text style={styles.popularTitle}>Catégories récentes :</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.categoryTags}>
-          {existingCategories.slice(0, 5).map((cat) => (
-            <Pressable
-              key={cat}
-              style={styles.categoryTag}
-              onPress={() => selectCategory(cat)}
-            >
-              <Text style={styles.categoryTagText}>{cat}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </ScrollView>
-    </View>
-  )}
-</View>
-
-                {/* Aperçu */}
-                {(front || back) && (
-                  <View style={styles.previewSection}>
-                    <Text style={styles.previewTitle}>Aperçu</Text>
-                    <View style={styles.previewCards}>
-                      <View style={styles.previewCard}>
-                        <Text style={styles.previewLabel}>Recto</Text>
-                        <Text style={styles.previewText}>
-                          {front || 'Votre question...'}
-                        </Text>
-                      </View>
-                      <View style={styles.previewCard}>
-                        <Text style={styles.previewLabel}>Verso</Text>
-                        <Text style={styles.previewText}>
-                          {back || 'Votre réponse...'}
-                        </Text>
-                      </View>
-                    </View>
+            <ScrollView style={styles.modalContent}>
+              {/* Sélection de deck */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Deck de destination</Text>
+                
+                {decks.length === 0 ? (
+                  <View style={styles.noDeckContainer}>
+                    <Text style={styles.noDeckText}>
+                      Vous n'avez pas encore de collection. Créez-en une pour commencer !
+                    </Text>
+                    <Pressable 
+                      style={styles.createDeckButton}
+                      onPress={() => setShowAddDeckModal(true)}
+                    >
+                      <Ionicons name="add" size={20} color="#fff" />
+                      <Text style={styles.createDeckButtonText}>Créer ma première collection</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.deckSelector}>
+                      {decks.map((deck) => (
+                        <Pressable
+                          key={deck.id}
+                          style={[
+                            styles.deckOption,
+                            selectedDeckId === deck.id && styles.deckOptionSelected
+                          ]}
+                          onPress={() => setSelectedDeckId(deck.id)}
+                        >
+                          <Text style={[
+                            styles.deckOptionText,
+                            selectedDeckId === deck.id && styles.deckOptionTextSelected
+                          ]}>
+                            {deck.name}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                    <Pressable 
+                      style={styles.switchButton}
+                      onPress={() => setShowAddDeckModal(true)}
+                    >
+                      <Ionicons name="add" size={16} color="#007AFF" />
+                      <Text style={styles.switchButtonText}>Créer une nouvelle collection</Text>
+                    </Pressable>
                   </View>
                 )}
-              </>
-            )}
+              </View>
+
+              {/* Formulaire de carte (seulement si un deck est sélectionné) */}
+              {selectedDeckId && (
+                <>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Question</Text>
+                    <TextInput
+                      style={[
+                        styles.textInput,
+                        { outlineWidth: 0 }
+                      ]}
+                      value={front}
+                      onChangeText={setFront}
+                      placeholder="Tapez votre question..."
+                      multiline
+                      numberOfLines={4}
+                      textAlignVertical="top"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Réponse</Text>
+                    <TextInput
+                      style={[
+                        styles.textInput,
+                        { outlineWidth: 0 }
+                      ]}
+                      value={back}
+                      onChangeText={setBack}
+                      placeholder="Tapez votre réponse..."
+                      multiline
+                      numberOfLines={4}
+                      textAlignVertical="top"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+      <Text style={styles.label}>
+        Catégories ({categories.length}/3) - max 12 caractères
+      </Text>
+      
+      {/* Affichage des catégories sélectionnées */}
+      {categories.length > 0 && (
+        <View style={styles.categoriesDisplay}>
+          {categories.map((category, index) => (
+            <View key={index} style={styles.categoryChip}>
+              <Text style={styles.categoryChipText}>{category}</Text>
+              <Pressable onPress={() => removeCategory(category)}>
+                <Ionicons name="close" size={16} color="#666" />
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      )}
+      
+      {/* Input pour nouvelle catégorie (si moins de 3) */}
+      {categories.length < 3 && (
+        <View style={styles.categoryInputContainer}>
+          <TextInput
+            style={[styles.textInput, styles.categoryInput, { outlineWidth: 0 }]}
+            value={currentCategoryInput}
+            onChangeText={(text) => {
+              if (text.length <= 12) {
+                setCurrentCategoryInput(text);
+              }
+            }}
+            placeholder="Ajouter une catégorie..."
+            returnKeyType="done"
+            autoCapitalize="words"
+            onSubmitEditing={handleCategoryInputSubmit}
+            onFocus={() => {
+              if (existingCategories.length > 0) {
+                setShowCategorySuggestions(true);
+              }
+            }}
+          />
+          <Pressable 
+            style={styles.addCategoryButton}
+            onPress={handleCategoryInputSubmit}
+            disabled={!currentCategoryInput.trim()}
+          >
+            <Ionicons name="add" size={20} color="#007AFF" />
+          </Pressable>
+        </View>
+      )}
+
+      {/* Indicateur de caractères restants */}
+      {categories.length < 3 && currentCategoryInput.length > 0 && (
+        <Text style={[
+          styles.characterCount, 
+          currentCategoryInput.length > 10 && styles.characterCountWarning, 
+          currentCategoryInput.length === 12 && styles.characterCountError
+        ]}>
+          {currentCategoryInput.length}/12 caractères
+        </Text>
+      )}
+      
+      {/* Suggestions */}
+      {showCategorySuggestions && filteredCategories.length > 0 && (
+        <View style={styles.suggestionsContainer}>
+          <Text style={styles.suggestionsTitle}>Catégories disponibles :</Text>
+          <FlatList
+            data={filteredCategories}
+            renderItem={renderCategorySuggestion}
+            keyExtractor={(item) => item}
+            style={styles.suggestionsList}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled={true}
+          />
+        </View>
+      )}
+      
+      {/* Catégories populaires */}
+      {existingCategories.length > 0 && currentCategoryInput === '' && categories.length < 3 && (
+        <View style={styles.popularCategories}>
+          <Text style={styles.popularTitle}>Catégories récentes :</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.categoryTags}>
+              {existingCategories.slice(0, 5).map((cat) => (
+                <Pressable
+                  key={cat}
+                  style={styles.categoryTag}
+                  onPress={() => selectCategory(cat)}
+                >
+                  <Text style={styles.categoryTagText}>{cat}</Text>
+                </Pressable>
+              ))}
+            </View>
           </ScrollView>
+        </View>
+      )}
+    </View>
+
+                  {/* Aperçu */}
+                  {(front || back) && (
+                    <View style={styles.previewSection}>
+                      <Text style={styles.previewTitle}>Aperçu</Text>
+                      <View style={styles.previewCards}>
+                        <View style={styles.previewCard}>
+                          <Text style={styles.previewLabel}>Recto</Text>
+                          <Text style={styles.previewText}>
+                            {front || 'Votre question...'}
+                          </Text>
+                        </View>
+                        <View style={styles.previewCard}>
+                          <Text style={styles.previewLabel}>Verso</Text>
+                          <Text style={styles.previewText}>
+                            {back || 'Votre réponse...'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+                </>
+              )}
+            </ScrollView>
+          </View>
         </SafeAreaView>
       </Modal>
 
-      {/* ✅ Modal AddDeck pour créer un nouveau deck */}
+      {/* Modal AddDeck pour créer un nouveau deck */}
       <AddDeckModal
         visible={showAddDeckModal}
         onClose={() => setShowAddDeckModal(false)}
@@ -581,7 +570,7 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     width: '100%',
-    maxWidth: 500, // Largeur maximale pour garder l'aspect mobile
+    maxWidth: 500,
     position: 'relative',
   },
   topBar: {
@@ -693,6 +682,13 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalMainContent: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 500,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -755,7 +751,6 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 100,
   },
-  // ✅ Nouveaux styles pour le cas "aucun deck"
   noDeckContainer: {
     backgroundColor: '#fff',
     padding: 20,
@@ -894,106 +889,81 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  popularCategories: {
-    marginTop: 10,
-  },
-  popularTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  categoryTags: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  categoryTag: {
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  categoryTagText: {
-    fontSize: 12,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 5,
-    fontStyle: 'italic',
-  },
-  selectedCategories: {
+    categoriesDisplay: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 10,
   },
-  selectedCategoryTag: {
+  categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E3F2FD',
+    backgroundColor: '#007AFF',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     gap: 6,
   },
-  selectedCategoryText: {
+  categoryChipText: {
+    color: '#fff',
     fontSize: 14,
-    color: '#007AFF', 
     fontWeight: '500',
   },
-  categoriesDisplay: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  gap: 8,
-  marginBottom: 10,
-},
-categoryChip: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: '#E3F2FD',
-  paddingHorizontal: 12,
-  paddingVertical: 6,
-  borderRadius: 16,
-  gap: 6,
-},
-categoryChipText: {
-  fontSize: 14,
-  color: '#007AFF',
-  fontWeight: '500',
-},
-categoryInputContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 8,
-},
-categoryInput: {
-  flex: 1,
-  minHeight: 50,
-  paddingVertical: 12,
-},
-addCategoryButton: {
-  width: 50,
-  height: 50,
-  borderRadius: 25,
-  backgroundColor: '#E3F2FD',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-characterCount: {
-  fontSize: 12,
-  color: '#666',
-  marginTop: 4,
-  textAlign: 'right',
-},
-characterCountWarning: {
-  color: '#FF9500',
-},
-characterCountError: {
-  color: '#FF3B30',
-  fontWeight: '600',
-},
+  categoryInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  categoryInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  addCategoryButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  characterCount: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'right',
+    marginTop: 5,
+  },
+  characterCountWarning: {
+    color: '#ff9500',
+  },
+  characterCountError: {
+    color: '#ff3b30',
+    fontWeight: '600',
+  },
+  popularCategories: {
+    marginTop: 15,
+  },
+  popularTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+  },
+  categoryTags: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+  categoryTag: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  categoryTagText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
 });

@@ -12,6 +12,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -172,134 +173,136 @@ export default function AddDeckModal({
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <KeyboardAvoidingView 
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={handleClose}>
-            <Text style={styles.cancelButton}>Annuler</Text>
-          </Pressable>
-          <Text style={styles.title}>Nouvelle collection</Text>
-          <Pressable 
-            onPress={handleAddDeck}
-            disabled={loading || !name.trim()}
-            style={[
-              styles.saveButton, 
-              (loading || !name.trim()) && styles.saveButtonDisabled
-            ]}
-          >
-            <Text style={[
-              styles.saveButtonText, 
-              (loading || !name.trim()) && styles.saveButtonTextDisabled
-            ]}>
-              {loading ? 'Création...' : 'Créer'}
-            </Text>
-          </Pressable>
-        </View>
-
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Form */}
-          <View style={styles.form}>
-            {/* Nom de la collection */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nom de la collection *</Text>
-              <TextInput
-                  style={[
-                    styles.textInput,
-                    { outlineWidth: 0 }
-                  ]}
-                value={name}
-                onChangeText={setName}
-                placeholder="Ex: Vocabulaire anglais, Histoire..."
-                autoFocus
-                editable={!loading}
-                maxLength={100}
-                underlineColorAndroid="transparent"
-                selectionColor="#007AFF"
-              />
-            </View>
-
-            {/* Description */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Description (optionnel)</Text>
-              <TextInput
-                style={[styles.textInput, styles.textArea, { outlineWidth: 0 }]}
-                value={description}
-                onChangeText={setDescription}
-                placeholder="Décrivez brièvement le contenu de cette collection..."
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                editable={!loading}
-                maxLength={500}
-                underlineColorAndroid="transparent"
-                selectionColor="#007AFF"
-              />
-            </View>
-
-            {/* Sélection de couleur */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Couleur de la bordure</Text>
-              <View style={styles.colorGrid}>
-                {DECK_COLORS.map((color) => (
-                  <Pressable
-                    key={color.value}
-                    style={[
-                      styles.colorOption,
-                      { backgroundColor: color.value },
-                      selectedColor === color.value && styles.colorOptionSelected
-                    ]}
-                    onPress={() => setSelectedColor(color.value)}
-                    disabled={loading}
-                  >
-                    {selectedColor === color.value && (
-                      <Ionicons name="checkmark" size={20} color="#fff" />
-                    )}
-                  </Pressable>
-                ))}
-              </View>
-              <Text style={styles.colorName}>
-                {DECK_COLORS.find(c => c.value === selectedColor)?.name}
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView 
+          style={styles.mainContent}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Pressable onPress={handleClose}>
+              <Text style={styles.cancelButton}>Annuler</Text>
+            </Pressable>
+            <Text style={styles.title}>Nouvelle collection</Text>
+            <Pressable 
+              onPress={handleAddDeck}
+              disabled={loading || !name.trim()}
+              style={[
+                styles.saveButton, 
+                (loading || !name.trim()) && styles.saveButtonDisabled
+              ]}
+            >
+              <Text style={[
+                styles.saveButtonText, 
+                (loading || !name.trim()) && styles.saveButtonTextDisabled
+              ]}>
+                {loading ? 'Création...' : 'Créer'}
               </Text>
-            </View>
-
-            {/* Preview */}
-            <View style={styles.previewSection}>
-              <Text style={styles.previewTitle}>Aperçu</Text>
-              <View style={[styles.previewCard, { borderLeftColor: selectedColor }]}>
-                <View style={styles.previewHeader}>
-                  <Text style={[
-                    styles.previewName,
-                    { color: name ? '#333' : '#999', fontStyle: name ? 'normal' : 'italic' }
-                  ]}>
-                    {name || 'Nom de la collection'}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={20} color="#666" />
-                </View>
-                {(description || !name) && (
-                  <Text style={[
-                    styles.previewDescription,
-                    { color: description ? '#666' : '#999', fontStyle: description ? 'normal' : 'italic' }
-                  ]}>
-                    {description || 'Description de la collection (optionnel)'}
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            {/* Tips */}
-            <View style={styles.tipsSection}>
-              <Text style={styles.tipsTitle}>💡 Conseils</Text>
-              <Text style={styles.tipsText}>
-                • Choisissez un nom descriptif{'\n'}
-                • Sélectionnez une couleur pour organiser vos collections{'\n'}
-              </Text>
-            </View>
+            </Pressable>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            {/* Form */}
+            <View style={styles.form}>
+              {/* Nom de la collection */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Nom de la collection *</Text>
+                <TextInput
+                    style={[
+                      styles.textInput,
+                      { outlineWidth: 0 }
+                    ]}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Ex: Vocabulaire anglais, Histoire..."
+                  autoFocus
+                  editable={!loading}
+                  maxLength={100}
+                  underlineColorAndroid="transparent"
+                  selectionColor="#007AFF"
+                />
+              </View>
+
+              {/* Description */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Description (optionnel)</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea, { outlineWidth: 0 }]}
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder="Décrivez brièvement le contenu de cette collection..."
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  editable={!loading}
+                  maxLength={500}
+                  underlineColorAndroid="transparent"
+                  selectionColor="#007AFF"
+                />
+              </View>
+
+              {/* Sélection de couleur */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Couleur de la bordure</Text>
+                <View style={styles.colorGrid}>
+                  {DECK_COLORS.map((color) => (
+                    <Pressable
+                      key={color.value}
+                      style={[
+                        styles.colorOption,
+                        { backgroundColor: color.value },
+                        selectedColor === color.value && styles.colorOptionSelected
+                      ]}
+                      onPress={() => setSelectedColor(color.value)}
+                      disabled={loading}
+                    >
+                      {selectedColor === color.value && (
+                        <Ionicons name="checkmark" size={20} color="#fff" />
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+                <Text style={styles.colorName}>
+                  {DECK_COLORS.find(c => c.value === selectedColor)?.name}
+                </Text>
+              </View>
+
+              {/* Preview */}
+              <View style={styles.previewSection}>
+                <Text style={styles.previewTitle}>Aperçu</Text>
+                <View style={[styles.previewCard, { borderLeftColor: selectedColor }]}>
+                  <View style={styles.previewHeader}>
+                    <Text style={[
+                      styles.previewName,
+                      { color: name ? '#333' : '#999', fontStyle: name ? 'normal' : 'italic' }
+                    ]}>
+                      {name || 'Nom de la collection'}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                  </View>
+                  {(description || !name) && (
+                    <Text style={[
+                      styles.previewDescription,
+                      { color: description ? '#666' : '#999', fontStyle: description ? 'normal' : 'italic' }
+                    ]}>
+                      {description || 'Description de la collection (optionnel)'}
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              {/* Tips */}
+              <View style={styles.tipsSection}>
+                <Text style={styles.tipsTitle}>💡 Conseils</Text>
+                <Text style={styles.tipsText}>
+                  • Choisissez un nom descriptif{'\n'}
+                  • Sélectionnez une couleur pour organiser vos collections{'\n'}
+                </Text>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -308,6 +311,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainContent: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 500,
   },
   header: {
     flexDirection: 'row',

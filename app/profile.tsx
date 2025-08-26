@@ -147,131 +147,133 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header avec bouton retour intégré */}
-        <View style={styles.headerSection}>
-          <View style={styles.headerRow}>
-            <Pressable style={styles.backButton} onPress={() => router.back()}>
-              <Ionicons name="chevron-back" size={24} color="#007AFF" />
-            </Pressable>
-            <View style={styles.titleContainer}>
-              <Text style={styles.mainTitle}>Mon Profil</Text>
-              <View style={styles.titleUnderline} />
+      <View style={styles.mainContent}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header avec bouton retour intégré */}
+          <View style={styles.headerSection}>
+            <View style={styles.headerRow}>
+              <Pressable style={styles.backButton} onPress={() => router.back()}>
+                <Ionicons name="chevron-back" size={24} color="#007AFF" />
+              </Pressable>
+              <View style={styles.titleContainer}>
+                <Text style={styles.mainTitle}>Mon Profil</Text>
+                <View style={styles.titleUnderline} />
+              </View>
+              <View style={styles.placeholder} />
             </View>
-            <View style={styles.placeholder} />
           </View>
-        </View>
 
-        {/* User Info */}
-        <View style={styles.userSection}>
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={40} color="#fff" />
-          </View>
-          <Text style={styles.email}>{user?.email}</Text>
-          <Text style={styles.userInfo}>
-            Membre depuis {new Date(user?.created_at || '').toLocaleDateString('fr-FR')}
-          </Text>
-        </View>
-
-        {/* Stats */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Vos statistiques</Text>
-          {loading ? (
-            <View style={styles.loadingStats}>
-              <Text style={styles.loadingText}>Chargement des statistiques...</Text>
+          {/* User Info */}
+          <View style={styles.userSection}>
+            <View style={styles.avatar}>
+              <Ionicons name="person" size={40} color="#fff" />
             </View>
-          ) : (
-            <View style={styles.statsGrid}>
-              <View style={styles.statCard}>
-                <Ionicons name="library" size={24} color="#007AFF" />
-                <Text style={styles.statNumber}>{stats.totalCards}</Text>
-                <Text style={styles.statLabel}>Cartes créées</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Ionicons name="checkmark-circle" size={24} color="#34C759" />
-                <Text style={styles.statNumber}>{stats.cardsReviewed}</Text>
-                <Text style={styles.statLabel}>Cartes étudiées</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Ionicons name="flame" size={24} color="#FF9500" />
-                <Text style={styles.statNumber}>{stats.currentStreak}</Text>
-                <Text style={styles.statLabel}>Jours de suite</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Ionicons name="trending-up" size={24} color="#FF3B30" />
-                <Text style={styles.statNumber}>{stats.successRate}%</Text>
-                <Text style={styles.statLabel}>Taux de réussite</Text>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Additional Stats */}
-        <View style={styles.additionalStatsSection}>
-          <View style={styles.additionalStatItem}>
-            <Ionicons name="albums" size={20} color="#666" />
-            <Text style={styles.additionalStatText}>
-              {stats.totalDecks} collection{stats.totalDecks > 1 ? 's' : ''} créée{stats.totalDecks > 1 ? 's' : ''}
+            <Text style={styles.email}>{user?.email}</Text>
+            <Text style={styles.userInfo}>
+              Membre depuis {new Date(user?.created_at || '').toLocaleDateString('fr-FR')}
             </Text>
           </View>
-          
-          {stats.cardsReviewed > 0 && (
+
+          {/* Stats */}
+          <View style={styles.statsSection}>
+            <Text style={styles.sectionTitle}>Vos statistiques</Text>
+            {loading ? (
+              <View style={styles.loadingStats}>
+                <Text style={styles.loadingText}>Chargement des statistiques...</Text>
+              </View>
+            ) : (
+              <View style={styles.statsGrid}>
+                <View style={styles.statCard}>
+                  <Ionicons name="library" size={24} color="#007AFF" />
+                  <Text style={styles.statNumber}>{stats.totalCards}</Text>
+                  <Text style={styles.statLabel}>Cartes créées</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Ionicons name="checkmark-circle" size={24} color="#34C759" />
+                  <Text style={styles.statNumber}>{stats.cardsReviewed}</Text>
+                  <Text style={styles.statLabel}>Cartes étudiées</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Ionicons name="flame" size={24} color="#FF9500" />
+                  <Text style={styles.statNumber}>{stats.currentStreak}</Text>
+                  <Text style={styles.statLabel}>Jours de suite</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Ionicons name="trending-up" size={24} color="#FF3B30" />
+                  <Text style={styles.statNumber}>{stats.successRate}%</Text>
+                  <Text style={styles.statLabel}>Taux de réussite</Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Additional Stats */}
+          <View style={styles.additionalStatsSection}>
             <View style={styles.additionalStatItem}>
-              <Ionicons name="analytics" size={20} color="#666" />
+              <Ionicons name="albums" size={20} color="#666" />
               <Text style={styles.additionalStatText}>
-                {Math.round((stats.cardsReviewed / stats.totalCards) * 100)}% des cartes ont été révisées
+                {stats.totalDecks} collection{stats.totalDecks > 1 ? 's' : ''} créée{stats.totalDecks > 1 ? 's' : ''}
               </Text>
             </View>
-          )}
-        </View>
+            
+            {stats.cardsReviewed > 0 && (
+              <View style={styles.additionalStatItem}>
+                <Ionicons name="analytics" size={20} color="#666" />
+                <Text style={styles.additionalStatText}>
+                  {Math.round((stats.cardsReviewed / stats.totalCards) * 100)}% des cartes ont été révisées
+                </Text>
+              </View>
+            )}
+          </View>
 
-        {/* Settings */}
-        <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>Paramètres</Text>
-          
-          <Pressable style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="notifications-outline" size={24} color="#666" />
-              <Text style={styles.settingText}>Notifications</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
+          {/* Settings */}
+          <View style={styles.settingsSection}>
+            <Text style={styles.sectionTitle}>Paramètres</Text>
+            
+            <Pressable style={styles.settingItem}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="notifications-outline" size={24} color="#666" />
+                <Text style={styles.settingText}>Notifications</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#666" />
+            </Pressable>
+
+            <Pressable style={styles.settingItem}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="moon-outline" size={24} color="#666" />
+                <Text style={styles.settingText}>Mode sombre</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#666" />
+            </Pressable>
+
+            <Pressable style={styles.settingItem}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="help-circle-outline" size={24} color="#666" />
+                <Text style={styles.settingText}>Aide & Support</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#666" />
+            </Pressable>
+
+            <Pressable style={styles.settingItem}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="information-circle-outline" size={24} color="#666" />
+                <Text style={styles.settingText}>À propos</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#666" />
+            </Pressable>
+          </View>
+
+          {/* Logout */}
+          <Pressable style={styles.logoutButton} onPress={handleSignOut}>
+            <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
+            <Text style={styles.logoutText}>Se déconnecter</Text>
           </Pressable>
-
-          <Pressable style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="moon-outline" size={24} color="#666" />
-              <Text style={styles.settingText}>Mode sombre</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </Pressable>
-
-          <Pressable style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="help-circle-outline" size={24} color="#666" />
-              <Text style={styles.settingText}>Aide & Support</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </Pressable>
-
-          <Pressable style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="information-circle-outline" size={24} color="#666" />
-              <Text style={styles.settingText}>À propos</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </Pressable>
-        </View>
-
-        {/* Logout */}
-        <Pressable style={styles.logoutButton} onPress={handleSignOut}>
-          <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
-          <Text style={styles.logoutText}>Se déconnecter</Text>
-        </Pressable>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -280,6 +282,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainContent: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 500, // Largeur maximale pour garder l'aspect mobile
   },
   scrollView: {
     flex: 1,
