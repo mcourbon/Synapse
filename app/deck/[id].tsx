@@ -6,6 +6,576 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Card, Deck } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+
+export default function DeckDetail() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [deck, setDeck] = useState<Deck | null>(null);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteCardConfirm, setShowDeleteCardConfirm] = useState(false);
+  const [showEditCardModal, setShowEditCardModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [front, setFront] = useState('');
+  const [back, setBack] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
+  const [newCategory, setNewCategory] = useState(''); // Pour saisir une nouvelle catégorie
+  const [addingCard, setAddingCard] = useState(false);
+  const [editingCard, setEditingCard] = useState(false);
+  const [deletingDeck, setDeletingDeck] = useState(false);
+  const [deletingCard, setDeletingCard] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
+  const router = useRouter();
+  const { user } = useAuth();
+  const { theme } = useTheme();
+
+  const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainContent: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 500,
+  },
+  loadingText: {
+    textAlign: 'center',
+    fontSize: 18,
+    color: theme.textSecondary,
+    marginTop: 50,
+  },
+  errorText: {
+    textAlign: 'center',
+    fontSize: 18,
+    color: theme.error,
+    marginTop: 50,
+  },
+  backButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: `${theme.primary}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  optionsButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: theme.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerSection: {
+  paddingHorizontal: 20,
+  paddingVertical: 15,
+  marginBottom: 10,
+},
+headerRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+},
+titleContainer: {
+  alignItems: 'center',
+  flex: 1,
+  marginHorizontal: 10,
+},
+mainTitle: {
+  fontSize: 28,
+  fontWeight: '700',
+  color: theme.text,
+  letterSpacing: -0.5,
+  marginBottom: 8,
+},
+titleUnderline: {
+  width: 60,
+  height: 3,
+  backgroundColor: theme.primary,
+  borderRadius: 2,
+},
+  editModeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: `${theme.primary}20`,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginHorizontal: 20,
+    marginBottom: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  editModeText: {
+    fontSize: 14,
+    color: theme.primary,
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'center',
+  },
+  editModeCancel: {
+    fontSize: 14,
+    color: theme.primary,
+    fontWeight: '600',
+  },
+  deckInfo: {
+    backgroundColor: theme.surface,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  deckDescription: {
+    fontSize: 16,
+    color: theme.textSecondary,
+    lineHeight: 22,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  deckStats: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    gap: 12,
+    backgroundColor: theme.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  reviewButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
+  },
+  reviewButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  addButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.success,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  listContainer: {
+    padding: 20,
+  },
+  cardItem: {
+    backgroundColor: theme.surface,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: theme.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardFront: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.text,
+    marginBottom: 4,
+  },
+  cardBack: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  cardCategoriesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  cardCategory: {
+    fontSize: 12,
+    color: theme.primary,
+    backgroundColor: `${theme.primary}20`,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    fontWeight: '500',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: `${theme.primary}20`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: `${theme.error}20`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.textSecondary,
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 16,
+    color: theme.textSecondary,
+    marginTop: 10,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  optionsMenu: {
+    backgroundColor: theme.surface,
+    borderRadius: 12,
+    paddingVertical: 8,
+    minWidth: 200,
+    shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    gap: 12,
+  },
+  optionText: {
+    fontSize: 16,
+    color: theme.primary,
+    fontWeight: '500',
+  },
+  deleteOptionText: {
+    fontSize: 16,
+    color: theme.error,
+    fontWeight: '500',
+  },
+  optionSeparator: {
+    height: 1,
+    backgroundColor: theme.border,
+    marginHorizontal: 20,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: theme.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: theme.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+    width: '100%',
+    maxWidth: 500,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.text,
+  },
+  cancelButton: {
+    fontSize: 16,
+    color: theme.primary,
+  },
+  saveButton: {
+    backgroundColor: theme.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  saveButtonDisabled: {
+    backgroundColor: theme.textSecondary,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButtonTextDisabled: {
+    color: theme.background,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+    width: '100%',
+    maxWidth: 500,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.text,
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: theme.surface,
+    borderWidth: 2,
+    borderColor: theme.primary,
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 16,
+    color: theme.text,
+    minHeight: 100,
+  },
+  categoriesDisplay: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${theme.primary}20`,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  categoryChipText: {
+    fontSize: 14,
+    color: theme.primary,
+    fontWeight: '500',
+  },
+  categoryInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  categoryInput: {
+    flex: 1,
+    minHeight: 50,
+  },
+  addCategoryButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: `${theme.primary}20`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  characterCount: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    marginTop: 4,
+    textAlign: 'right',
+  },
+  characterCountWarning: {
+    color: theme.warning,
+  },
+  characterCountError: {
+    color: theme.error,
+    fontWeight: '600',
+  },
+  previewSection: {
+    marginTop: 20,
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.text,
+    marginBottom: 15,
+  },
+  previewCards: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  previewCard: {
+    flex: 1,
+    backgroundColor: theme.surface,
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+    minHeight: 120,
+  },
+  previewLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: theme.textSecondary,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  previewText: {
+    fontSize: 14,
+    color: theme.text,
+    lineHeight: 20,
+  },
+  confirmOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  confirmModal: {
+    backgroundColor: theme.surface,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 350,
+    shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.text,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  confirmMessage: {
+    fontSize: 16,
+    color: theme.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  confirmButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  confirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelConfirmButton: {
+    backgroundColor: theme.border,
+  },
+  confirmButtonDisabled: {
+    opacity: 0.6,
+  },
+  cancelConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.text,
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  confirmButtonTextDisabled: {
+    color: theme.textSecondary,
+  },
+  toast: {
+    position: 'absolute',
+    top: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+    shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1000,
+    width: '90%',
+    maxWidth: 460,
+    alignSelf: 'center',
+  },
+  toastSuccess: {
+    backgroundColor: theme.success,
+  },
+  toastError: {
+    backgroundColor: theme.error,
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+    flex: 1,
+  },
+  optionsButtonEditMode: {
+    backgroundColor: theme.primary,
+  },
+});
 
 // Composant Modal de Confirmation Personnalisé
 interface ConfirmModalProps {
@@ -97,32 +667,6 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
     </View>
   );
 };
-
-export default function DeckDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const [deck, setDeck] = useState<Deck | null>(null);
-  const [cards, setCards] = useState<Card[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showOptionsModal, setShowOptionsModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showDeleteCardConfirm, setShowDeleteCardConfirm] = useState(false);
-  const [showEditCardModal, setShowEditCardModal] = useState(false);
-  const [showErrorModal, setShowErrorModal] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-  const [front, setFront] = useState('');
-  const [back, setBack] = useState('');
-  const [categories, setCategories] = useState<string[]>([]);
-  const [newCategory, setNewCategory] = useState(''); // Pour saisir une nouvelle catégorie
-  const [addingCard, setAddingCard] = useState(false);
-  const [editingCard, setEditingCard] = useState(false);
-  const [deletingDeck, setDeletingDeck] = useState(false);
-  const [deletingCard, setDeletingCard] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
-  const router = useRouter();
-  const { user } = useAuth();
 
   // Fonction pour afficher un toast
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -504,23 +1048,28 @@ export default function DeckDetail() {
     <SafeAreaView style={styles.container}>
       <View style={styles.mainContent}>
         {/* Header */}
-        <View style={styles.floatingHeader}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#007AFF" />
-        </Pressable>
-        <Text style={styles.headerTitle}>{deck.name}</Text>
-        <Pressable 
-          style={[styles.optionsButton, editMode && styles.optionsButtonEditMode]} 
-          onPress={editMode ? () => setEditMode(false) : () => setShowOptionsModal(true)}
-          disabled={deletingDeck}
-        >
-          <Ionicons 
-            name={editMode ? "checkmark" : "ellipsis-horizontal"} 
-            size={24} 
-            color={editMode ? "#fff" : "#007AFF"} 
-          />
-        </Pressable>
-      </View>
+        <View style={styles.headerSection}>
+          <View style={styles.headerRow}>
+            <Pressable style={styles.backButton} onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={24} color={theme.primary} />
+            </Pressable>
+            <View style={styles.titleContainer}>
+              <Text style={styles.mainTitle}>{deck.name}</Text>
+              <View style={styles.titleUnderline} />
+            </View>
+            <Pressable 
+              style={[styles.optionsButton, editMode && styles.optionsButtonEditMode]} 
+              onPress={editMode ? () => setEditMode(false) : () => setShowOptionsModal(true)}
+              disabled={deletingDeck}
+            >
+              <Ionicons 
+                name={editMode ? "checkmark" : "ellipsis-horizontal"} 
+                size={24} 
+                color={editMode ? "#fff" : "#007AFF"} 
+              />
+            </Pressable>
+          </View>
+        </View>
 
       {/* Informations du deck */}
       <View style={styles.deckInfo}>
@@ -923,537 +1472,3 @@ export default function DeckDetail() {
     </SafeAreaView>
   );
 }
-
-// Styles personnalisés pour les nouvelles fonctionnalités de catégories
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mainContent: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 500,
-  },
-  loadingText: {
-    textAlign: 'center',
-    fontSize: 18,
-    color: '#666',
-    marginTop: 50,
-  },
-  errorText: {
-    textAlign: 'center',
-    fontSize: 18,
-    color: '#FF3B30',
-    marginTop: 50,
-  },
-  floatingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 15,
-    backgroundColor: '#f5f5f5',
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  optionsButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    flex: 1,
-  },
-  editModeIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#E3F2FD',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginHorizontal: 20,
-    marginBottom: 10,
-    borderRadius: 8,
-    gap: 8,
-  },
-  editModeText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-    flex: 1,
-    textAlign: 'center',
-  },
-  editModeCancel: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  deckInfo: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  deckDescription: {
-    fontSize: 16,
-    color: '#666',
-    lineHeight: 22,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  deckStats: {
-    fontSize: 14,
-    color: '#999',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    gap: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  reviewButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    gap: 8,
-  },
-  reviewButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  addButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#34C759',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    gap: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  listContainer: {
-    padding: 20,
-  },
-  cardItem: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  cardFront: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  cardBack: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  cardCategoriesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  cardCategory: {
-    fontSize: 12,
-    color: '#007AFF',
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    fontWeight: '500',
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  editButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E3F2FD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFEBEE',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#666',
-    marginTop: 20,
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    fontSize: 16,
-    color: '#999',
-    marginTop: 10,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  optionsMenu: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 8,
-    minWidth: 200,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  optionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    gap: 12,
-  },
-  optionText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  deleteOptionText: {
-    fontSize: 16,
-    color: '#FF3B30',
-    fontWeight: '500',
-  },
-  optionSeparator: {
-    height: 1,
-    backgroundColor: '#eee',
-    marginHorizontal: 20,
-  },
-  modalContainer: {
-  flex: 1,
-  backgroundColor: '#f5f5f5',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-  modalHeader: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  paddingHorizontal: 20,
-  paddingVertical: 15,
-  backgroundColor: '#fff',
-  borderBottomWidth: 1,
-  borderBottomColor: '#eee',
-  width: '100%',
-  maxWidth: 500,
-},
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  cancelButton: {
-    fontSize: 16,
-    color: '#007AFF',
-  },
-  saveButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButtonTextDisabled: {
-    color: '#999',
-  },
-  modalContent: {
-  flex: 1,
-  padding: 20,
-  width: '100%',
-  maxWidth: 500,
-},
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  textInput: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    borderRadius: 12,
-    padding: 15,
-    fontSize: 16,
-    color: '#333',
-    minHeight: 100,
-  },
-  // Nouveaux styles pour les catégories multiples
-  categoriesDisplay: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 10,
-  },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 6,
-  },
-  categoryChipText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  categoryInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  categoryInput: {
-    flex: 1,
-    minHeight: 50,
-  },
-  addCategoryButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#E3F2FD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  characterCount: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-    textAlign: 'right',
-  },
-  characterCountWarning: {
-    color: '#FF9500',
-  },
-  characterCountError: {
-    color: '#FF3B30',
-    fontWeight: '600',
-  },
-  previewSection: {
-    marginTop: 20,
-  },
-  previewTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-  },
-  previewCards: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  previewCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    minHeight: 120,
-  },
-  previewLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#666',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  previewText: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-  },
-  // Styles pour la modal de confirmation
-  confirmOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  confirmModal: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 350,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  confirmTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  confirmMessage: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  confirmButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  confirmButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelConfirmButton: {
-    backgroundColor: '#f0f0f0',
-  },
-  confirmButtonDisabled: {
-    opacity: 0.6,
-  },
-  cancelConfirmText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  confirmButtonTextDisabled: {
-    color: '#ccc',
-  },
-  // Styles pour le toast
-  toast: {
-    position: 'absolute',
-    top: 100,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    zIndex: 1000,
-    width: '90%',
-    maxWidth: 460,
-    alignSelf: 'center',
-  },
-  toastSuccess: {
-    backgroundColor: '#34C759',
-  },
-  toastError: {
-    backgroundColor: '#FF3B30',
-  },
-  toastText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    flex: 1,
-  },
-  optionsButtonEditMode: {
-    backgroundColor: '#007AFF',
-  },
-});

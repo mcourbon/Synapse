@@ -1,26 +1,36 @@
 // app/_layout.tsx
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext'; // Ajouter cette ligne
 import AuthScreen from '../components/AuthScreen';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 
 function RootLayoutNav() {
   const { user, loading } = useAuth();
+  const { theme } = useTheme(); // Utiliser le thème
+
+  // Créer les styles avec le thème dynamique
+  const dynamicStyles = StyleSheet.create({
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.background, // Au lieu de '#f5f5f5'
+    },
+  });
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View style={dynamicStyles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
-  // Si l'utilisateur n'est pas connecté, afficher l'écran d'auth
   if (!user) {
     return <AuthScreen />;
   }
 
-  // Si l'utilisateur est connecté, afficher l'app normale
   return (
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -34,17 +44,10 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootLayoutNav />
-    </AuthProvider>
+    <ThemeProvider> {/* Ajouter le ThemeProvider ici */}
+      <AuthProvider>
+        <RootLayoutNav />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-});

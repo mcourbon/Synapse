@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { Card, Deck } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
 import AddDeckModal from '../components/AddDeckModal';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function Home() {
   const router = useRouter();
@@ -24,6 +25,416 @@ export default function Home() {
   const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [showCategorySuggestions, setShowCategorySuggestions] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState<string[]>([]);
+  const { theme } = useTheme();
+
+  // Dans le composant, après const { theme } = useTheme();
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainContent: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 500,
+    position: 'relative',
+  },
+  topBar: {
+    position: 'absolute',
+    top: 0,
+    width: '100%',
+    paddingHorizontal: 20,
+    marginTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  iconButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: `${theme.surface}dd`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: theme.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  tinycardWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tinycard: {
+    backgroundColor: theme.surface,
+    borderRadius: 20,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    minWidth: 320,
+    maxWidth: '90%',
+    aspectRatio: 5/3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
+    marginBottom: 28,
+    overflow: 'hidden',
+    zIndex: 2,
+    position: 'relative',
+    borderBottomWidth: 12,
+    borderBottomColor: theme.primary,
+  },
+  
+  tinycardText: {
+    color: theme.text,
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    letterSpacing: 0.3,
+    lineHeight: 32,
+    zIndex: 2,
+    paddingHorizontal: 32,
+  },
+  welcomeOverlay: {
+    position: 'absolute',
+    top: 100,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  welcomeText: {
+     fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.text,
+    textAlign: 'center',
+    backgroundColor: `${theme.surface}f2`,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 16,
+    shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginHorizontal: 20,
+    overflow: 'hidden',
+    },
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: theme.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: theme.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: theme.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalMainContent: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 500,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: theme.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.text,
+  },
+  cancelButton: {
+    fontSize: 16,
+    color: theme.primary,
+  },
+  saveButton: {
+    backgroundColor: theme.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  saveButtonDisabled: {
+    backgroundColor: theme.textSecondary,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButtonTextDisabled: {
+    color: theme.background,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.text,
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: theme.surface,
+    borderWidth: 2,
+    borderColor: theme.primary,
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 16,
+    color: theme.text,
+  },
+  textArea: {
+    minHeight: 100,
+  },
+  noDeckContainer: {
+    backgroundColor: theme.surface,
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+    alignItems: 'center',
+  },
+  noDeckText: {
+    fontSize: 16,
+    color: theme.textSecondary,
+    textAlign: 'center',
+    marginBottom: 15,
+    lineHeight: 22,
+  },
+  createDeckButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  createDeckButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deckSelector: {
+    marginBottom: 10,
+  },
+  deckOption: {
+    backgroundColor: theme.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  deckOptionSelected: {
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
+  },
+  deckOptionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: theme.text,
+  },
+  deckOptionTextSelected: {
+    color: '#fff',
+  },
+  switchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 5,
+  },
+  switchButtonText: {
+    fontSize: 14,
+    color: theme.primary,
+    fontWeight: '500',
+  },
+  previewSection: {
+    marginTop: 20,
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.text,
+    marginBottom: 15,
+  },
+  previewCards: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  previewCard: {
+    flex: 1,
+    backgroundColor: theme.surface,
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+    minHeight: 120,
+  },
+  previewLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: theme.textSecondary,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  previewText: {
+    fontSize: 14,
+    color: theme.text,
+    lineHeight: 20,
+  },
+  categoryContainer: {
+    position: 'relative',
+  },
+  suggestionsContainer: {
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    maxHeight: 150,
+    marginTop: -12,
+    zIndex: 1000,
+  },
+  suggestionsTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.textSecondary,
+    paddingHorizontal: 15,
+    paddingTop: 10,
+    paddingBottom: 5,
+    textTransform: 'uppercase',
+  },
+  suggestionsList: {
+    maxHeight: 120,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+    gap: 10,
+  },
+  suggestionText: {
+    fontSize: 16,
+    color: theme.text,
+  },
+    categoriesDisplay: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  categoryChipText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  categoryInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  categoryInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  addCategoryButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: theme.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  characterCount: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    textAlign: 'right',
+    marginTop: 5,
+  },
+  characterCountWarning: {
+    color: theme.warning,
+  },
+  characterCountError: {
+    color: theme.error,
+    fontWeight: '600',
+  },
+  popularCategories: {
+    marginTop: 15,
+  },
+  popularTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.textSecondary,
+    marginBottom: 8,
+  },
+  categoryTags: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+  categoryTag: {
+    backgroundColor: theme.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  categoryTagText: {
+    fontSize: 14,
+    color: theme.text,
+    fontWeight: '500',
+  },
+});
 
   useEffect(() => {
     if (user) {
@@ -274,7 +685,7 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
     style={styles.suggestionItem}
     onPress={() => selectCategory(item)}
   >
-    <Ionicons name="pricetag-outline" size={16} color="#666" />
+    <Ionicons name="pricetag-outline" size={16} color={theme.textSecondary} />
     <Text style={styles.suggestionText}>{item}</Text>
   </Pressable>
   );
@@ -302,10 +713,10 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
         {/* Bar en haut */}
         <View style={styles.topBar}>
           <Pressable style={styles.iconButton} onPress={() => router.push('/decks')}>
-            <Ionicons name="albums" size={28} color="#007AFF" />
+            <Ionicons name="albums" size={28} color={theme.primary} />
           </Pressable>
           <Pressable style={styles.iconButton} onPress={() => router.push('/profile')}>
-            <Ionicons name="person" size={28} color="#007AFF" />
+            <Ionicons name="person" size={28} color={theme.primary} />
           </Pressable>
         </View>
 
@@ -384,7 +795,7 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
                       style={styles.switchButton}
                       onPress={() => setShowAddDeckModal(true)}
                     >
-                      <Ionicons name="add" size={16} color="#007AFF" />
+                      <Ionicons name="add" size={16} color={theme.primary} />
                       <Text style={styles.switchButtonText}>Créer une nouvelle collection</Text>
                     </Pressable>
                   </View>
@@ -471,7 +882,7 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
             onPress={handleCategoryInputSubmit}
             disabled={!currentCategoryInput.trim()}
           >
-            <Ionicons name="add" size={20} color="#007AFF" />
+            <Ionicons name="add" size={20} color={theme.primary} />
           </Pressable>
         </View>
       )}
@@ -559,411 +970,3 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mainContent: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 500,
-    position: 'relative',
-  },
-  topBar: {
-    position: 'absolute',
-    top: 0,
-    width: '100%',
-    paddingHorizontal: 20,
-    marginTop: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  iconButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  tinycardWrapper: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tinycard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingVertical: 0,
-    paddingHorizontal: 0,
-    minWidth: 320,
-    maxWidth: '90%',
-    aspectRatio: 5/3,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 12,
-    marginBottom: 28,
-    overflow: 'hidden',
-    zIndex: 2,
-    position: 'relative',
-    borderBottomWidth: 12,
-    borderBottomColor: '#007AFF',
-  },
-  
-  tinycardText: {
-    color: '#222',
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    letterSpacing: 0.3,
-    lineHeight: 32,
-    zIndex: 2,
-    paddingHorizontal: 32,
-  },
-  welcomeOverlay: {
-    position: 'absolute',
-    top: 100,
-    left: 20,
-    right: 20,
-    alignItems: 'center',
-  },
-  welcomeText: {
-     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    marginHorizontal: 20,
-    overflow: 'hidden',
-    },
-  fab: {
-    position: 'absolute',
-    bottom: 30,
-    right: 30,
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalMainContent: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 500,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  cancelButton: {
-    fontSize: 16,
-    color: '#007AFF',
-  },
-  saveButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButtonTextDisabled: {
-    color: '#999',
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  textInput: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    borderRadius: 12,
-    padding: 15,
-    fontSize: 16,
-    color: '#333',
-  },
-  textArea: {
-    minHeight: 100,
-  },
-  noDeckContainer: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    alignItems: 'center',
-  },
-  noDeckText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 15,
-    lineHeight: 22,
-  },
-  createDeckButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 10,
-    gap: 8,
-  },
-  createDeckButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  deckSelector: {
-    marginBottom: 10,
-  },
-  deckOption: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  deckOptionSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  deckOptionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  deckOptionTextSelected: {
-    color: '#fff',
-  },
-  switchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    gap: 5,
-  },
-  switchButtonText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  previewSection: {
-    marginTop: 20,
-  },
-  previewTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-  },
-  previewCards: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  previewCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    minHeight: 120,
-  },
-  previewLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#666',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  previewText: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-  },
-  categoryContainer: {
-    position: 'relative',
-  },
-  suggestionsContainer: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderTopWidth: 0,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    maxHeight: 150,
-    marginTop: -12,
-    zIndex: 1000,
-  },
-  suggestionsTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    paddingHorizontal: 15,
-    paddingTop: 10,
-    paddingBottom: 5,
-    textTransform: 'uppercase',
-  },
-  suggestionsList: {
-    maxHeight: 120,
-  },
-  suggestionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    gap: 10,
-  },
-  suggestionText: {
-    fontSize: 16,
-    color: '#333',
-  },
-    categoriesDisplay: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 10,
-  },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 6,
-  },
-  categoryChipText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  categoryInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  categoryInput: {
-    flex: 1,
-    marginBottom: 0,
-  },
-  addCategoryButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  characterCount: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'right',
-    marginTop: 5,
-  },
-  characterCountWarning: {
-    color: '#ff9500',
-  },
-  characterCountError: {
-    color: '#ff3b30',
-    fontWeight: '600',
-  },
-  popularCategories: {
-    marginTop: 15,
-  },
-  popularTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
-  },
-  categoryTags: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 2,
-  },
-  categoryTag: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  categoryTagText: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-  },
-});
