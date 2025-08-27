@@ -63,10 +63,10 @@ export default function DeckDetail() {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: `${theme.primary}15`,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: theme.shadow,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -89,6 +89,7 @@ export default function DeckDetail() {
   paddingHorizontal: 20,
   paddingVertical: 15,
   marginBottom: 10,
+  marginTop: 5,
 },
 headerRow: {
   flexDirection: 'row',
@@ -138,11 +139,8 @@ titleUnderline: {
     fontWeight: '600',
   },
   deckInfo: {
-    backgroundColor: theme.surface,
     paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
+    paddingVertical: 0,
   },
   deckDescription: {
     fontSize: 16,
@@ -162,9 +160,6 @@ titleUnderline: {
     paddingHorizontal: 20,
     paddingVertical: 15,
     gap: 12,
-    backgroundColor: theme.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
   },
   reviewButton: {
     flex: 1,
@@ -337,9 +332,6 @@ titleUnderline: {
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: theme.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
     width: '100%',
     maxWidth: 500,
   },
@@ -424,13 +416,18 @@ titleUnderline: {
     minHeight: 50,
   },
   addCategoryButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: `${theme.primary}20`,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  width: 50,
+  height: 50,
+  borderRadius: 25,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+addCategoryButtonActive: {
+  backgroundColor: theme.primary,
+},
+addCategoryButtonInactive: {
+  backgroundColor: `${theme.primary}20`,
+},
   characterCount: {
     fontSize: 12,
     color: theme.textSecondary,
@@ -543,9 +540,10 @@ titleUnderline: {
   },
   toast: {
     position: 'absolute',
-    top: 100,
+    top: 70,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
@@ -570,7 +568,7 @@ titleUnderline: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
-    flex: 1,
+    textAlign: 'center',
   },
   optionsButtonEditMode: {
     backgroundColor: theme.primary,
@@ -661,7 +659,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
       <Ionicons 
         name={type === 'success' ? 'checkmark-circle' : 'close-circle'} 
         size={20} 
-        color="#fff" 
+        color="#fff"
       />
       <Text style={styles.toastText}>{message}</Text>
     </View>
@@ -1303,11 +1301,18 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
                     selectionColor="#007AFF"
                   />
                   <Pressable 
-                    style={styles.addCategoryButton}
+                    style={[
+                      styles.addCategoryButton,
+                      newCategory.trim() ? styles.addCategoryButtonActive : styles.addCategoryButtonInactive
+                    ]}
                     onPress={addCategory}
                     disabled={!newCategory.trim()}
                   >
-                    <Ionicons name="add" size={20} color="#007AFF" />
+                    <Ionicons 
+                      name="add" 
+                      size={20} 
+                      color={newCategory.trim() ? "#fff" : theme.primary} 
+                    />
                   </Pressable>
                 </View>
               )}
@@ -1437,12 +1442,19 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
                     selectionColor="#007AFF"
                   />
                   <Pressable 
-                    style={styles.addCategoryButton}
+                    style={[
+                      styles.addCategoryButton,
+                      newCategory.trim() ? styles.addCategoryButtonActive : styles.addCategoryButtonInactive
+                    ]}
                     onPress={addCategory}
                     disabled={!newCategory.trim()}
                   >
-                    <Ionicons name="add" size={20} color="#007AFF" />
-                  </Pressable>
+                    <Ionicons 
+                      name="add" 
+                      size={20} 
+                      color={newCategory.trim() ? "#fff" : theme.primary} 
+                    />
+                    </Pressable>
                 </View>
               )}
             </View>
