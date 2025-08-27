@@ -25,7 +25,7 @@ export default function Home() {
   const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [showCategorySuggestions, setShowCategorySuggestions] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState<string[]>([]);
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
 
   // Dans le composant, après const { theme } = useTheme();
 const styles = StyleSheet.create({
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   saveButtonDisabled: {
-    backgroundColor: theme.textSecondary,
+    backgroundColor: isDark ? '#404040' : theme.textSecondary,
   },
   saveButtonText: {
     color: '#fff',
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   saveButtonTextDisabled: {
-    color: theme.background,
+    color: isDark ? '#888888' : theme.background,
   },
   modalContent: {
     flex: 1,

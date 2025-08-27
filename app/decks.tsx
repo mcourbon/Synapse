@@ -17,7 +17,7 @@ export default function Decks() {
   const [showAddModal, setShowAddModal] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   
     const styles = StyleSheet.create({
     container: {
@@ -45,14 +45,14 @@ export default function Decks() {
       justifyContent: 'space-between',
       alignItems: 'center',
     },
-      backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
+    backButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      backgroundColor: theme.surface,
+      justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

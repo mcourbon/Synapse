@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface AddDeckModalProps {
   visible: boolean;
@@ -46,6 +47,176 @@ export default function AddDeckModal({
   const [selectedColor, setSelectedColor] = useState(DECK_COLORS[0].value);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
+  const { theme, isDark } = useTheme();
+
+  const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainContent: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 500,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: theme.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.text,
+  },
+  cancelButton: {
+    fontSize: 16,
+    color: theme.primary,
+  },
+  saveButton: {
+    backgroundColor: theme.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  saveButtonDisabled: {
+    backgroundColor: isDark ? '#404040' : '#ccc',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButtonTextDisabled: {
+    color: isDark ? '#888' : '#999',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  form: {
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 25,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.text,
+    marginBottom: 12,
+  },
+  textInput: {
+    backgroundColor: theme.surface,
+    borderWidth: 2,
+    borderColor: theme.primary,
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 16,
+    color: theme.text,
+  },
+  textArea: {
+    minHeight: 100,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  colorOption: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: theme.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  colorOptionSelected: {
+    transform: [{ scale: 1.1 }],
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  colorName: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  previewSection: {
+    marginBottom: 25,
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.text,
+    marginBottom: 15,
+  },
+  previewCard: {
+    backgroundColor: theme.surface,
+    padding: 20,
+    borderRadius: 12,
+    borderLeftWidth: 8,
+    shadowColor: theme.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: isDark ? 0.3 : 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  previewName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  previewDescription: {
+    fontSize: 14,
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  tipsSection: {
+    backgroundColor: theme.surface,
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  tipsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.text,
+    marginBottom: 10,
+  },
+  tipsText: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    lineHeight: 20,
+  },
+});
 
   const handleAddDeck = async () => {
     console.log('=== DÉBUT handleAddDeck ===');
@@ -206,7 +377,7 @@ export default function AddDeckModal({
             <View style={styles.form}>
               {/* Nom de la collection */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Nom de la collection *</Text>
+                <Text style={styles.label}>Nom de la collection</Text>
                 <TextInput
                     style={[
                       styles.textInput,
@@ -274,16 +445,16 @@ export default function AddDeckModal({
                   <View style={styles.previewHeader}>
                     <Text style={[
                       styles.previewName,
-                      { color: name ? '#333' : '#999', fontStyle: name ? 'normal' : 'italic' }
+                      { color: name ? theme.text : theme.textMuted, fontStyle: name ? 'normal' : 'italic' }
                     ]}>
                       {name || 'Nom de la collection'}
                     </Text>
-                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                    <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
                   </View>
                   {(description || !name) && (
                     <Text style={[
                       styles.previewDescription,
-                      { color: description ? '#666' : '#999', fontStyle: description ? 'normal' : 'italic' }
+                      { color: description ? theme.textSecondary : theme.textMuted, fontStyle: description ? 'normal' : 'italic' }
                     ]}>
                       {description || 'Description de la collection (optionnel)'}
                     </Text>
@@ -306,174 +477,3 @@ export default function AddDeckModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mainContent: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 500,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  cancelButton: {
-    fontSize: 16,
-    color: '#007AFF',
-  },
-  saveButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButtonTextDisabled: {
-    color: '#999',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  form: {
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 25,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  textInput: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    borderRadius: 12,
-    padding: 15,
-    fontSize: 16,
-    color: '#333',
-  },
-  textArea: {
-    minHeight: 100,
-  },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 8,
-  },
-  colorOption: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  colorOptionSelected: {
-    transform: [{ scale: 1.1 }],
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  colorName: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  previewSection: {
-    marginBottom: 25,
-  },
-  previewTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-  },
-  previewCard: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 12,
-    borderLeftWidth: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  previewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  previewName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  previewDescription: {
-    fontSize: 14,
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  previewDate: {
-    fontSize: 12,
-    color: '#999',
-  },
-  tipsSection: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  tipsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-  },
-  tipsText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-});

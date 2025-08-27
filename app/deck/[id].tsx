@@ -33,7 +33,7 @@ export default function DeckDetail() {
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
   const router = useRouter();
   const { user } = useAuth();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
 
   const styles = StyleSheet.create({
   container: {
@@ -63,10 +63,10 @@ export default function DeckDetail() {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: theme.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -351,7 +351,7 @@ titleUnderline: {
     borderRadius: 8,
   },
   saveButtonDisabled: {
-    backgroundColor: theme.textSecondary,
+    backgroundColor: isDark ? '#404040' : theme.textSecondary,
   },
   saveButtonText: {
     color: '#fff',
@@ -359,7 +359,7 @@ titleUnderline: {
     fontWeight: '600',
   },
   saveButtonTextDisabled: {
-    color: theme.background,
+    color: isDark ? '#888888' : theme.background,
   },
   modalContent: {
     flex: 1,
@@ -540,7 +540,7 @@ addCategoryButtonInactive: {
   },
   toast: {
     position: 'absolute',
-    top: 70,
+    top: 75,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

@@ -7,14 +7,15 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { SpacedRepetitionSystem, useSpacedRepetition } from '../../utils/spacedRepetition';
 import Svg, { Circle, Path, G, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 // Composant pour le cercle de progression animé
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-// Composant d'animation professionnelle
-const ProfessionalProgressCircle = ({ progress, size = 100 }: { progress: Animated.Value, size?: number }) => {
+// Composant d'animation professionnelle avec support thème
+const ProfessionalProgressCircle = ({ progress, size = 100, theme }: { progress: Animated.Value, size?: number, theme: any }) => {
   const radius = (size - 12) / 2;
   const circumference = 2 * Math.PI * radius;
   
@@ -22,10 +23,10 @@ const ProfessionalProgressCircle = ({ progress, size = 100 }: { progress: Animat
     <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Defs>
-          {/* Gradient pour le fond */}
+          {/* Gradient pour le fond - adapté au thème */}
           <LinearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#f8f9fa" stopOpacity="1" />
-            <Stop offset="100%" stopColor="#e9ecef" stopOpacity="1" />
+            <Stop offset="0%" stopColor={theme.isDark ? "#2a2a2a" : "#f8f9fa"} stopOpacity="1" />
+            <Stop offset="100%" stopColor={theme.isDark ? "#1a1a1a" : "#e9ecef"} stopOpacity="1" />
           </LinearGradient>
           
           {/* Gradient pour la progression */}
@@ -35,10 +36,10 @@ const ProfessionalProgressCircle = ({ progress, size = 100 }: { progress: Animat
             <Stop offset="100%" stopColor="#CDDC39" stopOpacity="1" />
           </LinearGradient>
           
-          {/* Ombre pour la profondeur */}
+          {/* Ombre pour la profondeur - adapté au thème */}
           <LinearGradient id="shadowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#000000" stopOpacity="0.1" />
-            <Stop offset="100%" stopColor="#000000" stopOpacity="0.05" />
+            <Stop offset="0%" stopColor={theme.isDark ? "#000000" : "#000000"} stopOpacity={theme.isDark ? 0.3 : 0.1} />
+            <Stop offset="100%" stopColor={theme.isDark ? "#000000" : "#000000"} stopOpacity={theme.isDark ? 0.1 : 0.05} />
           </LinearGradient>
         </Defs>
         
@@ -81,12 +82,12 @@ const ProfessionalProgressCircle = ({ progress, size = 100 }: { progress: Animat
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
         
-        {/* Cercle intérieur pour l'effet 3D */}
+        {/* Cercle intérieur pour l'effet 3D - adapté au thème */}
         <Circle
           cx={size / 2}
           cy={size / 2}
           r={radius - 12}
-          stroke="rgba(255, 255, 255, 0.1)"
+          stroke={theme.isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.1)"}
           strokeWidth="1"
           fill="none"
         />
@@ -142,6 +143,7 @@ export default function CardReview() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<'hard' | 'medium' | 'easy' | null>(null);
   const router = useRouter();
   const { user } = useAuth();
+  const { theme, isDark } = useTheme();
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   
   // Animations
@@ -162,6 +164,307 @@ export default function CardReview() {
 
   // Hook pour la répétition espacée
   const { processReview, isProcessing } = useSpacedRepetition();
+
+  // StyleSheet utilisant le thème complet
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      textAlign: 'center',
+      fontSize: 18,
+      color: theme.textSecondary,
+      marginTop: 50,
+    },
+    errorText: {
+      textAlign: 'center',
+      fontSize: 18,
+      color: '#FF3B30',
+      marginTop: 50,
+    },
+    floatingHeader: {
+      position: 'absolute',
+      top: 0,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      paddingHorizontal: 20,
+      paddingTop: 5,
+      paddingBottom: 15,
+      zIndex: 10,
+      width: '100%',
+      maxWidth: 500,
+      alignSelf: 'center',
+    },
+    backButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      backgroundColor: theme.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+      marginTop: 15,
+    },
+    headerCenter: {
+      alignItems: 'center',
+      flex: 1,
+      marginHorizontal: 16,
+      marginTop: 15,
+    },
+    deckName: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.text,
+      backgroundColor: theme.surface,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+      textAlign: 'center',
+    },
+    cardProgress: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      backgroundColor: theme.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 12,
+      marginTop: 4,
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    headerSpacer: {
+      width: 48,
+    },
+    mainContent: {
+      flex: 1,
+      position: 'relative',
+      width: '100%',
+      maxWidth: 500,
+    },
+    cardContainer: {
+      position: 'absolute',
+      top: 80,
+      left: 0,
+      right: 0,
+      bottom: 250,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+    },
+    card: {
+      backgroundColor: theme.surface,
+      borderRadius: 20,
+      width: '100%',
+      maxWidth: 380,
+      minHeight: 250,
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
+      elevation: 12,
+      borderBottomWidth: 8,
+      borderBottomColor: theme.primary,
+    },
+    cardContent: {
+      flex: 1,
+      padding: 24,
+      justifyContent: 'center',
+    },
+    questionSection: {
+      alignItems: 'center',
+    },
+    answerSection: {
+      alignItems: 'center',
+    },
+    separator: {
+      height: 2,
+      backgroundColor: theme.border,
+      marginVertical: 20,
+      borderRadius: 1,
+      alignSelf: 'stretch',
+    },
+    cardText: {
+      fontSize: 18,
+      fontWeight: '500',
+      lineHeight: 26,
+      textAlign: 'center',
+      color: theme.text,
+    },
+    difficultyContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      paddingHorizontal: 20,
+      paddingVertical: 24,
+      alignSelf: 'center',
+      maxWidth: 500,
+    },
+    difficultyTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.text,
+      textAlign: 'center',
+      marginBottom: 20,
+    },
+    difficultyButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    buttonWrapper: {
+      flex: 1,
+    },
+    difficultyButton: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 16,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      borderWidth: 2,
+      minHeight: 80,
+    },
+    difficultyButtonText: {
+      fontSize: 14,
+      fontWeight: 'bold',
+      marginTop: 8,
+      textAlign: 'center',
+    },
+    cardStatsContainer: {
+      marginTop: 16,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    cardStatsText: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      textAlign: 'center',
+    },
+    endSessionOverlay: {
+      flex: 1,
+      backgroundColor: theme.isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.6)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+    },
+    endSessionModal: {
+      backgroundColor: theme.surface,
+      borderRadius: 24,
+      padding: 32,
+      width: '100%',
+      maxWidth: 360,
+      alignItems: 'center',
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.25,
+      shadowRadius: 20,
+      elevation: 16,
+    },
+    iconContainer: {
+      marginBottom: 24,
+      padding: 8,
+    },
+    progressCircleContainer: {
+      width: 100,
+      height: 100,
+      justifyContent: 'center',
+      alignItems: 'center',
+      position: 'relative',
+    },
+    endSessionSubtitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      textAlign: 'center',
+      marginBottom: 12,
+    },
+    endSessionTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: theme.text,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    endSessionMessage: {
+      fontSize: 15,
+      color: theme.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: 32,
+      paddingHorizontal: 16,
+    },
+    endSessionButtons: {
+      width: '100%',
+      flexDirection: 'row',
+      gap: 16,
+    },
+    endSessionButton: {
+      flex: 1,
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 20,
+      paddingHorizontal: 16,
+      borderRadius: 16,
+      minHeight: 100,
+    },
+    continueButton: {
+      backgroundColor: theme.primary,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    stopButton: {
+      backgroundColor: theme.surface,
+      borderWidth: 2,
+      borderColor: theme.border,
+    },
+    buttonIconContainer: {
+      marginBottom: 8,
+      padding: 4,
+    },
+    continueButtonText: {
+      color: '#fff',
+      fontSize: 17,
+      fontWeight: 'bold',
+      marginBottom: 2,
+    },
+    continueButtonSubtext: {
+      color: 'rgba(255, 255, 255, 0.85)',
+      fontSize: 13,
+      textAlign: 'center',
+    },
+    stopButtonText: {
+      color: theme.textSecondary,
+      fontSize: 17,
+      fontWeight: 'bold',
+      marginBottom: 2,
+    },
+    stopButtonSubtext: {
+      color: theme.textSecondary,
+      fontSize: 13,
+      textAlign: 'center',
+    },
+  });
 
   useEffect(() => {
     if (id && user) {
@@ -404,33 +707,33 @@ export default function CardReview() {
     }).start();
   };
 
-const handleEndReview = () => {
-  // Animation de sortie du modal
-  Animated.parallel([
-    Animated.timing(modalBackgroundAnimation, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }),
-    Animated.timing(modalScaleAnimation, {
-      toValue: 0.8,
-      duration: 200,
-      useNativeDriver: true,
-    }),
-  ]).start(() => {
-    // Reset des animations du modal
-    circleProgressAnimation.setValue(0);
-    checkScaleAnimation.setValue(0);
-    modalBackgroundAnimation.setValue(0);
-    modalScaleAnimation.setValue(0.8);
-    setShowEndSessionModal(false);
-    
-    // Utiliser setTimeout pour s'assurer que la navigation se fait après la fermeture du modal
-    setTimeout(() => {
-      router.back();
-    }, 50);
-  });
-};
+  const handleEndReview = () => {
+    // Animation de sortie du modal
+    Animated.parallel([
+      Animated.timing(modalBackgroundAnimation, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalScaleAnimation, {
+        toValue: 0.8,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // Reset des animations du modal
+      circleProgressAnimation.setValue(0);
+      checkScaleAnimation.setValue(0);
+      modalBackgroundAnimation.setValue(0);
+      modalScaleAnimation.setValue(0.8);
+      setShowEndSessionModal(false);
+      
+      // Utiliser setTimeout pour s'assurer que la navigation se fait après la fermeture du modal
+      setTimeout(() => {
+        router.back();
+      }, 50);
+    });
+  };
 
   const handleDifficultyResponse = async (difficulty: 'hard' | 'medium' | 'easy') => {
     if (isProcessing || !card) return;
@@ -573,27 +876,65 @@ const handleEndReview = () => {
     if (selectedDifficulty === 'hard') return '#FF3B30';
     if (selectedDifficulty === 'medium') return '#FF9500';
     if (selectedDifficulty === 'easy') return '#34C759';
-    return '#333'; // couleur par défaut
+    return theme.text;
   };
 
   // Fonction pour obtenir la couleur de bordure selon la difficulté sélectionnée
   const getAnimatedBorderColor = () => {
     if (!selectedDifficulty || !borderColorAnimation) {
-      // Pas de sélection = bleu par défaut
-      return '#007AFF';
+      // Pas de sélection = couleur primaire du thème
+      return theme.primary;
     }
 
     // Animation de la couleur selon la difficulté
-    let targetColor = '#007AFF'; // bleu par défaut
+    let targetColor = theme.primary;
     if (selectedDifficulty === 'hard') targetColor = '#FF3B30';
     if (selectedDifficulty === 'medium') targetColor = '#FF9500'; 
     if (selectedDifficulty === 'easy') targetColor = '#34C759';
 
     return borderColorAnimation.interpolate({
       inputRange: [0, 1],
-      outputRange: ['#007AFF', targetColor], // De bleu vers la couleur sélectionnée
+      outputRange: [theme.primary, targetColor],
     });
   };
+
+  const getButtonStyle = (buttonType: 'hard' | 'medium' | 'easy') => {
+    // Styles par défaut adaptés au thème
+    let defaultStyle = {};
+    if (buttonType === 'hard') defaultStyle = { 
+      backgroundColor: isDark ? '#4A1A1A' : '#FFF5F5', 
+      borderColor: '#FF3B30' 
+    };
+    if (buttonType === 'medium') defaultStyle = { 
+      backgroundColor: isDark ? '#4A2A0F' : '#FFFBF0', 
+      borderColor: '#FF9500' 
+    };
+    if (buttonType === 'easy') defaultStyle = { 
+      backgroundColor: isDark ? '#1A3A1A' : '#F0FFF4', 
+      borderColor: '#34C759' 
+    };
+
+    // Si ce bouton est sélectionné, utiliser la couleur pleine
+    if (selectedDifficulty === buttonType) {
+      if (buttonType === 'hard') return { backgroundColor: '#FF3B30', borderColor: '#FF3B30' };
+      if (buttonType === 'medium') return { backgroundColor: '#FF9500', borderColor: '#FF9500' };
+      if (buttonType === 'easy') return { backgroundColor: '#34C759', borderColor: '#34C759' };
+    }
+
+    return defaultStyle;
+  };
+
+  
+
+const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
+  // Si le bouton est sélectionné, texte blanc
+  if (selectedDifficulty === buttonType) {
+    return "#fff";
+  }
+  
+  // Sinon, couleur adaptée au thème
+  return isDark ? '#fff' : '#333';
+};
 
   if (loading) {
     return (
@@ -616,7 +957,7 @@ const handleEndReview = () => {
       {/* Header flottant */}
       <View style={styles.floatingHeader}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#007AFF" />
+          <Ionicons name="chevron-back" size={24} color={theme.primary} />
         </Pressable>
         <View style={styles.headerCenter}>
           <Text style={styles.deckName}>{deckInfo?.name}</Text>
@@ -685,43 +1026,79 @@ const handleEndReview = () => {
             <View style={styles.difficultyButtons}>
               <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.hard }] }]}>
                 <Pressable 
-                  style={[styles.difficultyButton, styles.hardButton]}
+                  style={[
+                    styles.difficultyButton, 
+                    getButtonStyle('hard')
+                  ]}
                   onPress={() => {
                     animateButton('hard');
                     handleDifficultyResponse('hard');
                   }}
                   disabled={isProcessing}
                 >
-                  <Ionicons name="close-circle" size={24} color="#FF3B30" />
-                  <Text style={styles.difficultyButtonText}>Difficile</Text>
+                  <Ionicons 
+                    name="close-circle" 
+                    size={24} 
+                    color={selectedDifficulty === 'hard' ? "#fff" : "#FF3B30"}
+                  />
+                  <Text style={[
+                    styles.difficultyButtonText,
+                    { color: getButtonTextColor('hard') }
+                  ]}>
+                    Difficile
+                  </Text>
                 </Pressable>
               </Animated.View>
 
               <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.medium }] }]}>
                 <Pressable 
-                  style={[styles.difficultyButton, styles.mediumButton]}
+                  style={[
+                    styles.difficultyButton, 
+                    getButtonStyle('medium')
+                  ]}
                   onPress={() => {
                     animateButton('medium');
                     handleDifficultyResponse('medium');
                   }}
                   disabled={isProcessing}
                 >
-                  <Ionicons name="help-circle" size={24} color="#FF9500" />
-                  <Text style={styles.difficultyButtonText}>Moyen</Text>
+                  <Ionicons 
+                    name="help-circle" 
+                    size={24} 
+                    color={selectedDifficulty === 'medium' ? "#fff" : "#FF9500"}
+                  />
+                  <Text style={[
+                    styles.difficultyButtonText,
+                    { color: getButtonTextColor('medium') }
+                  ]}>
+                    Moyen
+                  </Text>
                 </Pressable>
               </Animated.View>
 
               <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.easy }] }]}>
                 <Pressable 
-                  style={[styles.difficultyButton, styles.easyButton]}
+                  style={[
+                    styles.difficultyButton, 
+                    getButtonStyle('easy')
+                  ]}
                   onPress={() => {
                     animateButton('easy');
                     handleDifficultyResponse('easy');
                   }}
                   disabled={isProcessing}
                 >
-                  <Ionicons name="checkmark-circle" size={24} color="#34C759" />
-                  <Text style={styles.difficultyButtonText}>Facile</Text>
+                  <Ionicons 
+                    name="checkmark-circle" 
+                    size={24} 
+                    color={selectedDifficulty === 'easy' ? "#fff" : "#34C759"}
+                  />
+                  <Text style={[
+                    styles.difficultyButtonText,
+                    { color: getButtonTextColor('easy') }
+                  ]}>
+                    Facile
+                  </Text>
                 </Pressable>
               </Animated.View>
             </View>
@@ -730,7 +1107,7 @@ const handleEndReview = () => {
             {card && (
               <View style={styles.cardStatsContainer}>
                 <Text style={styles.cardStatsText}>
-                  Révisions: {card.repetitions || 0} • 
+                  Win Streak: {card.repetitions || 0} • 
                   Facilité: {((card.ease_factor || 2.5) * 100 - 250).toFixed(0)}% •
                   Statut: {SpacedRepetitionSystem.getCardMastery(
                     card.repetitions || 0, 
@@ -772,6 +1149,7 @@ const handleEndReview = () => {
                 <ProfessionalProgressCircle 
                   progress={circleProgressAnimation} 
                   size={100} 
+                  theme={theme}
                 />
                 <AnimatedSuccessIcon scale={checkScaleAnimation} />
               </View>
@@ -796,7 +1174,7 @@ const handleEndReview = () => {
                 onPress={handleEndReview}
               >
                 <View style={styles.buttonIconContainer}>
-                  <Ionicons name="home-outline" size={22} color="#666" />
+                  <Ionicons name="home-outline" size={22} color={theme.textSecondary} />
                 </View>
                 <Text style={styles.stopButtonText}>Terminer</Text>
                 <Text style={styles.stopButtonSubtext}>Retour au deck</Text>
@@ -821,316 +1199,3 @@ const handleEndReview = () => {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-  flex: 1,
-  backgroundColor: '#f5f5f5',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-  loadingText: {
-    textAlign: 'center',
-    fontSize: 18,
-    color: '#666',
-    marginTop: 50,
-  },
-  errorText: {
-    textAlign: 'center',
-    fontSize: 18,
-    color: '#FF3B30',
-    marginTop: 50,
-  },
-  floatingHeader: {
-  position: 'absolute',
-  top: 0,
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'flex-start',
-  paddingHorizontal: 20,
-  paddingTop: 5,
-  paddingBottom: 15,
-  zIndex: 10,
-  width: '100%',
-  maxWidth: 500,
-  alignSelf: 'center', // Centre le header
-},
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    marginTop: 15,
-  },
-  headerCenter: {
-    alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 16,
-    marginTop: 15,
-  },
-  deckName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    textAlign: 'center',
-  },
-  cardProgress: {
-    fontSize: 12,
-    color: '#666',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginTop: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  headerSpacer: {
-    width: 48, // Même largeur que le bouton back pour centrer
-  },
-  mainContent: {
-  flex: 1,
-  position: 'relative',
-  width: '100%',
-  maxWidth: 500,
-},
-  cardContainer: {
-    position: 'absolute',
-    top: 80,
-    left: 0,
-    right: 0,
-    bottom: 250,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    width: '100%',
-    maxWidth: 380,
-    minHeight: 250,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 12,
-    borderBottomWidth: 8,
-    borderBottomColor: '#007AFF',
-  },
-  cardContent: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
-  },
-  questionSection: {
-    alignItems: 'center',
-  },
-  answerSection: {
-    alignItems: 'center',
-  },
-  separator: {
-    height: 2,
-    backgroundColor: '#eee',
-    marginVertical: 20,
-    borderRadius: 1,
-    alignSelf: 'stretch',
-  },
-  cardText: {
-    fontSize: 18,
-    fontWeight: '500',
-    lineHeight: 26,
-    textAlign: 'center',
-  },
-  difficultyContainer: {
-  position: 'absolute',
-  bottom: 0,
-  left: 0,
-  right: 0,
-  paddingHorizontal: 20,
-  paddingVertical: 24,
-  // Ajoute ces deux propriétés :
-  alignSelf: 'center',
-  maxWidth: 500,
-},
-  difficultyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  difficultyButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  buttonWrapper: {
-    flex: 1, // Assure que tous les boutons ont la même largeur
-  },
-  difficultyButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    minHeight: 80, // Hauteur minimale fixe pour tous les boutons
-  },
-  hardButton: {
-    backgroundColor: '#FFF5F5',
-    borderColor: '#FF3B30',
-  },
-  mediumButton: {
-    backgroundColor: '#FFFBF0',
-    borderColor: '#FF9500',
-  },
-  easyButton: {
-    backgroundColor: '#F0FFF4',
-    borderColor: '#34C759',
-  },
-  difficultyButtonText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  cardStatsContainer: {
-    marginTop: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  cardStatsText: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
-  endSessionOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  endSessionModal: {
-  backgroundColor: '#fff',
-  borderRadius: 24,
-  padding: 32,
-  width: '100%',
-  maxWidth: 360, // Déjà présent, c'est bon
-  alignItems: 'center',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 12 },
-  shadowOpacity: 0.25,
-  shadowRadius: 20,
-  elevation: 16,
-},
-  iconContainer: {
-    marginBottom: 24,
-    padding: 8,
-  },
-  progressCircleContainer: {
-    width: 100,
-    height: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  endSessionSubtitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  endSessionTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  endSessionMessage: {
-    fontSize: 15,
-    color: '#888',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
-    paddingHorizontal: 16,
-  },
-  endSessionButtons: {
-    width: '100%',
-    flexDirection: 'row',
-    gap: 16,
-  },
-  endSessionButton: {
-    flex: 1,
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    minHeight: 100,
-  },
-  continueButton: {
-    backgroundColor: '#007AFF',
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  stopButton: {
-    backgroundColor: '#f8f9fa',
-    borderWidth: 2,
-    borderColor: '#e9ecef',
-  },
-  buttonIconContainer: {
-    marginBottom: 8,
-    padding: 4,
-  },
-  continueButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  continueButtonSubtext: {
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 13,
-    textAlign: 'center',
-  },
-  stopButtonText: {
-    color: '#666',
-    fontSize: 17,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  stopButtonSubtext: {
-    color: '#999',
-    fontSize: 13,
-    textAlign: 'center',
-  },
-});
