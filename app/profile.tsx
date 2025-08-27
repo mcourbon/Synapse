@@ -1,5 +1,5 @@
 // app/profile.tsx
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch, Modal, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -28,6 +28,9 @@ export default function Profile() {
     successRate: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+
 
   useEffect(() => {
     if (user) {
@@ -300,7 +303,88 @@ export default function Profile() {
       color: theme.error,
       fontWeight: '600',
     },
-  });
+modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: theme.surface,
+    borderRadius: 20,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+    paddingBottom: 16,
+    marginBottom: 20,
+  },
+  modalTitle: {
+    flex: 1, // Permet au titre de prendre de l'espace
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.text,
+    textAlign: 'center', // Centre le texte
+  },
+  closeButtonCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.border, // Couleur de fond pour le cercle
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalIconContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.text,
+    marginTop: 10,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalText: {
+    fontSize: 15,
+    color: theme.textSecondary,
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  contactButton: {
+    backgroundColor: theme.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 24,
+  },
+  contactButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  versionText: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: theme.textSecondary,
+    opacity: 0.7,
+    marginTop: 10, // Ajout d'un petit espace
+  },
+});
 
   return (
     <SafeAreaView style={dynamicStyles.container}>
@@ -418,7 +502,9 @@ export default function Profile() {
               />
             </View>
 
-            <Pressable style={dynamicStyles.settingItem}>
+            <Pressable 
+              style={dynamicStyles.settingItem}
+              onPress={() => setShowHelpModal(true)}>
               <View style={styles.settingLeft}>
                 <Ionicons name="help-circle-outline" size={24} color={theme.textSecondary} />
                 <Text style={dynamicStyles.settingText}>Aide & Support</Text>
@@ -426,7 +512,9 @@ export default function Profile() {
               <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
             </Pressable>
 
-            <Pressable style={dynamicStyles.settingItem}>
+            <Pressable 
+              style={dynamicStyles.settingItem}  
+              onPress={() => setShowAboutModal(true)}>
               <View style={styles.settingLeft}>
                 <Ionicons name="information-circle-outline" size={24} color={theme.textSecondary} />
                 <Text style={dynamicStyles.settingText}>À propos</Text>
@@ -441,6 +529,79 @@ export default function Profile() {
             <Text style={dynamicStyles.logoutText}>Se déconnecter</Text>
           </Pressable>
         </ScrollView>
+          {/* About Modal */}
+        <Modal
+          visible={showAboutModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowAboutModal(false)}
+        >
+          <View style={dynamicStyles.modalOverlay}>
+            <View style={dynamicStyles.modalContent}>
+              {/* Header de la modale */}
+              <View style={dynamicStyles.modalHeader}>
+                {/* Placeholder pour aligner le titre au centre */}
+                <View style={{width: 32}} /> 
+                <Text style={dynamicStyles.modalTitle}>À propos de l'application</Text>
+                <Pressable onPress={() => setShowAboutModal(false)} style={dynamicStyles.closeButtonCircle}>
+                  <Ionicons name="close" size={20} color={theme.textSecondary} />
+                </Pressable>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={dynamicStyles.modalIconContainer}>
+                  <Ionicons name="code-slash" size={40} color={theme.primary} />
+                </View>
+
+                <Text style={dynamicStyles.modalSectionTitle}>Une aventure personnelle</Text>
+                <Text style={dynamicStyles.modalText}>
+                  Cette application est née d'un besoin simple : trouver un outil de révision par cartes (flashcards) qui soit à la fois simple, efficace et addictif à utiliser. Frustré par les options existantes, j'ai décidé de mettre à profit mes compétences pour créer la solution que j'avais en tête.
+                </Text>
+                <Text style={dynamicStyles.modalText}>
+                  Chaque fonctionnalité a été pensée pour optimiser l'apprentissage et la mémorisation, en se basant sur des principes comme la répétition espacée.
+                </Text>
+                <Text style={dynamicStyles.versionText}>Version 1.0.0</Text>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Help & Support Modal */}
+        <Modal
+          visible={showHelpModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowHelpModal(false)}
+        >
+          <View style={dynamicStyles.modalOverlay}>
+            <View style={dynamicStyles.modalContent}>
+              <View style={dynamicStyles.modalHeader}>
+                {/* Placeholder pour aligner le titre au centre */}
+                <View style={{width: 32}} /> 
+                <Text style={dynamicStyles.modalTitle}>Aide & Support</Text>
+                <Pressable onPress={() => setShowHelpModal(false)} style={dynamicStyles.closeButtonCircle}>
+                  <Ionicons name="close" size={20} color={theme.textSecondary} />
+                </Pressable>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={dynamicStyles.modalSectionTitle}>Votre avis compte</Text>
+                <Text style={dynamicStyles.modalText}>
+                  Ce projet est en constante évolution. Si vous avez des idées, des suggestions ou si vous rencontrez un bug, n'hésitez pas à me contacter. Votre retour est précieux pour améliorer l'application.
+                </Text>
+                
+                <Pressable 
+                  style={dynamicStyles.contactButton}
+                  onPress={() => Linking.openURL('mailto:votre.email@example.com?subject=Feedback sur l\'application Flashcards')}
+                >
+                  <Text style={dynamicStyles.contactButtonText}>Donner mon avis</Text>
+                </Pressable>
+
+                <Text style={dynamicStyles.versionText}>Vous pouvez également nous contacter pour toute autre question.</Text>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
