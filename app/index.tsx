@@ -164,7 +164,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: theme.surface,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
   },
@@ -364,19 +363,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 6,
-  },
-  categoryChipText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: `${theme.primary}20`,  // Changé de theme.primary à ${theme.primary}20
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+  borderRadius: 16,
+  gap: 6,
+},
+categoryChipText: {
+  fontSize: 14,
+  color: theme.primary,  // Changé de '#fff' à theme.primary
+  fontWeight: '500',
+},
   categoryInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -387,18 +386,23 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   addCategoryButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: theme.border,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addCategoryButtonActive: {
+    backgroundColor: theme.primary,
+  },
+  addCategoryButtonInactive: {
+    backgroundColor: `${theme.primary}20`,
   },
   characterCount: {
     fontSize: 12,
     color: theme.textSecondary,
     textAlign: 'right',
-    marginTop: 5,
+    marginTop: 4,
   },
   characterCountWarning: {
     color: theme.warning,
@@ -594,18 +598,32 @@ const styles = StyleSheet.create({
     setShowQuickAddModal(true);
   };
 
-  const addCategory = (newCategory: string) => {
-    if (newCategory.trim() && 
-        newCategory.length <= 12 && 
-        categories.length < 3 && 
-        !categories.includes(newCategory.trim())) {
-      setCategories([...categories, newCategory.trim()]);
-      setCurrentCategoryInput('');
-      setShowCategorySuggestions(false);
-    } else if (newCategory.length > 12) {
-      Alert.alert('Erreur', 'Les catégories sont limitées à 12 caractères');
-    }
-  };
+  const addCategory = () => {
+  if (!currentCategoryInput.trim()) return;
+  
+  const trimmedCategory = currentCategoryInput.trim();
+  
+  // Vérifier la longueur (12 caractères max)
+  if (trimmedCategory.length > 12) {
+    Alert.alert('Erreur', 'Les catégories sont limitées à 12 caractères');
+    return;
+  }
+  
+  // Vérifier si la catégorie n'existe pas déjà et qu'on ne dépasse pas 3 catégories
+  if (!categories.includes(trimmedCategory) && categories.length < 3) {
+    setCategories([...categories, trimmedCategory]);
+    setCurrentCategoryInput('');
+    setShowCategorySuggestions(false);
+  } else if (categories.includes(trimmedCategory)) {
+    Alert.alert('Erreur', 'Cette catégorie existe déjà');
+  }
+};
+
+const handleCategoryInputChange = (text: string) => {
+  if (text.length <= 12) {
+    setCurrentCategoryInput(text);
+  }
+};
 
 const removeCategory = (categoryToRemove: string) => {
   setCategories(categories.filter(cat => cat !== categoryToRemove));
@@ -862,11 +880,7 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
           <TextInput
             style={[styles.textInput, styles.categoryInput, { outlineWidth: 0 }]}
             value={currentCategoryInput}
-            onChangeText={(text) => {
-              if (text.length <= 12) {
-                setCurrentCategoryInput(text);
-              }
-            }}
+            onChangeText={handleCategoryInputChange}  // Utiliser la nouvelle fonction
             placeholder="Ajouter une catégorie..."
             returnKeyType="done"
             autoCapitalize="words"
@@ -876,13 +890,22 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
                 setShowCategorySuggestions(true);
               }
             }}
+            underlineColorAndroid="transparent"
+            selectionColor="#007AFF"
           />
           <Pressable 
-            style={styles.addCategoryButton}
+            style={[
+              styles.addCategoryButton,
+              currentCategoryInput.trim() ? styles.addCategoryButtonActive : styles.addCategoryButtonInactive
+            ]}
             onPress={handleCategoryInputSubmit}
             disabled={!currentCategoryInput.trim()}
           >
-            <Ionicons name="add" size={20} color={theme.primary} />
+                      <Ionicons 
+              name="add" 
+              size={20} 
+              color={currentCategoryInput.trim() ? "#fff" : theme.primary} 
+            />
           </Pressable>
         </View>
       )}

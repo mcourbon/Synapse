@@ -334,6 +334,8 @@ titleUnderline: {
     paddingVertical: 15,
     width: '100%',
     maxWidth: 500,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
   },
   modalTitle: {
     fontSize: 18,
