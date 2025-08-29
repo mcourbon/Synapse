@@ -30,6 +30,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
 
   useEffect(() => {
@@ -305,84 +306,123 @@ export default function Profile() {
     },
 modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   modalContent: {
     backgroundColor: theme.surface,
-    borderRadius: 20,
-    padding: 24,
-    width: '90%',
-    maxWidth: 400,
-    maxHeight: '80%',
+    borderRadius: 28,
+    padding: 0,
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '85%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 15,
+    overflow: 'hidden',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-    paddingBottom: 16,
-    marginBottom: 20,
+    borderBottomColor: theme.border + '40',
   },
   modalTitle: {
-    flex: 1, // Permet au titre de prendre de l'espace
-    fontSize: 20,
-    fontWeight: 'bold',
+    flex: 1,
+    fontSize: 22,
+    fontWeight: '700',
     color: theme.text,
-    textAlign: 'center', // Centre le texte
+    textAlign: 'center',
+    letterSpacing: -0.3,
   },
   closeButtonCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.border, // Couleur de fond pour le cercle
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.border + '30',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.border + '50',
   },
   modalIconContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginTop: 16,
+    marginBottom: 24,
+    paddingHorizontal: 24,
   },
   modalSectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: theme.text,
-    marginTop: 10,
-    marginBottom: 12,
+    marginBottom: 16,
     textAlign: 'center',
+    letterSpacing: -0.2,
   },
   modalText: {
-    fontSize: 15,
+    fontSize: 16,
     color: theme.textSecondary,
-    lineHeight: 22,
-    marginBottom: 16,
+    lineHeight: 24,
+    marginBottom: 20,
+    paddingHorizontal: 24,
+    textAlign: 'center',
   },
   contactButton: {
     backgroundColor: theme.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 16,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 24,
+    marginHorizontal: 24,
+    marginTop: 8,
+    marginBottom: 32,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   contactButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   versionText: {
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 13,
     color: theme.textSecondary,
-    opacity: 0.7,
-    marginTop: 10, // Ajout d'un petit espace
+    opacity: 0.6,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  notificationInfoContainer: {
+    backgroundColor: theme.warning + '15',
+    marginHorizontal: 24,
+    padding: 20,
+    borderRadius: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.warning,
+    marginBottom: 20,
+    shadowColor: theme.warning,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  notificationInfoText: {
+    fontSize: 15,
+    color: theme.text,
+    lineHeight: 22,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
 
@@ -475,7 +515,9 @@ modalOverlay: {
           <View style={styles.settingsSection}>
             <Text style={dynamicStyles.sectionTitle}>Paramètres</Text>
             
-            <Pressable style={dynamicStyles.settingItem}>
+            <Pressable 
+              style={dynamicStyles.settingItem}
+              onPress={() => setShowNotificationsModal(true)}>
               <View style={styles.settingLeft}>
                 <Ionicons name="notifications-outline" size={24} color={theme.textSecondary} />
                 <Text style={dynamicStyles.settingText}>Notifications</Text>
@@ -529,28 +571,105 @@ modalOverlay: {
             <Text style={dynamicStyles.logoutText}>Se déconnecter</Text>
           </Pressable>
         </ScrollView>
+
+          {/* Notifications Modal */}
+        <Modal
+          visible={showNotificationsModal}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setShowNotificationsModal(false)}
+        >
+          <Pressable 
+            style={dynamicStyles.modalOverlay}
+            onPress={() => setShowNotificationsModal(false)}
+            activeOpacity={1}
+          >
+            <Pressable 
+              style={dynamicStyles.modalContent}
+              onPress={() => {}} // Empêche la fermeture quand on clique dans la modale
+              activeOpacity={1}
+            >
+              {/* Header de la modale */}
+              <View style={dynamicStyles.modalHeader}>
+                <View style={{width: 36}} /> 
+                <Text style={dynamicStyles.modalTitle}>Notifications</Text>
+                <Pressable onPress={() => setShowNotificationsModal(false)} style={dynamicStyles.closeButtonCircle}>
+                  <Ionicons name="close" size={20} color={theme.textSecondary} />
+                </Pressable>
+              </View>
+
+              <View style={dynamicStyles.modalIconContainer}>
+                <View style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 40,
+                  backgroundColor: theme.textSecondary + '15',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginBottom: 8,
+                }}>
+                  <Ionicons name="notifications-off" size={36} color={theme.textSecondary} />
+                </View>
+              </View>
+
+              <Text style={dynamicStyles.modalSectionTitle}>Fonctionnalité à venir</Text>
+              
+              <View style={dynamicStyles.notificationInfoContainer}>
+                <Text style={dynamicStyles.notificationInfoText}>
+                  Les notifications ne sont pas encore disponibles dans cette version de l'application.
+                </Text>
+              </View>
+
+              <Text style={dynamicStyles.modalText}>
+                Cette fonctionnalité est en cours de développement et sera bientôt disponible pour vous rappeler vos sessions de révision et vous aider à maintenir votre routine d'apprentissage.
+              </Text>
+
+              <Text style={dynamicStyles.modalText}>
+                En attendant, nous vous encourageons à créer votre propre routine de révision pour maximiser vos résultats !
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
           {/* About Modal */}
         <Modal
           visible={showAboutModal}
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           onRequestClose={() => setShowAboutModal(false)}
         >
-          <View style={dynamicStyles.modalOverlay}>
-            <View style={dynamicStyles.modalContent}>
+          <Pressable 
+            style={dynamicStyles.modalOverlay}
+            onPress={() => setShowAboutModal(false)}
+            activeOpacity={1}
+          >
+            <Pressable 
+              style={dynamicStyles.modalContent}
+              onPress={() => {}}
+              activeOpacity={1}
+            >
               {/* Header de la modale */}
               <View style={dynamicStyles.modalHeader}>
-                {/* Placeholder pour aligner le titre au centre */}
-                <View style={{width: 32}} /> 
+                <View style={{width: 36}} /> 
                 <Text style={dynamicStyles.modalTitle}>À propos de l'application</Text>
                 <Pressable onPress={() => setShowAboutModal(false)} style={dynamicStyles.closeButtonCircle}>
                   <Ionicons name="close" size={20} color={theme.textSecondary} />
                 </Pressable>
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView style={{flex: 1}} showsVerticalScrollIndicator={false}>
                 <View style={dynamicStyles.modalIconContainer}>
-                  <Ionicons name="code-slash" size={40} color={theme.primary} />
+                  <View style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    backgroundColor: theme.primary + '15',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginBottom: 8,
+                  }}>
+                    <Ionicons name="code-slash" size={36} color={theme.primary} />
+                  </View>
                 </View>
 
                 <Text style={dynamicStyles.modalSectionTitle}>Une aventure personnelle</Text>
@@ -562,29 +681,50 @@ modalOverlay: {
                 </Text>
                 <Text style={dynamicStyles.versionText}>Version 1.0.0</Text>
               </ScrollView>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
 
         {/* Help & Support Modal */}
         <Modal
           visible={showHelpModal}
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           onRequestClose={() => setShowHelpModal(false)}
         >
-          <View style={dynamicStyles.modalOverlay}>
-            <View style={dynamicStyles.modalContent}>
+          <Pressable 
+            style={dynamicStyles.modalOverlay}
+            onPress={() => setShowHelpModal(false)}
+            activeOpacity={1}
+          >
+            <Pressable 
+              style={dynamicStyles.modalContent}
+              onPress={() => {}}
+              activeOpacity={1}
+            >
               <View style={dynamicStyles.modalHeader}>
-                {/* Placeholder pour aligner le titre au centre */}
-                <View style={{width: 32}} /> 
+                <View style={{width: 36}} /> 
                 <Text style={dynamicStyles.modalTitle}>Aide & Support</Text>
                 <Pressable onPress={() => setShowHelpModal(false)} style={dynamicStyles.closeButtonCircle}>
                   <Ionicons name="close" size={20} color={theme.textSecondary} />
                 </Pressable>
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView style={{flex: 1}} showsVerticalScrollIndicator={false}>
+                <View style={dynamicStyles.modalIconContainer}>
+                  <View style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    backgroundColor: theme.success + '15',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginBottom: 8,
+                  }}>
+                    <Ionicons name="help-circle" size={36} color={theme.success} />
+                  </View>
+                </View>
+
                 <Text style={dynamicStyles.modalSectionTitle}>Votre avis compte</Text>
                 <Text style={dynamicStyles.modalText}>
                   Ce projet est en constante évolution. Si vous avez des idées, des suggestions ou si vous rencontrez un bug, n'hésitez pas à me contacter. Votre retour est précieux pour améliorer l'application.
@@ -592,15 +732,18 @@ modalOverlay: {
                 
                 <Pressable 
                   style={dynamicStyles.contactButton}
-                  onPress={() => Linking.openURL('mailto:votre.email@example.com?subject=Feedback sur l\'application Flashcards')}
+                  onPress={() => {
+                    setShowHelpModal(false);
+                    Linking.openURL('mailto:votre.email@example.com?subject=Feedback sur l\'application Flashcards');
+                  }}
                 >
                   <Text style={dynamicStyles.contactButtonText}>Donner mon avis</Text>
                 </Pressable>
 
                 <Text style={dynamicStyles.versionText}>Vous pouvez également nous contacter pour toute autre question.</Text>
               </ScrollView>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
       </View>
     </SafeAreaView>
