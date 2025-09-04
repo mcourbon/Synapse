@@ -9,6 +9,9 @@ import { useAuth } from '../contexts/AuthContext';
 import AddDeckModal from '../components/AddDeckModal';
 import AddCardModal from '../components/AddCardModal';
 import { useTheme } from '../contexts/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
+import React from 'react';
+import { SpacedRepetitionSystem } from '../utils/spacedRepetition';
 
 export default function Home() {
   const router = useRouter();
@@ -27,6 +30,8 @@ export default function Home() {
   const [showCategorySuggestions, setShowCategorySuggestions] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState<string[]>([]);
   const { theme, isDark } = useTheme();
+  const [dueCardsCount, setDueCardsCount] = useState<number>(0);
+  const [totalCardsCount, setTotalCardsCount] = useState<number>(0);
 
   // Dans le composant, après const { theme } = useTheme();
 const styles = StyleSheet.create({
@@ -441,9 +446,21 @@ categoryChipText: {
   },
 });
 
+useFocusEffect(
+  React.useCallback(() => {
+    if (user) {
+      updateHomeScreenCard();
+      fetchDueCardsCount();
+      fetchTotalCardsCount();
+    }
+  }, [user])
+);
+
   useEffect(() => {
     if (user) {
-      fetchRandomCard();
+      updateHomeScreenCard();
+      fetchDueCardsCount();
+      fetchTotalCardsCount();
     }
   }, [user]);
 
@@ -473,33 +490,59 @@ categoryChipText: {
     }
   }, [selectedDeckId, showQuickAddModal]);
 
-  async function fetchRandomCard() {
-    if (!user) return;
+async function updateHomeScreenCard() {
+  if (!user) return;
 
-    try {
-      const { data: userCards, error } = await supabase
-        .from('cards')
-        .select(`
-          *,
-          decks!inner(user_id)
-        `)
-        .eq('decks.user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
+  try {
+    // On réutilise la fonction qui cherche les cartes dues
+    const dueCards = await fetchAllDueCards();
 
-      if (error) {
-        console.error('Erreur lors de la récupération des cartes:', error);
-        return;
-      }
-
-      if (userCards && userCards.length > 0) {
-        const randomIndex = Math.floor(Math.random() * userCards.length);
-        setCard(userCards[randomIndex]);
-      }
-    } catch (err) {
-      console.error('Erreur:', err);
+    if (dueCards && dueCards.length > 0) {
+      // S'il y a des cartes à réviser, on en choisit une au hasard
+      const randomIndex = Math.floor(Math.random() * dueCards.length);
+      setCard(dueCards[randomIndex]);
+    } else {
+      // S'il n'y a AUCUNE carte à réviser, on met l'état à null
+      setCard(null);
     }
+  } catch (err) {
+    console.error('Erreur lors de la mise à jour de la carte d\'accueil:', err);
+    setCard(null); // En cas d'erreur, on n'affiche rien non plus
   }
+}
+
+// Nouvelle fonction pour récupérer toutes les cartes dues
+async function fetchAllDueCards() {
+  if (!user) return [];
+
+  try {
+    const { data: allCards, error } = await supabase
+      .from('cards')
+      .select(`
+        *,
+        decks!inner(user_id)
+      `)
+      .eq('decks.user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Erreur lors de la récupération des cartes:', error);
+      return [];
+    }
+
+    if (!allCards) return [];
+
+    // Filtrer les cartes dues avec SpacedRepetitionSystem
+    const dueCards = allCards.filter(card => {
+      return SpacedRepetitionSystem.isDue(card.next_review);
+    });
+
+    return dueCards;
+  } catch (err) {
+    console.error('Erreur:', err);
+    return [];
+  }
+}
 
   async function fetchDecks() {
     if (!user) return;
@@ -523,6 +566,40 @@ categoryChipText: {
       console.error('Erreur:', err);
     }
   }
+
+  async function fetchDueCardsCount() {
+  if (!user) return;
+
+  try {
+    const dueCards = await fetchAllDueCards();
+    setDueCardsCount(dueCards.length);
+  } catch (err) {
+    console.error('Erreur:', err);
+  }
+}
+
+async function fetchTotalCardsCount() {
+  if (!user) return;
+
+  try {
+    // On utilise { count: 'exact', head: true } pour être plus performant.
+    // On ne récupère que le compte, pas les données des cartes.
+    const { count, error } = await supabase
+      .from('cards')
+      .select('id, decks!inner(user_id)', { count: 'exact', head: true })
+      .eq('decks.user_id', user.id);
+
+    if (error) {
+      console.error('Erreur lors du comptage total des cartes:', error);
+      return;
+    }
+    
+    setTotalCardsCount(count || 0);
+
+  } catch (err) {
+    console.error('Erreur dans fetchTotalCardsCount:', err);
+  }
+}
 
   const handleDeckCreated = async () => {
     console.log('Deck créé, rafraîchissement...');
@@ -571,7 +648,7 @@ categoryChipText: {
       Alert.alert('Succès', 'Carte ajoutée avec succès !');
       closeModal();
       
-      fetchRandomCard();
+      updateHomeScreenCard();
     } catch (error: any) {
       console.error('Erreur:', error);
       Alert.alert('Erreur', error.message || 'Impossible d\'ajouter la carte');
@@ -709,18 +786,39 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
   </Pressable>
   );
 
+  const getCardTextMessage = () => {
+  // Cas 1: Il y a une carte à réviser
+  if (card) {
+    return card.front;
+  }
+  // Cas 2: Il n'y a pas de carte à réviser, mais l'utilisateur a déjà créé des cartes
+  if (totalCardsCount > 0) {
+    return "Toutes vos cartes sont à jour !";
+  }
+  // Cas 3: L'utilisateur n'a encore jamais créé de carte
+  return "Commencez par créer votre premier deck !";
+};
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.mainContent}>
         {/* Flashcard en fond façon Tinycards */}
         <View style={styles.tinycardWrapper}>
           <Pressable
-            style={styles.tinycard}
-            onPress={() => {}}
-          >
+  style={styles.tinycard}
+  onPress={async () => {
+    const dueCards = await fetchAllDueCards();
+    if (dueCards.length === 0) {
+      Alert.alert('Aucune carte due', 'Toutes vos cartes sont à jour ! Revenez plus tard.');
+      return;
+    }
+    // Naviguer vers la révision globale
+    router.push('/review/global');
+  }}
+>
             <Text style={styles.tinycardText}>
-              {card?.front || 'Commencez par créer votre premier deck !'}
-            </Text>
+  {getCardTextMessage()}
+</Text>
           </Pressable>
         </View>
 
@@ -747,14 +845,15 @@ const renderCategorySuggestion = ({ item }: { item: string }) => (
 
       {/* Modal d'ajout rapide */}
       <AddCardModal
-        visible={showQuickAddModal}
-        onClose={() => setShowQuickAddModal(false)}
-        onCardAdded={() => {
-          fetchRandomCard();
-          setShowQuickAddModal(false);
-        }}
-        // Pas de deckId = mode sélection de deck
-      />
+  visible={showQuickAddModal}
+  onClose={() => setShowQuickAddModal(false)}
+  onCardAdded={async () => {
+    await updateHomeScreenCard(); // Attendez que la mise à jour soit finie
+    await fetchDueCardsCount();
+    await fetchTotalCardsCount();
+    setShowQuickAddModal(false);
+  }}
+/>
 
       {/* Modal AddDeck pour créer un nouveau deck */}
       <AddDeckModal

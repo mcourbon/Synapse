@@ -1205,7 +1205,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
           {cards.length > 0 && (
             <Pressable style={styles.reviewButton} onPress={handleStartReview}>
               <Ionicons name="play" size={24} color="#fff" />
-              <Text style={styles.reviewButtonText}>Réviser</Text>
+              <Text style={styles.reviewButtonText}>S'entraîner</Text>
             </Pressable>
           )}
           

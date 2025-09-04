@@ -38,6 +38,14 @@ function RootLayoutNav() {
       <Stack.Screen name="profile" options={{ headerShown: false }} />
       <Stack.Screen name="deck/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="card/[id]" options={{ headerShown: false }} />
+      <Stack.Screen 
+        name="review/global" 
+        options={{ 
+          headerShown: false,
+          presentation: 'modal',
+          animation: 'slide_from_bottom'
+        }} 
+      />
     </Stack>
   );
 }

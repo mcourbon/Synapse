@@ -1,20 +1,20 @@
 // app/review/global.tsx
-import { View, Text, StyleSheet, Pressable, Animated, Modal, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Modal, Alert } from 'react-native';
 import { useEffect, useState, useRef } from 'react';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
+import React from 'react';
 import { SpacedRepetitionSystem, useSpacedRepetition } from '../../utils/spacedRepetition';
-import Svg, { Circle, Path, G, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Circle, LinearGradient, Stop, Defs } from 'react-native-svg';
 
-// Composant pour le cercle de progression animé
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-// Composant d'animation professionnelle avec support thème
 const ProfessionalProgressCircle = ({ progress, size = 100, theme }: { progress: Animated.Value, size?: number, theme: any }) => {
   const radius = (size - 12) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -23,38 +23,18 @@ const ProfessionalProgressCircle = ({ progress, size = 100, theme }: { progress:
     <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Defs>
-          {/* Gradient pour le fond - adapté au thème */}
           <LinearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <Stop offset="0%" stopColor={theme.isDark ? "#2a2a2a" : "#f8f9fa"} stopOpacity="1" />
             <Stop offset="100%" stopColor={theme.isDark ? "#1a1a1a" : "#e9ecef"} stopOpacity="1" />
           </LinearGradient>
           
-          {/* Gradient pour la progression */}
           <LinearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <Stop offset="0%" stopColor="#4CAF50" stopOpacity="1" />
             <Stop offset="50%" stopColor="#8BC34A" stopOpacity="1" />
             <Stop offset="100%" stopColor="#CDDC39" stopOpacity="1" />
           </LinearGradient>
-          
-          {/* Ombre pour la profondeur - adapté au thème */}
-          <LinearGradient id="shadowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={theme.isDark ? "#000000" : "#000000"} stopOpacity={theme.isDark ? 0.3 : 0.1} />
-            <Stop offset="100%" stopColor={theme.isDark ? "#000000" : "#000000"} stopOpacity={theme.isDark ? 0.1 : 0.05} />
-          </LinearGradient>
         </Defs>
         
-        {/* Ombre du cercle de fond */}
-        <Circle
-          cx={size / 2 + 1}
-          cy={size / 2 + 1}
-          r={radius}
-          stroke="url(#shadowGradient)"
-          strokeWidth="8"
-          fill="none"
-          opacity={0.3}
-        />
-        
-        {/* Cercle de fond */}
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -64,7 +44,6 @@ const ProfessionalProgressCircle = ({ progress, size = 100, theme }: { progress:
           fill="none"
         />
         
-        {/* Cercle de progression animé */}
         <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
@@ -73,7 +52,6 @@ const ProfessionalProgressCircle = ({ progress, size = 100, theme }: { progress:
           strokeWidth="8"
           fill="none"
           strokeLinecap="round"
-          strokeLinejoin="round"
           strokeDasharray={circumference}
           strokeDashoffset={progress.interpolate({
             inputRange: [0, 1],
@@ -81,22 +59,11 @@ const ProfessionalProgressCircle = ({ progress, size = 100, theme }: { progress:
           })}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
-        
-        {/* Cercle intérieur pour l'effet 3D - adapté au thème */}
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius - 12}
-          stroke={theme.isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.1)"}
-          strokeWidth="1"
-          fill="none"
-        />
       </Svg>
     </View>
   );
 };
 
-// Composant pour l'icône de succès animée
 const AnimatedSuccessIcon = ({ scale }: { scale: Animated.Value }) => {
   return (
     <Animated.View 
@@ -133,19 +100,17 @@ const AnimatedSuccessIcon = ({ scale }: { scale: Animated.Value }) => {
 };
 
 export default function GlobalReview() {
-  const { cards, startIndex } = useLocalSearchParams<{ cards: string; startIndex: string }>();
-  const [card, setCard] = useState<Card | null>(null);
-  const [reviewCards, setReviewCards] = useState<Card[]>([]);
+  const [dueCards, setDueCards] = useState<Card[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showAnswer, setShowAnswer] = useState(false);
   const [selectedDifficulty, setSelectedDifficulty] = useState<'hard' | 'medium' | 'easy' | null>(null);
+  const [showEndSessionModal, setShowEndSessionModal] = useState(false);
+  const [totalCardsReviewed, setTotalCardsReviewed] = useState(0);
   const router = useRouter();
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
-  const [showEndSessionModal, setShowEndSessionModal] = useState(false);
-  const [totalCardsReviewed, setTotalCardsReviewed] = useState(0);
-  
+
   // Animations
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(1)).current;
@@ -156,16 +121,14 @@ export default function GlobalReview() {
     easy: useRef(new Animated.Value(1)).current,
   };
 
-  // Animations pour le modal de fin - améliorées
+  // Animations pour le modal de fin
   const circleProgressAnimation = useRef(new Animated.Value(0)).current;
   const checkScaleAnimation = useRef(new Animated.Value(0)).current;
   const modalBackgroundAnimation = useRef(new Animated.Value(0)).current;
   const modalScaleAnimation = useRef(new Animated.Value(0.8)).current;
 
-  // Hook pour la répétition espacée
   const { processReview, isProcessing } = useSpacedRepetition();
 
-  // StyleSheet utilisant le thème complet
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -177,12 +140,6 @@ export default function GlobalReview() {
       textAlign: 'center',
       fontSize: 18,
       color: theme.textSecondary,
-      marginTop: 50,
-    },
-    errorText: {
-      textAlign: 'center',
-      fontSize: 18,
-      color: '#FF3B30',
       marginTop: 50,
     },
     floatingHeader: {
@@ -219,7 +176,7 @@ export default function GlobalReview() {
       marginHorizontal: 16,
       marginTop: 15,
     },
-    globalReviewTitle: {
+    deckName: {
       fontSize: 16,
       fontWeight: '700',
       color: theme.text,
@@ -306,13 +263,6 @@ export default function GlobalReview() {
       textAlign: 'center',
       color: theme.text,
     },
-    deckName: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      textAlign: 'center',
-      marginTop: 8,
-      fontStyle: 'italic',
-    },
     difficultyContainer: {
       position: 'absolute',
       bottom: 0,
@@ -395,19 +345,19 @@ export default function GlobalReview() {
       alignItems: 'center',
       position: 'relative',
     },
-    endSessionSubtitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: theme.textSecondary,
-      textAlign: 'center',
-      marginBottom: 12,
-    },
     endSessionTitle: {
       fontSize: 28,
       fontWeight: 'bold',
       color: theme.text,
       textAlign: 'center',
       marginBottom: 8,
+    },
+    endSessionSubtitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      textAlign: 'center',
+      marginBottom: 12,
     },
     endSessionMessage: {
       fontSize: 15,
@@ -417,103 +367,84 @@ export default function GlobalReview() {
       marginBottom: 32,
       paddingHorizontal: 16,
     },
-    endSessionStats: {
-      backgroundColor: theme.background,
-      padding: 16,
-      borderRadius: 12,
-      marginBottom: 24,
-      width: '100%',
-    },
-    statsText: {
-      fontSize: 14,
-      color: theme.text,
-      textAlign: 'center',
-      marginBottom: 4,
-    },
-    endSessionButtons: {
-      width: '100%',
-      flexDirection: 'row',
-      gap: 16,
-    },
     endSessionButton: {
-      flex: 1,
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 20,
-      paddingHorizontal: 16,
-      borderRadius: 16,
-      minHeight: 100,
-    },
-    homeButton: {
       backgroundColor: theme.primary,
+      paddingVertical: 16,
+      paddingHorizontal: 32,
+      borderRadius: 12,
       shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 8,
       elevation: 6,
     },
-    buttonIconContainer: {
-      marginBottom: 8,
-      padding: 4,
-    },
-    homeButtonText: {
+    endSessionButtonText: {
       color: '#fff',
-      fontSize: 17,
+      fontSize: 18,
       fontWeight: 'bold',
-      marginBottom: 2,
-    },
-    homeButtonSubtext: {
-      color: 'rgba(255, 255, 255, 0.85)',
-      fontSize: 13,
       textAlign: 'center',
     },
   });
 
   useEffect(() => {
-    if (cards && user) {
-      loadReviewCards();
+    if (user) {
+      fetchDueCards();
     }
-  }, [cards, user]);
+  }, [user]);
 
-  async function loadReviewCards() {
-    if (!cards || !user) return;
+  useFocusEffect(
+  React.useCallback(() => {
+    // Force immediate header hide
+    return () => {};
+  }, [])
+);
+
+  async function fetchDueCards() {
+    if (!user) return;
 
     try {
-      const cardIds = JSON.parse(cards);
-      const startIdx = parseInt(startIndex || '0');
-
-      // Récupérer toutes les cartes avec leurs informations de deck
-      const { data: cardData, error } = await supabase
+      const { data: allCards, error } = await supabase
         .from('cards')
         .select(`
           *,
-          decks!inner(user_id, name)
+          decks!inner(user_id)
         `)
-        .in('id', cardIds)
         .eq('decks.user_id', user.id);
 
       if (error) {
         console.error('Erreur:', error);
-        router.back();
         return;
       }
 
-      if (cardData && cardData.length > 0) {
-        // Ordonner les cartes selon l'ordre des IDs passés en paramètre
-        const orderedCards = cardIds.map((id: string) => 
-          cardData.find(card => card.id === id)
-        ).filter(Boolean);
-
-        setReviewCards(orderedCards);
-        setCurrentCardIndex(startIdx);
-        setCard(orderedCards[startIdx]);
-      } else {
-        router.back();
+      if (!allCards) {
+        setLoading(false);
+        return;
       }
+
+      // Filtrer les cartes dues (incluant les nouvelles cartes)
+      const dueCardsList = allCards.filter(card => {
+        return SpacedRepetitionSystem.isDue(card.next_review);
+      });
+
+      if (dueCardsList.length === 0) {
+        Alert.alert(
+          'Aucune carte à réviser',
+          'Toutes vos cartes sont à jour ! Revenez plus tard.',
+          [{ text: 'OK', onPress: () => router.back() }]
+        );
+        return;
+      }
+
+      // Mélanger les cartes
+      const shuffledCards = [...dueCardsList];
+      for (let i = shuffledCards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledCards[i], shuffledCards[j]] = [shuffledCards[j], shuffledCards[i]];
+      }
+
+      setDueCards(shuffledCards);
     } catch (err) {
       console.error('Erreur:', err);
-      router.back();
     } finally {
       setLoading(false);
     }
@@ -527,13 +458,9 @@ export default function GlobalReview() {
         duration: 300,
         useNativeDriver: true,
       }).start();
-    } else {
-      setShowAnswer(false);
-      fadeAnimation.setValue(0);
     }
   };
 
-  // Fonction pour animer un bouton spécifique
   const animateButton = (buttonType: 'hard' | 'medium' | 'easy') => {
     Animated.sequence([
       Animated.timing(buttonScaleAnimations[buttonType], {
@@ -549,16 +476,14 @@ export default function GlobalReview() {
     ]).start();
   };
 
-  // Fonction pour passer à la carte suivante
   const goToNextCard = () => {
     const nextIndex = currentCardIndex + 1;
     
-    // Vérifier si on arrive à la fin
-    if (nextIndex >= reviewCards.length) {
-      // Afficher le modal de fin avec animation
+    if (nextIndex >= dueCards.length) {
+      // Session terminée - afficher le modal de succès
       setShowEndSessionModal(true);
       
-      // Animation d'entrée du modal
+      // Animations du modal
       Animated.parallel([
         Animated.timing(modalBackgroundAnimation, {
           toValue: 1,
@@ -573,20 +498,16 @@ export default function GlobalReview() {
         }),
       ]).start();
       
-      // Démarrer l'animation du cercle de progression après un délai
       setTimeout(() => {
-        // Reset des animations
         circleProgressAnimation.setValue(0);
         checkScaleAnimation.setValue(0);
         
-        // Animation du cercle de progression (2.5 secondes avec easing)
         Animated.timing(circleProgressAnimation, {
           toValue: 1,
           duration: 2500,
           useNativeDriver: false,
         }).start();
         
-        // Animation du check qui apparaît après 2 secondes
         setTimeout(() => {
           Animated.spring(checkScaleAnimation, {
             toValue: 1,
@@ -600,75 +521,31 @@ export default function GlobalReview() {
       return;
     }
 
-    // Sinon, continuer normalement
-    const nextCard = reviewCards[nextIndex];
+    // Passer à la carte suivante
+    setCurrentCardIndex(nextIndex);
+    setShowAnswer(false);
+    setSelectedDifficulty(null);
+    fadeAnimation.setValue(0);
+    borderColorAnimation.setValue(0);
     
-    if (nextCard) {
-      // Réinitialiser l'état pour la nouvelle carte
-      setShowAnswer(false);
-      setSelectedDifficulty(null);
-      fadeAnimation.setValue(0);
-      borderColorAnimation.setValue(0);
-      setCurrentCardIndex(nextIndex);
-      setCard(nextCard);
-      
-      // Animation d'entrée pour la nouvelle carte
-      scaleAnimation.setValue(0.8);
-      Animated.spring(scaleAnimation, {
-        toValue: 1,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      router.back();
-    }
-  };
-
-  const handleEndReview = () => {
-    // Animation de sortie du modal
-    Animated.parallel([
-      Animated.timing(modalBackgroundAnimation, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(modalScaleAnimation, {
-        toValue: 0.8,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // Reset des animations du modal
-      circleProgressAnimation.setValue(0);
-      checkScaleAnimation.setValue(0);
-      modalBackgroundAnimation.setValue(0);
-      modalScaleAnimation.setValue(0.8);
-      setShowEndSessionModal(false);
-      
-      // Utiliser setTimeout pour s'assurer que la navigation se fait après la fermeture du modal
-      setTimeout(() => {
-        router.push('/'); // Retourner à la page d'accueil
-      }, 50);
-    });
+    // Animation d'entrée
+    scaleAnimation.setValue(0.8);
+    Animated.spring(scaleAnimation, {
+      toValue: 1,
+      tension: 100,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
   };
 
   const handleDifficultyResponse = async (difficulty: 'hard' | 'medium' | 'easy') => {
-    if (isProcessing || !card) return;
+    if (isProcessing || !dueCards[currentCardIndex]) return;
 
-    console.log('Bouton cliqué:', difficulty);
-
-    // Changer la couleur du texte immédiatement
+    const card = dueCards[currentCardIndex];
     setSelectedDifficulty(difficulty);
-
-    // ANIMATION DE COULEUR POUR TOUS LES BOUTONS
     borderColorAnimation.setValue(1);
 
-    // Animation additionnelle selon la difficulté
-    if (difficulty === 'hard') {
-      // Pour "hard", pas d'animation supplémentaire (juste la couleur)
-    } else {
-      // Animation de feedback rapide sur la carte pour "medium" et "easy"
+    if (difficulty !== 'hard') {
       Animated.sequence([
         Animated.timing(scaleAnimation, {
           toValue: 0.95,
@@ -683,7 +560,6 @@ export default function GlobalReview() {
       ]).start();
     }
 
-    // Préparer les stats actuelles de la carte
     const currentStats = {
       interval: card.interval || 1,
       repetitions: card.repetitions || 0,
@@ -692,7 +568,6 @@ export default function GlobalReview() {
       nextReview: card.next_review ? new Date(card.next_review) : undefined,
     };
 
-    // Callback pour mettre à jour la base de données
     const updateCard = async (cardId: string, stats: any) => {
       const { error } = await supabase
         .from('cards')
@@ -712,50 +587,33 @@ export default function GlobalReview() {
     };
 
     try {
-      // Traiter la révision
       const result = await processReview(card.id, difficulty, currentStats, updateCard);
 
-      if (result?.success && result.stats) {
-        console.log('✅ Révision sauvée:', result.message);
-
-        // Compter les cartes révisées
-        setTotalCardsReviewed(prev => prev + 1);
-
-        // Mettre à jour la carte en mémoire avec les nouvelles stats
-        setCard(prevCard => ({
-          ...prevCard!,
-          interval: result.stats?.interval,
-          repetitions: result.stats?.repetitions,
-          ease_factor: result.stats?.easeFactor,
-          last_reviewed: result.stats?.lastReviewed?.toISOString() || prevCard!.last_reviewed,
-          next_review: result.stats?.nextReview?.toISOString() || prevCard!.next_review,
-        }));
-
-        setReviewCards(prevCards => 
-          prevCards.map(c => 
-            c.id === card.id 
-              ? {
-                  ...c,
-                  interval: result.stats?.interval,
-                  repetitions: result.stats?.repetitions,
-                  ease_factor: result.stats?.easeFactor,
-                  last_reviewed: result.stats?.lastReviewed?.toISOString() || c.last_reviewed,
-                  next_review: result.stats?.nextReview?.toISOString() || c.next_review,
-                }
-              : c
-          )
+      if (result?.success) {
+        setDueCards(prevCards => 
+            prevCards.map((c, index) => 
+                index === currentCardIndex 
+                ? {
+                    ...c,
+                    interval: result.stats?.interval || c.interval,
+                    repetitions: result.stats?.repetitions || c.repetitions,
+                    ease_factor: result.stats?.easeFactor || c.ease_factor,
+                    last_reviewed: result.stats?.lastReviewed?.toISOString() || c.last_reviewed,
+                    next_review: result.stats?.nextReview?.toISOString() || c.next_review,
+                    }
+                : c
+            )
         );
-
-        // Gestion différente selon la difficulté
+    
+        setTotalCardsReviewed(prev => prev + 1);
+        
         if (difficulty === 'hard') {
-          // Pour "hard", on reste sur la même carte avec animation de reset
+          // Pour "hard", rester sur la même carte
           setTimeout(() => {
-            // Reset après 1 secondes
             setShowAnswer(false);
             setSelectedDifficulty(null);
             fadeAnimation.setValue(0);
             
-            // Animation de disparition de la bordure rouge
             Animated.timing(borderColorAnimation, {
               toValue: 0,
               duration: 300,
@@ -763,16 +621,14 @@ export default function GlobalReview() {
             }).start();
           }, 1000);
         } else {
-          // Pour "medium" et "easy", passer à la carte suivante après un délai
+          // Pour "medium" et "easy", passer à la suivante
           setTimeout(() => {
-            // Animation de disparition de la bordure colorée
             Animated.timing(borderColorAnimation, {
               toValue: 0,
               duration: 150,
               useNativeDriver: false,
             }).start();
 
-            // Animation de sortie de la carte
             Animated.timing(scaleAnimation, {
               toValue: 0,
               duration: 200,
@@ -783,16 +639,32 @@ export default function GlobalReview() {
           }, 500);
         }
       } else {
-        console.error('❌ Erreur:', result?.message);
         goToNextCard();
       }
     } catch (error) {
-      console.error('❌ Erreur:', error);
+      console.error('Erreur:', error);
       goToNextCard();
     }
   };
 
-  // Fonction pour obtenir la couleur du texte selon la difficulté sélectionnée
+  const handleEndSession = () => {
+    Animated.parallel([
+      Animated.timing(modalBackgroundAnimation, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalScaleAnimation, {
+        toValue: 0.8,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowEndSessionModal(false);
+      router.back();
+    });
+  };
+
   const getTextColor = () => {
     if (selectedDifficulty === 'hard') return '#FF3B30';
     if (selectedDifficulty === 'medium') return '#FF9500';
@@ -800,7 +672,6 @@ export default function GlobalReview() {
     return theme.text;
   };
 
-  // Fonction pour obtenir la couleur de bordure selon la difficulté sélectionnée
   const getAnimatedBorderColor = () => {
     if (!selectedDifficulty || !borderColorAnimation) {
       return theme.primary;
@@ -818,7 +689,6 @@ export default function GlobalReview() {
   };
 
   const getButtonStyle = (buttonType: 'hard' | 'medium' | 'easy') => {
-    // Styles par défaut adaptés au thème
     let defaultStyle = {};
     if (buttonType === 'hard') defaultStyle = { 
       backgroundColor: isDark ? '#4A1A1A' : '#FFF5F5', 
@@ -833,7 +703,6 @@ export default function GlobalReview() {
       borderColor: '#34C759' 
     };
 
-    // Si ce bouton est sélectionné, utiliser la couleur pleine
     if (selectedDifficulty === buttonType) {
       if (buttonType === 'hard') return { backgroundColor: '#FF3B30', borderColor: '#FF3B30' };
       if (buttonType === 'medium') return { backgroundColor: '#FF9500', borderColor: '#FF9500' };
@@ -847,19 +716,236 @@ export default function GlobalReview() {
     if (selectedDifficulty === buttonType) {
       return "#fff";
     }
-    
     return isDark ? '#fff' : '#333';
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <Text style={styles.loadingText}>Chargement des cartes à réviser...</Text>
       </SafeAreaView>
     );
   }
 
-  if (!card) {
+  if (dueCards.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style
+        <Text style={styles.loadingText}>Aucune carte à réviser</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const currentCard = dueCards[currentCardIndex];
+
+  return (
+    <>
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.floatingHeader}>
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color={theme.primary} />
+        </Pressable>
+        <View style={styles.headerCenter}>
+          <Text style={styles.deckName}>Révision globale</Text>
+          <Text style={styles.cardProgress}>
+            {currentCardIndex + 1} / {dueCards.length}
+          </Text>
+        </View>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      {/* Zone cliquable principale */}
+      <Pressable 
+        style={styles.mainContent} 
+        onPress={handleToggleAnswer}
+        activeOpacity={1}
+      >
+        <View style={styles.cardContainer}>
+          <Animated.View 
+            style={[
+              styles.card,
+              {
+                transform: [{ scale: scaleAnimation }],
+                borderBottomColor: getAnimatedBorderColor(),
+              }
+            ]}
+          >
+            <View style={styles.cardContent}>
+              <View style={styles.questionSection}>
+                <Text style={[styles.cardText, { color: getTextColor() }]}>
+                  {currentCard.front}
+                </Text>
+              </View>
+
+              {showAnswer && <View style={styles.separator} />}
+              
+              {showAnswer && (
+                <Animated.View 
+                  style={[
+                    styles.answerSection,
+                    { opacity: fadeAnimation }
+                  ]}
+                >
+                  <Text style={[styles.cardText, { color: getTextColor() }]}>
+                    {currentCard.back}
+                  </Text>
+                </Animated.View>
+              )}
+            </View>
+          </Animated.View>
+        </View>
+
+        {/* Boutons de difficulté */}
+        {showAnswer && (
+          <Pressable 
+            style={styles.difficultyContainer}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={styles.difficultyTitle}>Comment avez-vous trouvé cette carte ?</Text>
+            
+            <View style={styles.difficultyButtons}>
+              <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.hard }] }]}>
+                <Pressable 
+                  style={[styles.difficultyButton, getButtonStyle('hard')]}
+                  onPress={() => {
+                    animateButton('hard');
+                    handleDifficultyResponse('hard');
+                  }}
+                  disabled={isProcessing}
+                >
+                  <Ionicons 
+                    name="close-circle" 
+                    size={24} 
+                    color={selectedDifficulty === 'hard' ? "#fff" : "#FF3B30"}
+                  />
+                  <Text style={[
+                    styles.difficultyButtonText,
+                    { color: getButtonTextColor('hard') }
+                  ]}>
+                    Difficile
+                  </Text>
+                </Pressable>
+              </Animated.View>
+
+              <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.medium }] }]}>
+                <Pressable 
+                  style={[styles.difficultyButton, getButtonStyle('medium')]}
+                  onPress={() => {
+                    animateButton('medium');
+                    handleDifficultyResponse('medium');
+                  }}
+                  disabled={isProcessing}
+                >
+                  <Ionicons 
+                    name="help-circle" 
+                    size={24} 
+                    color={selectedDifficulty === 'medium' ? "#fff" : "#FF9500"}
+                  />
+                  <Text style={[
+                    styles.difficultyButtonText,
+                    { color: getButtonTextColor('medium') }
+                  ]}>
+                    Moyen
+                  </Text>
+                </Pressable>
+              </Animated.View>
+
+              <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.easy }] }]}>
+                <Pressable 
+                  style={[styles.difficultyButton, getButtonStyle('easy')]}
+                  onPress={() => {
+                    animateButton('easy');
+                    handleDifficultyResponse('easy');
+                  }}
+                  disabled={isProcessing}
+                >
+                  <Ionicons 
+                    name="checkmark-circle" 
+                    size={24} 
+                    color={selectedDifficulty === 'easy' ? "#fff" : "#34C759"}
+                  />
+                  <Text style={[
+                    styles.difficultyButtonText,
+                    { color: getButtonTextColor('easy') }
+                  ]}>
+                    Facile
+                  </Text>
+                </Pressable>
+              </Animated.View>
+            </View>
+
+            {/* Stats de la carte */}
+            <View style={styles.cardStatsContainer}>
+              <Text style={styles.cardStatsText}>
+                Win Streak: {currentCard.repetitions || 0} • 
+                Facilité: {((currentCard.ease_factor || 2.5) * 100 - 250).toFixed(0)}% •
+                Statut: {SpacedRepetitionSystem.getCardMastery(
+                  currentCard.repetitions || 0, 
+                  currentCard.ease_factor || 2.5
+                )}
+              </Text>
+            </View>
+          </Pressable>
+        )}
+      </Pressable>
+
+      {/* Modal de fin de session */}
+      <Modal
+        visible={showEndSessionModal}
+        animationType="none"
+        transparent={true}
+        onRequestClose={() => setShowEndSessionModal(false)}
+      >
+        <Animated.View 
+          style={[
+            styles.endSessionOverlay,
+            {
+              opacity: modalBackgroundAnimation,
+            }
+          ]}
+        >
+          <Animated.View 
+            style={[
+              styles.endSessionModal,
+              {
+                transform: [{ scale: modalScaleAnimation }],
+              }
+            ]}
+          >
+            {/* Animation de succès */}
+            <View style={styles.iconContainer}>
+              <View style={styles.progressCircleContainer}>
+                <ProfessionalProgressCircle 
+                  progress={circleProgressAnimation} 
+                  size={100} 
+                  theme={theme}
+                />
+                <AnimatedSuccessIcon scale={checkScaleAnimation} />
+              </View>
+            </View>
+
+            <Text style={styles.endSessionTitle}>
+              Félicitations !
+            </Text>
+            
+            <Text style={styles.endSessionSubtitle}>
+              Session terminée
+            </Text>
+            
+            <Text style={styles.endSessionMessage}>
+              Vous avez révisé {totalCardsReviewed} cartes aujourd'hui. Excellent travail !
+            </Text>
+            
+            <Pressable 
+              style={styles.endSessionButton}
+              onPress={handleEndSession}
+            >
+              <Text style={styles.endSessionButtonText}>Retour à l'accueil</Text>
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
+    </SafeAreaView>
+    </>
+  );
+}

@@ -736,140 +736,75 @@ export default function CardReview() {
   };
 
   const handleDifficultyResponse = async (difficulty: 'hard' | 'medium' | 'easy') => {
-    if (isProcessing || !card) return;
+  if (isProcessing || !card) return;
 
-    console.log('Bouton cliqué:', difficulty);
+  console.log('Bouton cliqué:', difficulty);
 
-    // Changer la couleur du texte immédiatement
-    setSelectedDifficulty(difficulty);
+  // Changer la couleur du texte immédiatement
+  setSelectedDifficulty(difficulty);
 
-    // ANIMATION DE COULEUR POUR TOUS LES BOUTONS
-    borderColorAnimation.setValue(1);
+  // ANIMATION DE COULEUR POUR TOUS LES BOUTONS
+  borderColorAnimation.setValue(1);
 
-    // Animation additionnelle selon la difficulté
-    if (difficulty === 'hard') {
-      // Pour "hard", pas d'animation supplémentaire (juste la couleur)
-    } else {
-      // Animation de feedback rapide sur la carte pour "medium" et "easy"
-      Animated.sequence([
-        Animated.timing(scaleAnimation, {
-          toValue: 0.95,
-          duration: 80,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnimation, {
-          toValue: 1,
-          duration: 80,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
+  // Animation additionnelle selon la difficulté
+  if (difficulty === 'hard') {
+    // Pour "hard", pas d'animation supplémentaire (juste la couleur)
+  } else {
+    // Animation de feedback rapide sur la carte pour "medium" et "easy"
+    Animated.sequence([
+      Animated.timing(scaleAnimation, {
+        toValue: 0.95,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnimation, {
+        toValue: 1,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }
 
-    // Préparer les stats actuelles de la carte
-    const currentStats = {
-      interval: card.interval || 1,
-      repetitions: card.repetitions || 0,
-      easeFactor: card.ease_factor || 2.5,
-      lastReviewed: card.last_reviewed ? new Date(card.last_reviewed) : undefined,
-      nextReview: card.next_review ? new Date(card.next_review) : undefined,
-    };
+  // MODE ENTRAÎNEMENT - Pas de modification des stats réelles
+  console.log('✅ Mode entraînement - Stats non modifiées');
 
-    // Callback pour mettre à jour la base de données
-    const updateCard = async (cardId: string, stats: any) => {
-      const { error } = await supabase
-        .from('cards')
-        .update({
-          interval: stats.interval,
-          repetitions: stats.repetitions,
-          ease_factor: stats.easeFactor,
-          last_reviewed: stats.lastReviewed.toISOString(),
-          next_review: stats.nextReview.toISOString(),
-        })
-        .eq('id', cardId);
+  // Gestion différente selon la difficulté
+  if (difficulty === 'hard') {
+    // Pour "hard", on reste sur la même carte avec animation de reset
+    setTimeout(() => {
+      // Reset après 1 secondes
+      setShowAnswer(false);
+      setSelectedDifficulty(null);
+      fadeAnimation.setValue(0);
+      
+      // Animation de disparition de la bordure rouge
+      Animated.timing(borderColorAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    }, 1000);
+  } else {
+    // Pour "medium" et "easy", passer à la carte suivante après un délai
+    setTimeout(() => {
+      // Animation de disparition de la bordure colorée
+      Animated.timing(borderColorAnimation, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: false,
+      }).start();
 
-      if (error) {
-        console.error('Erreur DB:', error);
-        throw new Error('Erreur lors de la mise à jour');
-      }
-    };
-
-    try {
-      // Traiter la révision
-      const result = await processReview(card.id, difficulty, currentStats, updateCard);
-
-      if (result?.success && result.stats) {
-        console.log('✅ Révision sauvée:', result.message);
-
-        // Mettre à jour la carte en mémoire avec les nouvelles stats
-        setCard(prevCard => ({
-          ...prevCard!,
-          interval: result.stats?.interval,
-          repetitions: result.stats?.repetitions,
-          ease_factor: result.stats?.easeFactor,
-          last_reviewed: result.stats?.lastReviewed?.toISOString() || prevCard!.last_reviewed,
-          next_review: result.stats?.nextReview?.toISOString() || prevCard!.next_review,
-        }));
-
-        setDeckCards(prevCards => 
-          prevCards.map(c => 
-            c.id === card.id 
-              ? {
-                  ...c,
-                  interval: result.stats?.interval,
-                  repetitions: result.stats?.repetitions,
-                  ease_factor: result.stats?.easeFactor,
-                  last_reviewed: result.stats?.lastReviewed?.toISOString() || c.last_reviewed,
-                  next_review: result.stats?.nextReview?.toISOString() || c.next_review,
-                }
-              : c
-          )
-        );
-
-        // Gestion différente selon la difficulté
-        if (difficulty === 'hard') {
-          // Pour "hard", on reste sur la même carte avec animation de reset
-          setTimeout(() => {
-            // Reset après 1 secondes
-            setShowAnswer(false);
-            setSelectedDifficulty(null);
-            fadeAnimation.setValue(0);
-            
-            // Animation de disparition de la bordure rouge
-            Animated.timing(borderColorAnimation, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: false,
-            }).start();
-          }, 1000);
-        } else {
-          // Pour "medium" et "easy", passer à la carte suivante après un délai
-          setTimeout(() => {
-            // Animation de disparition de la bordure colorée
-            Animated.timing(borderColorAnimation, {
-              toValue: 0,
-              duration: 150,
-              useNativeDriver: false,
-            }).start();
-
-            // Animation de sortie de la carte
-            Animated.timing(scaleAnimation, {
-              toValue: 0,
-              duration: 200,
-              useNativeDriver: true,
-            }).start(() => {
-              goToNextCard();
-            });
-          }, 500);
-        }
-      } else {
-        console.error('❌ Erreur:', result?.message);
+      // Animation de sortie de la carte
+      Animated.timing(scaleAnimation, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => {
         goToNextCard();
-      }
-    } catch (error) {
-      console.error('❌ Erreur:', error);
-      goToNextCard();
-    }
-  };
+      });
+    }, 500);
+  }
+};
 
   // Fonction pour obtenir la couleur du texte selon la difficulté sélectionnée
   const getTextColor = () => {
