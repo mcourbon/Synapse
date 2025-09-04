@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { Card, Deck } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import AddCardModal from '../../components/AddCardModal';
 
 export default function DeckDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,13 +25,18 @@ export default function DeckDetail() {
   const [front, setFront] = useState('');
   const [back, setBack] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
-  const [newCategory, setNewCategory] = useState(''); // Pour saisir une nouvelle catégorie
+  const [currentCategoryInput, setCurrentCategoryInput] = useState(''); // Remplace newCategory
   const [addingCard, setAddingCard] = useState(false);
   const [editingCard, setEditingCard] = useState(false);
   const [deletingDeck, setDeletingDeck] = useState(false);
   const [deletingCard, setDeletingCard] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
+  
+  // Nouveaux états pour le système de tags avancé
+  const [existingCategories, setExistingCategories] = useState<string[]>([]);
+  const [filteredCategories, setFilteredCategories] = useState<string[]>([]);
+  
   const router = useRouter();
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
@@ -411,11 +417,12 @@ titleUnderline: {
   categoryInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   categoryInput: {
     flex: 1,
     minHeight: 50,
+    marginBottom: 0,
   },
   addCategoryButton: {
   width: 50,
@@ -433,8 +440,8 @@ addCategoryButtonInactive: {
   characterCount: {
     fontSize: 12,
     color: theme.textSecondary,
-    marginTop: 4,
     textAlign: 'right',
+    marginTop: 4,
   },
   characterCountWarning: {
     color: theme.warning,
@@ -442,6 +449,35 @@ addCategoryButtonInactive: {
   characterCountError: {
     color: theme.error,
     fontWeight: '600',
+  },
+  // Nouveaux styles pour les catégories populaires
+  popularCategories: {
+    marginTop: 15,
+  },
+  popularTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.textSecondary,
+    marginBottom: 8,
+  },
+  categoryTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+  categoryTag: {
+    backgroundColor: theme.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  categoryTagText: {
+    fontSize: 14,
+    color: theme.text,
+    fontWeight: '500',
   },
   previewSection: {
     marginTop: 20,
@@ -668,6 +704,63 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
   );
 };
 
+  // Charger les catégories existantes quand on ouvre le modal d'édition
+  useEffect(() => {
+    if (showEditCardModal && id) {
+      fetchExistingCategories(id);
+    }
+  }, [showEditCardModal, id]);
+
+  // Filtrer les catégories selon la saisie
+  useEffect(() => {
+    if (currentCategoryInput.trim() === '') {
+      // Si pas de saisie, afficher les catégories récentes (exclure celles déjà sélectionnées)
+      setFilteredCategories(existingCategories.filter(cat => !categories.includes(cat)));
+    } else {
+      // Si saisie, filtrer selon le texte
+      const filtered = existingCategories.filter(cat => 
+        cat.toLowerCase().includes(currentCategoryInput.toLowerCase()) && 
+        !categories.includes(cat)
+      );
+      setFilteredCategories(filtered);
+    }
+  }, [currentCategoryInput, existingCategories, categories]);
+
+  const fetchExistingCategories = async (deckId: string) => {
+    if (!deckId || !user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('cards')
+        .select('categories')
+        .eq('deck_id', deckId)
+        .not('categories', 'is', null);
+
+      if (error) throw error;
+
+      const allCategories = data
+        .filter(item => item.categories && Array.isArray(item.categories))
+        .flatMap(item => item.categories)
+        .filter(Boolean);
+      
+      // Compter les occurrences et trier par fréquence puis par ordre alphabétique
+      const categoryCount = allCategories.reduce((acc, cat) => {
+        acc[cat] = (acc[cat] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const uniqueCategories = Object.keys(categoryCount).sort((a, b) => {
+        // Tri par fréquence décroissante, puis par ordre alphabétique
+        const countDiff = categoryCount[b] - categoryCount[a];
+        return countDiff !== 0 ? countDiff : a.localeCompare(b);
+      });
+      
+      setExistingCategories(uniqueCategories);
+    } catch (error) {
+      console.error('Erreur lors du chargement des catégories:', error);
+    }
+  };
+
   // Fonction pour afficher un toast
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ visible: true, message, type });
@@ -679,11 +772,11 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
     setShowErrorModal(true);
   };
 
-  // Fonction pour ajouter une catégorie
+  // Fonction pour ajouter une catégorie (mise à jour)
   const addCategory = () => {
-    if (!newCategory.trim()) return;
+    if (!currentCategoryInput.trim()) return;
     
-    const trimmedCategory = newCategory.trim();
+    const trimmedCategory = currentCategoryInput.trim();
     
     // Vérifier la longueur (12 caractères max)
     if (trimmedCategory.length > 12) {
@@ -694,22 +787,45 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
     // Vérifier si la catégorie n'existe pas déjà et qu'on ne dépasse pas 3 catégories
     if (!categories.includes(trimmedCategory) && categories.length < 3) {
       setCategories([...categories, trimmedCategory]);
-      setNewCategory('');
+      setCurrentCategoryInput('');
     } else if (categories.includes(trimmedCategory)) {
       showError('Cette catégorie existe déjà');
     }
   };
 
   // Fonction pour gérer la saisie de nouvelle catégorie avec limitation
-  const handleNewCategoryChange = (text: string) => {
+  const handleCategoryInputChange = (text: string) => {
     if (text.length <= 12) {
-      setNewCategory(text);
+      setCurrentCategoryInput(text);
     }
   };
 
   // Fonction pour supprimer une catégorie
   const removeCategory = (categoryToRemove: string) => {
     setCategories(categories.filter(cat => cat !== categoryToRemove));
+  };
+
+  // Fonction pour gérer la soumission de l'input catégorie
+  const handleCategoryInputSubmit = () => {
+    if (currentCategoryInput.trim()) {
+      addCategory();
+    }
+  };
+
+  // Fonction pour sélectionner une catégorie depuis les suggestions
+  const selectCategory = (selectedCategory: string) => {
+    if (!categories.includes(selectedCategory) && categories.length < 3) {
+      setCategories([...categories, selectedCategory]);
+      setCurrentCategoryInput('');
+    }
+  };
+
+  // Fonction pour obtenir le titre des catégories
+  const getCategoryTitle = () => {
+    if (currentCategoryInput.trim() !== '') {
+      return filteredCategories.length > 0 ? 'Correspondances :' : 'Aucune correspondance';
+    }
+    return 'Catégories récentes :';
   };
 
   useEffect(() => {
@@ -802,7 +918,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
       setFront('');
       setBack('');
       setCategories([]);
-      setNewCategory('');
+      setCurrentCategoryInput('');
       setShowAddModal(false);
       
       showToast('Carte ajoutée avec succès !', 'success');
@@ -845,7 +961,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
       setFront('');
       setBack('');
       setCategories([]);
-      setNewCategory('');
+      setCurrentCategoryInput('');
       setSelectedCard(null);
       setShowEditCardModal(false);
       
@@ -950,7 +1066,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
     setFront(card.front);
     setBack(card.back);
     setCategories(card.categories || []);
-    setNewCategory('');
+    setCurrentCategoryInput('');
     setShowEditCardModal(true);
   };
 
@@ -965,8 +1081,10 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
     setFront('');
     setBack('');
     setCategories([]);
-    setNewCategory('');
+    setCurrentCategoryInput('');
     setSelectedCard(null);
+    setExistingCategories([]);
+    setFilteredCategories([]);
   };
 
   const renderCard = ({ item }: { item: Card }) => (
@@ -1210,279 +1328,174 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
       />
 
       {/* Modal d'ajout de carte */}
-      <Modal
+      <AddCardModal
         visible={showAddModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={closeModal}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Pressable onPress={closeModal}>
-              <Text style={styles.cancelButton}>Annuler</Text>
-            </Pressable>
-            <Text style={styles.modalTitle}>Nouvelle carte</Text>
-            <Pressable 
-              onPress={handleAddCard}
-              disabled={addingCard}
-              style={[styles.saveButton, addingCard && styles.saveButtonDisabled]}
-            >
-              <Text style={[styles.saveButtonText, addingCard && styles.saveButtonTextDisabled]}>
-                {addingCard ? 'Ajout...' : 'Ajouter'}
-              </Text>
-            </Pressable>
-          </View>
+        onClose={() => setShowAddModal(false)}
+        onCardAdded={() => {
+          fetchDeckAndCards();
+          setShowAddModal(false);
+        }}
+        deckId={id} // Deck spécifique = pas de sélection
+      />
 
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Question</Text>
-              <TextInput
-                style={[
-                  styles.textInput,
-                  { outlineWidth: 0 }
-                ]}
-                value={front}
-                onChangeText={setFront}
-                placeholder="Tapez votre question..."
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                autoFocus
-                underlineColorAndroid="transparent"
-                selectionColor="#007AFF"
-              />
-            </View>
+      {/* Modal de modification de carte avec système de tags avancé */}
+<Modal
+  visible={showEditCardModal}
+  animationType="slide"
+  presentationStyle="pageSheet"
+  onRequestClose={closeModal}
+>
+  <SafeAreaView style={styles.modalContainer}>
+    <View style={styles.mainContent}>
+      {/* Header */}
+      <View style={styles.modalHeader}>
+        <Pressable onPress={closeModal}>
+          <Text style={styles.cancelButton}>Annuler</Text>
+        </Pressable>
+        <Text style={styles.modalTitle}>Modifier la carte</Text>
+        <Pressable 
+          onPress={handleEditCard}
+          disabled={editingCard}
+          style={[styles.saveButton, editingCard && styles.saveButtonDisabled]}
+        >
+          <Text style={[styles.saveButtonText, editingCard && styles.saveButtonTextDisabled]}>
+            {editingCard ? 'Modification...' : 'Modifier'}
+          </Text>
+        </Pressable>
+      </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Réponse</Text>
-              <TextInput
-                  style={[
-                    styles.textInput,
-                    { outlineWidth: 0 }
-                  ]}
-                value={back}
-                onChangeText={setBack}
-                placeholder="Tapez votre réponse..."
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                underlineColorAndroid="transparent"
-                selectionColor="#007AFF"
-              />
-            </View>
+      <ScrollView style={styles.modalContent}>
+        {/* Formulaire */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Question</Text>
+          <TextInput
+            style={[styles.textInput, { outlineWidth: 0 }]}
+            value={front}
+            onChangeText={setFront}
+            placeholder="Tapez votre question..."
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Catégories ({categories.length}/3) - max 12 caractères</Text>
-              
-              {/* Affichage des catégories existantes */}
-              {categories.length > 0 && (
-                <View style={styles.categoriesDisplay}>
-                  {categories.map((category, index) => (
-                    <View key={index} style={styles.categoryChip}>
-                      <Text style={styles.categoryChipText}>{category}</Text>
-                      <Pressable onPress={() => removeCategory(category)}>
-                        <Ionicons name="close" size={16} color="#666" />
-                      </Pressable>
-                    </View>
-                  ))}
-                </View>
-              )}
-              
-              {/* Input pour nouvelle catégorie (si moins de 3) */}
-              {categories.length < 3 && (
-                <View style={styles.categoryInputContainer}>
-                  <TextInput
-                    style={[styles.textInput, styles.categoryInput, { outlineWidth: 0 }]}
-                    value={newCategory}
-                    onChangeText={handleNewCategoryChange}
-                    placeholder="Ajouter une catégorie..."
-                    returnKeyType="done"
-                    autoCapitalize="words"
-                    onSubmitEditing={addCategory}
-                    underlineColorAndroid="transparent"
-                    selectionColor="#007AFF"
-                  />
-                  <Pressable 
-                    style={[
-                      styles.addCategoryButton,
-                      newCategory.trim() ? styles.addCategoryButtonActive : styles.addCategoryButtonInactive
-                    ]}
-                    onPress={addCategory}
-                    disabled={!newCategory.trim()}
-                  >
-                    <Ionicons 
-                      name="add" 
-                      size={20} 
-                      color={newCategory.trim() ? "#fff" : theme.primary} 
-                    />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Réponse</Text>
+          <TextInput
+            style={[styles.textInput, { outlineWidth: 0 }]}
+            value={back}
+            onChangeText={setBack}
+            placeholder="Tapez votre réponse..."
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>
+            Catégories ({categories.length}/3) - max 12 caractères
+          </Text>
+          
+          {/* Affichage des catégories sélectionnées */}
+          {categories.length > 0 && (
+            <View style={styles.categoriesDisplay}>
+              {categories.map((category, index) => (
+                <View key={index} style={styles.categoryChip}>
+                  <Text style={styles.categoryChipText}>{category}</Text>
+                  <Pressable onPress={() => removeCategory(category)}>
+                    <Ionicons name="close" size={16} color="#666" />
                   </Pressable>
                 </View>
-              )}
-              
-              {/* Indicateur de caractères restants */}
-              {categories.length < 3 && newCategory.length > 0 && (
-                <Text style={[styles.characterCount, newCategory.length > 10 && styles.characterCountWarning, newCategory.length === 12 && styles.characterCountError]}>
-                  {newCategory.length}/12 caractères
-                </Text>
-              )}
+              ))}
             </View>
-
-            {(front || back) && (
-              <View style={styles.previewSection}>
-                <Text style={styles.previewTitle}>Aperçu</Text>
-                <View style={styles.previewCards}>
-                  <View style={styles.previewCard}>
-                    <Text style={styles.previewLabel}>Recto</Text>
-                    <Text style={styles.previewText}>
-                      {front || 'Votre question...'}
-                    </Text>
-                  </View>
-                  <View style={styles.previewCard}>
-                    <Text style={styles.previewLabel}>Verso</Text>
-                    <Text style={styles.previewText}>
-                      {back || 'Votre réponse...'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
-
-      {/* Modal de modification de carte */}
-      <Modal
-        visible={showEditCardModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={closeModal}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Pressable onPress={closeModal}>
-              <Text style={styles.cancelButton}>Annuler</Text>
-            </Pressable>
-            <Text style={styles.modalTitle}>Modifier la carte</Text>
-            <Pressable 
-              onPress={handleEditCard}
-              disabled={editingCard}
-              style={[styles.saveButton, editingCard && styles.saveButtonDisabled]}
-            >
-              <Text style={[styles.saveButtonText, editingCard && styles.saveButtonTextDisabled]}>
-                {editingCard ? 'Modification...' : 'Modifier'}
-              </Text>
-            </Pressable>
-          </View>
-
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Question</Text>
+          )}
+          
+          {/* Input pour nouvelle catégorie (si moins de 3) */}
+          {categories.length < 3 && (
+            <View style={styles.categoryInputContainer}>
               <TextInput
-                  style={[
-                    styles.textInput,
-                    { outlineWidth: 0 }
-                  ]}
-                value={front}
-                onChangeText={setFront}
-                placeholder="Tapez votre question..."
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                autoFocus
+                style={[styles.textInput, styles.categoryInput, { outlineWidth: 0 }]}
+                value={currentCategoryInput}
+                onChangeText={handleCategoryInputChange}
+                placeholder="Ajouter une catégorie..."
+                returnKeyType="done"
+                autoCapitalize="words"
+                onSubmitEditing={handleCategoryInputSubmit}
                 underlineColorAndroid="transparent"
                 selectionColor="#007AFF"
               />
+              <Pressable 
+                style={[
+                  styles.addCategoryButton,
+                  currentCategoryInput.trim() ? styles.addCategoryButtonActive : styles.addCategoryButtonInactive
+                ]}
+                onPress={handleCategoryInputSubmit}
+                disabled={!currentCategoryInput.trim()}
+              >
+                <Ionicons 
+                  name="add" 
+                  size={20} 
+                  color={currentCategoryInput.trim() ? "#fff" : theme.primary} 
+                />
+              </Pressable>
             </View>
+          )}
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Réponse</Text>
-              <TextInput
-                  style={[
-                    styles.textInput,
-                    { outlineWidth: 0 }
-                  ]}
-                value={back}
-                onChangeText={setBack}
-                placeholder="Tapez votre réponse..."
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                underlineColorAndroid="transparent"
-                selectionColor="#007AFF"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Catégories ({categories.length}/3)</Text>
-              
-              {/* Affichage des catégories existantes */}
-              {categories.length > 0 && (
-                <View style={styles.categoriesDisplay}>
-                  {categories.map((category, index) => (
-                    <View key={index} style={styles.categoryChip}>
-                      <Text style={styles.categoryChipText}>{category}</Text>
-                      <Pressable onPress={() => removeCategory(category)}>
-                        <Ionicons name="close" size={16} color="#666" />
-                      </Pressable>
-                    </View>
-                  ))}
-                </View>
-              )}
-              
-              {/* Input pour nouvelle catégorie (si moins de 3) */}
-              {categories.length < 3 && (
-                <View style={styles.categoryInputContainer}>
-                  <TextInput
-                    style={[styles.textInput, styles.categoryInput, { outlineWidth: 0 }]}
-                    value={newCategory}
-                    onChangeText={setNewCategory}
-                    placeholder="Ajouter une catégorie..."
-                    returnKeyType="done"
-                    autoCapitalize="words"
-                    onSubmitEditing={addCategory}
-                    underlineColorAndroid="transparent"
-                    selectionColor="#007AFF"
-                  />
-                  <Pressable 
-                    style={[
-                      styles.addCategoryButton,
-                      newCategory.trim() ? styles.addCategoryButtonActive : styles.addCategoryButtonInactive
-                    ]}
-                    onPress={addCategory}
-                    disabled={!newCategory.trim()}
+          {/* Indicateur de caractères restants */}
+          {categories.length < 3 && currentCategoryInput.length > 0 && (
+            <Text style={[
+              styles.characterCount, 
+              currentCategoryInput.length > 10 && styles.characterCountWarning, 
+              currentCategoryInput.length === 12 && styles.characterCountError
+            ]}>
+              {currentCategoryInput.length}/12 caractères
+            </Text>
+          )}
+          
+          {/* Catégories avec suggestions fusionnées */}
+          {existingCategories.length > 0 && categories.length < 3 && filteredCategories.length > 0 && (
+            <View style={styles.popularCategories}>
+              <Text style={styles.popularTitle}>{getCategoryTitle()}</Text>
+              <View style={styles.categoryTags}>
+                {filteredCategories.slice(0, 8).map((cat) => (
+                  <Pressable
+                    key={cat}
+                    style={styles.categoryTag}
+                    onPress={() => selectCategory(cat)}
                   >
-                    <Ionicons 
-                      name="add" 
-                      size={20} 
-                      color={newCategory.trim() ? "#fff" : theme.primary} 
-                    />
-                    </Pressable>
-                </View>
-              )}
-            </View>
-
-            {(front || back) && (
-              <View style={styles.previewSection}>
-                <Text style={styles.previewTitle}>Aperçu</Text>
-                <View style={styles.previewCards}>
-                  <View style={styles.previewCard}>
-                    <Text style={styles.previewLabel}>Recto</Text>
-                    <Text style={styles.previewText}>
-                      {front || 'Votre question...'}
-                    </Text>
-                  </View>
-                  <View style={styles.previewCard}>
-                    <Text style={styles.previewLabel}>Verso</Text>
-                    <Text style={styles.previewText}>
-                      {back || 'Votre réponse...'}
-                    </Text>
-                  </View>
-                </View>
+                    <Text style={styles.categoryTagText}>{cat}</Text>
+                  </Pressable>
+                ))}
               </View>
-            )}
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
+            </View>
+          )}
+        </View>
+
+        {/* Aperçu */}
+        {(front || back) && (
+          <View style={styles.previewSection}>
+            <Text style={styles.previewTitle}>Aperçu</Text>
+            <View style={styles.previewCards}>
+              <View style={styles.previewCard}>
+                <Text style={styles.previewLabel}>Recto</Text>
+                <Text style={styles.previewText}>
+                  {front || 'Votre question...'}
+                </Text>
+              </View>
+              <View style={styles.previewCard}>
+                <Text style={styles.previewLabel}>Verso</Text>
+                <Text style={styles.previewText}>
+                  {back || 'Votre réponse...'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  </SafeAreaView>
+</Modal>
     </SafeAreaView>
   );
 }

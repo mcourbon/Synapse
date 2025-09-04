@@ -67,7 +67,6 @@ export default function AddDeckModal({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: theme.surface,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
   },
