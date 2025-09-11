@@ -1,11 +1,11 @@
 // app/profile.tsx
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch, Modal, Linking } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch, Modal, Linking, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext'; // Ajouter cet import
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface UserStats {
@@ -14,6 +14,13 @@ interface UserStats {
   cardsReviewed: number;
   currentStreak: number;
   successRate: number;
+}
+
+interface UserProfile {
+  id: string;
+  username: string | null;
+  email: string;
+  created_at: string;
 }
 
 export default function Profile() {
@@ -32,6 +39,11 @@ export default function Profile() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
+  const usernameInputRef = useRef<TextInput>(null);
 
 
   useEffect(() => {
@@ -40,102 +52,125 @@ export default function Profile() {
     }
   }, [user]);
 
-  const fetchUserStats = async () => {
-    if (!user) return;
-
-    try {
-      // Récupérer le nombre de decks
-      const { data: decksData, error: decksError } = await supabase
-        .from('decks')
-        .select('id')
-        .eq('user_id', user.id);
-
-      if (decksError) {
-        console.error('Erreur decks:', decksError);
-      }
-
-      // Récupérer toutes les cartes de l'utilisateur avec leurs statistiques
-      const { data: cardsData, error: cardsError } = await supabase
-        .from('cards')
-        .select(`
-          id,
-          repetitions,
-          ease_factor,
-          last_reviewed,
-          decks!inner(user_id)
-        `)
-        .eq('decks.user_id', user.id);
-
-      if (cardsError) {
-        console.error('Erreur cartes:', cardsError);
-      }
-
-      // Calculer les statistiques
-      const totalDecks = decksData?.length || 0;
-      const totalCards = cardsData?.length || 0;
-      
-      // Calculer le nombre de cartes révisées (au moins une fois)
-      const cardsReviewed = cardsData?.filter(card => 
-        card.repetitions && card.repetitions > 0
-      ).length || 0;
-
-      // Calculer le taux de réussite basé sur l'ease_factor
-      // ease_factor commence à 2.5, augmente si facile/moyen, diminue si difficile
-      let totalSuccessScore = 0;
-      let reviewedCards = 0;
-
-      cardsData?.forEach(card => {
-        if (card.repetitions && card.repetitions > 0) {
-          reviewedCards++;
-          // Convertir ease_factor en pourcentage de réussite
-          // 2.5 = 50%, 3.0 = 75%, 2.0 = 25%, etc.
-          const easeFactor = card.ease_factor || 2.5;
-          const successScore = Math.min(100, Math.max(0, ((easeFactor - 1.3) / 1.7) * 100));
-          totalSuccessScore += successScore;
-        }
-      });
-
-      const successRate = reviewedCards > 0 
-        ? Math.round(totalSuccessScore / reviewedCards)
-        : 0;
-
-      // Calculer la streak (jours consécutifs)
-      // Pour l'instant, on utilise une logique simple basée sur last_reviewed
-      let currentStreak = 0;
-      
-      if (cardsData && cardsData.length > 0) {
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        
-        // Vérifier si l'utilisateur a révisé hier ou aujourd'hui
-        const recentReviews = cardsData.filter(card => {
-          if (!card.last_reviewed) return false;
-          const reviewDate = new Date(card.last_reviewed);
-          const daysDiff = Math.floor((today.getTime() - reviewDate.getTime()) / (1000 * 60 * 60 * 24));
-          return daysDiff <= 1; // Aujourd'hui ou hier
-        });
-
-        if (recentReviews.length > 0) {
-          // Calcul simplifié de la streak
-          currentStreak = Math.min(7, Math.floor(cardsReviewed / 5)); // Max 7 jours, 1 jour par 5 cartes révisées
-        }
-      }
-
-      setStats({
-        totalCards,
-        totalDecks,
-        cardsReviewed,
-        currentStreak,
-        successRate,
-      });
-
-    } catch (error) {
-      console.error('Erreur lors du calcul des statistiques:', error);
-    } finally {
-      setLoading(false);
+  // Focus sur l'input quand on commence à éditer
+  useEffect(() => {
+    if (isEditingUsername && usernameInputRef.current) {
+      setTimeout(() => {
+        usernameInputRef.current?.focus();
+      }, 100);
     }
-  };
+  }, [isEditingUsername]);
+
+  const fetchUserStats = async () => {
+  if (!user) return;
+
+  try {
+    // Récupérer les données utilisateur depuis user_stats
+    const { data: statsData, error: statsError } = await supabase
+      .from('user_stats')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    if (statsError && statsError.code !== 'PGRST116') {
+      console.error('Erreur user_stats:', statsError);
+    } else if (statsData) {
+      // Adapter la structure pour userProfile
+      setUserProfile({
+        id: statsData.user_id,
+        username: statsData.username,
+        email: user.email,
+        created_at: user.created_at || '',
+      });
+      setNewUsername(statsData.username || '');
+    }
+
+    // Récupérer le nombre de decks
+    const { data: decksData, error: decksError } = await supabase
+      .from('decks')
+      .select('id')
+      .eq('user_id', user.id);
+
+    if (decksError) {
+      console.error('Erreur decks:', decksError);
+    }
+
+    // Récupérer toutes les cartes de l'utilisateur avec leurs statistiques
+    const { data: cardsData, error: cardsError } = await supabase
+      .from('cards')
+      .select(`
+        id,
+        repetitions,
+        ease_factor,
+        last_reviewed,
+        decks!inner(user_id)
+      `)
+      .eq('decks.user_id', user.id);
+
+    if (cardsError) {
+      console.error('Erreur cartes:', cardsError);
+    }
+
+    // Calculer les statistiques
+    const totalDecks = decksData?.length || 0;
+    const totalCards = cardsData?.length || 0;
+    
+    // Calculer le nombre de cartes révisées (au moins une fois)
+    const cardsReviewed = cardsData?.filter(card => 
+      card.repetitions && card.repetitions > 0
+    ).length || 0;
+
+    // Calculer le taux de réussite basé sur l'ease_factor
+    let totalSuccessScore = 0;
+    let reviewedCards = 0;
+
+    cardsData?.forEach(card => {
+      if (card.repetitions && card.repetitions > 0) {
+        reviewedCards++;
+        const easeFactor = card.ease_factor || 2.5;
+        const successScore = Math.min(100, Math.max(0, ((easeFactor - 1.3) / 1.7) * 100));
+        totalSuccessScore += successScore;
+      }
+    });
+
+    const successRate = reviewedCards > 0 
+      ? Math.round(totalSuccessScore / reviewedCards)
+      : 0;
+
+    // Calculer la streak
+    let currentStreak = 0;
+    
+    if (cardsData && cardsData.length > 0) {
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const recentReviews = cardsData.filter(card => {
+        if (!card.last_reviewed) return false;
+        const reviewDate = new Date(card.last_reviewed);
+        const daysDiff = Math.floor((today.getTime() - reviewDate.getTime()) / (1000 * 60 * 60 * 24));
+        return daysDiff <= 1;
+      });
+
+      if (recentReviews.length > 0) {
+        currentStreak = Math.min(7, Math.floor(cardsReviewed / 5));
+      }
+    }
+
+    setStats({
+      totalCards,
+      totalDecks,
+      cardsReviewed,
+      currentStreak,
+      successRate,
+    });
+
+  } catch (error) {
+    console.error('Erreur lors du calcul des statistiques:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleSignOut = () => {
   setShowLogoutModal(true);
@@ -147,6 +182,49 @@ const confirmLogout = async () => {
     await signOut();
   } catch (error) {
     console.error('Erreur:', error);
+  }
+};
+
+const startEditingUsername = () => {
+  setIsEditingUsername(true);
+  setNewUsername(userProfile?.username || '');
+};
+
+const cancelEditingUsername = () => {
+  setIsEditingUsername(false);
+  setNewUsername(userProfile?.username || '');
+};
+
+const updateUsername = async () => {
+  if (!user || !newUsername.trim()) {
+    cancelEditingUsername();
+    return;
+  }
+  
+  setIsUpdatingUsername(true);
+  try {
+    const { error } = await supabase
+      .from('user_stats')
+      .update({
+        username: newUsername.trim(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Erreur mise à jour username:', error);
+      console.log('Erreur', 'Impossible de mettre à jour le pseudo');
+    } else {
+      // Mettre à jour l'état local
+      setUserProfile(prev => prev ? {...prev, username: newUsername.trim()} : null);
+      setIsEditingUsername(false);
+      console.log('Succès', 'Pseudo mis à jour avec succès !');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    console.log('Erreur', 'Une erreur est survenue');
+  } finally {
+    setIsUpdatingUsername(false);
   }
 };
 
@@ -193,11 +271,71 @@ const confirmLogout = async () => {
       alignItems: 'center',
       marginBottom: 15,
     },
-    email: {
+    invisibleIcon: {
+      marginRight: 8,
+      padding: 6,
+      borderRadius: 8,
+    },
+    usernameContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 5,
+      minHeight: 40,
+    },
+    usernameText: {
       fontSize: 20,
       fontWeight: 'bold',
       color: theme.text,
-      marginBottom: 5,
+    },
+    usernameInput: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: theme.text,
+      backgroundColor: theme.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 2,
+      borderColor: theme.primary,
+      minWidth: 200,
+      textAlign: 'center',
+    },
+    editButton: {
+      marginLeft: 8,
+      padding: 6,
+      borderRadius: 8,
+      backgroundColor: theme.surface,
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    actionButtonsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginLeft: 8,
+      gap: 4,
+    },
+    saveButton: {
+      padding: 6,
+      borderRadius: 8,
+      backgroundColor: theme.success,
+      shadowColor: theme.success,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.2,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    cancelButton: {
+      padding: 6,
+      borderRadius: 8,
+      backgroundColor: theme.surface,
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
     },
     userInfo: {
       fontSize: 14,
@@ -452,7 +590,69 @@ modalOverlay: {
             <View style={dynamicStyles.avatar}>
               <Ionicons name="person" size={40} color="#fff" />
             </View>
-            <Text style={dynamicStyles.email}>{user?.email}</Text>
+            
+            {/* Username avec édition inline */}
+            <View style={dynamicStyles.usernameContainer}>
+  {isEditingUsername ? (
+    <>
+      <TextInput
+        ref={usernameInputRef}
+        style={[
+          dynamicStyles.usernameInput,
+          { outlineWidth: 0 }
+        ]}
+        value={newUsername}
+        onChangeText={setNewUsername}
+        placeholder="Votre pseudo"
+        placeholderTextColor={theme.textSecondary}
+        maxLength={20}
+        autoCapitalize="none"
+        autoCorrect={false}
+        onSubmitEditing={updateUsername}
+        editable={!isUpdatingUsername}
+      />
+      <View style={dynamicStyles.actionButtonsContainer}>
+        <Pressable 
+          style={dynamicStyles.saveButton} 
+          onPress={updateUsername}
+          disabled={isUpdatingUsername || !newUsername.trim()}
+        >
+          <Ionicons 
+            name={"checkmark"} 
+            size={16} 
+            color="#fff" 
+          />
+        </Pressable>
+        <Pressable 
+          style={dynamicStyles.cancelButton} 
+          onPress={cancelEditingUsername}
+          disabled={isUpdatingUsername}
+        >
+          <Ionicons name="close" size={16} color={theme.textSecondary} />
+        </Pressable>
+      </View>
+    </>
+  ) : (
+    <>
+      {/* Icône invisible pour équilibrer */}
+      <View style={dynamicStyles.invisibleIcon}>
+        <Ionicons name="pencil" size={16} color="transparent" />
+      </View>
+      
+      <Text style={dynamicStyles.usernameText}>
+        {userProfile?.username || 'Utilisateur anonyme'}
+      </Text>
+      
+      <Pressable style={dynamicStyles.editButton} onPress={startEditingUsername}>
+        <Ionicons name="pencil" size={16} color={theme.textSecondary} />
+      </Pressable>
+    </>
+  )}
+</View>
+            
+            <Text style={dynamicStyles.userInfo}>
+              {user?.email}
+            </Text>
             <Text style={dynamicStyles.userInfo}>
               Membre depuis {new Date(user?.created_at || '').toLocaleDateString('fr-FR')}
             </Text>
@@ -744,25 +944,27 @@ modalOverlay: {
             </Pressable>
           </Pressable>
         </Modal>
+
+        {/* Logout Modal */}
         <Modal
-  visible={showLogoutModal}
-  transparent={true}
-  animationType="fade"
->
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-    <View style={{ backgroundColor: theme.surface, padding: 20, borderRadius: 12, margin: 20 }}>
-      <Text style={{ color: theme.text, marginBottom: 20 }}>Voulez-vous vraiment vous déconnecter ?</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-        <Pressable onPress={() => setShowLogoutModal(false)}>
-          <Text style={{ color: theme.textSecondary, padding: 10 }}>Annuler</Text>
-        </Pressable>
-        <Pressable onPress={confirmLogout}>
-          <Text style={{ color: theme.error, padding: 10 }}>Déconnexion</Text>
-        </Pressable>
-      </View>
-    </View>
-  </View>
-</Modal>
+          visible={showLogoutModal}
+          transparent={true}
+          animationType="fade"
+        >
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <View style={{ backgroundColor: theme.surface, padding: 20, borderRadius: 12, margin: 20 }}>
+              <Text style={{ color: theme.text, marginBottom: 20 }}>Voulez-vous vraiment vous déconnecter ?</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+                <Pressable onPress={() => setShowLogoutModal(false)}>
+                  <Text style={{ color: theme.textSecondary, padding: 10 }}>Annuler</Text>
+                </Pressable>
+                <Pressable onPress={confirmLogout}>
+                  <Text style={{ color: theme.error, padding: 10 }}>Déconnexion</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );

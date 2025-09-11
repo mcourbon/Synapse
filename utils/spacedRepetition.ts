@@ -11,20 +11,23 @@ export interface CardStats {
 
 export type ReviewResponse = 'hard' | 'medium' | 'easy';
 
-// Algorithme basé sur SM-2 simplifié avec 3 réponses
+// Algorithme optimisé selon la courbe de l'oubli d'Ebbinghaus
 export class SpacedRepetitionSystem {
-  private static readonly INITIAL_INTERVAL = 1;
   private static readonly INITIAL_EASE_FACTOR = 2.5;
   private static readonly MIN_EASE_FACTOR = 1.3;
-  private static readonly MAX_EASE_FACTOR = 3.2;
-  private static readonly MAX_INTERVAL = 60; // Maximum 2 mois (60 jours)
+  private static readonly MAX_EASE_FACTOR = 3.0;
+  private static readonly MAX_INTERVAL = 60; // Maximum 2 mois
+
+  // Séquences optimales basées sur la recherche cognitive
+  private static readonly LEARNING_INTERVALS = [1, 3]; // 1 jour puis 3 jours pour l'apprentissage initial
+  private static readonly GRADUATION_INTERVAL = 7; // 7 jours pour la "graduation"
 
   static calculateNextReview(
     currentStats: Partial<CardStats>,
     response: ReviewResponse
   ): CardStats {
     const stats: CardStats = {
-      interval: currentStats.interval || this.INITIAL_INTERVAL,
+      interval: currentStats.interval || 0,
       repetitions: currentStats.repetitions || 0,
       easeFactor: currentStats.easeFactor || this.INITIAL_EASE_FACTOR,
     };
@@ -35,65 +38,93 @@ export class SpacedRepetitionSystem {
     let newEaseFactor: number = stats.easeFactor;
 
     switch (response) {
-      case 'hard': // Difficile - mauvaise réponse
-        // 🔥 CORRECTION : TOUJOURS remettre à 0 pour révision immédiate
-        newInterval = 0; // 0 = immédiatement disponible pour révision
-        newRepetitions = 0; // Reset les répétitions (casse la win streak)
+      case 'hard': // Échec - recommencer l'apprentissage
+        newInterval = 0; // Révision immédiate (quelques minutes)
+        newRepetitions = 0; // Reset complet
         newEaseFactor = Math.max(
           stats.easeFactor - 0.2,
           this.MIN_EASE_FACTOR
         );
         break;
 
-      case 'medium': // Moyen - réponse correcte mais hésitante
-        // 🔥 CORRECTION : Si on vient d'un "hard" (interval = 0), traiter comme nouveau départ
-        if (stats.interval === 0 || stats.repetitions === 0) {
-          newInterval = 2; // Dans 2 jours - première réussite
-        } else if (stats.repetitions === 1) {
-          newInterval = 4; // Dans 4 jours - deuxième réussite
-        } else {
-          newInterval = Math.round(stats.interval * (stats.easeFactor * 0.85)); // Progression modérée
-        }
-        newRepetitions = stats.repetitions + 1;
+      case 'medium': // Hésitant - progression prudente
         newEaseFactor = Math.max(
-          stats.easeFactor - 0.05,
+          stats.easeFactor - 0.15,
           this.MIN_EASE_FACTOR
         );
+        
+        if (stats.repetitions === 0) {
+          // Première réussite après échec : 1 jour
+          newInterval = this.LEARNING_INTERVALS[0];
+          newRepetitions = 1;
+        } else if (stats.repetitions === 1) {
+          // Deuxième réussite : 3 jours (consolidation précoce)
+          newInterval = this.LEARNING_INTERVALS[1];
+          newRepetitions = 2;
+        } else if (stats.repetitions === 2) {
+          // Graduation prudente : 7 jours
+          newInterval = this.GRADUATION_INTERVAL;
+          newRepetitions = 3;
+        } else {
+          // Phase de révision : progression modérée (85% du facteur normal)
+          newInterval = Math.round(stats.interval * newEaseFactor * 0.85);
+          newRepetitions = stats.repetitions + 1;
+        }
         break;
 
-      case 'easy': // Facile - réponse parfaite
-        // 🆕 MODIFICATION : Séquence 2j -> 4j -> 8j puis progression normale
-        if (stats.interval === 0 || stats.repetitions === 0) {
-          newInterval = 2; // Dans 2 jours - première réussite
-        } else if (stats.repetitions === 1) {
-          newInterval = 4; // Dans 4 jours - deuxième réussite
-        } else if (stats.repetitions === 2) {
-          newInterval = 8; // Dans 8 jours - troisième réussite
-        } else {
-          newInterval = Math.round(stats.interval * (stats.easeFactor * 1.1)); // Progression rapide normale
-        }
-        newRepetitions = stats.repetitions + 1;
+      case 'easy': // Maîtrisé - progression optimale
         newEaseFactor = Math.min(
           stats.easeFactor + 0.1,
           this.MAX_EASE_FACTOR
         );
+
+        if (stats.repetitions === 0) {
+          // Première réussite : 1 jour (consolidation initiale rapide)
+          newInterval = this.LEARNING_INTERVALS[0];
+          newRepetitions = 1;
+        } else if (stats.repetitions === 1) {
+          // Deuxième réussite : 4 jours (optimal selon Ebbinghaus)
+          newInterval = 4;
+          newRepetitions = 2;
+        } else if (stats.repetitions === 2) {
+          // Graduation : 10 jours (consolidation à long terme)
+          newInterval = 10;
+          newRepetitions = 3;
+        } else {
+          // Phase mature : progression exponentielle modifiée
+          // Formule basée sur la courbe de rétention optimale (90% de rétention)
+          const baseMultiplier = Math.min(newEaseFactor, 2.8);
+          
+          // Facteur de décroissance pour éviter des intervalles trop longs trop vite
+          const maturityFactor = Math.min(1 + (stats.repetitions - 3) * 0.05, 1.3);
+          
+          newInterval = Math.round(stats.interval * baseMultiplier * maturityFactor);
+          newRepetitions = stats.repetitions + 1;
+        }
         break;
     }
 
-    // 🔥 CORRECTION : Ne pas appliquer la limite MAX_INTERVAL pour "hard"
-    // car newInterval est déjà à 0 et doit le rester
+    // Appliquer la limite maximale (sauf pour 'hard' qui doit rester à 0)
     if (response !== 'hard') {
       newInterval = Math.min(newInterval, this.MAX_INTERVAL);
+      
+      // Protection contre les intervalles trop courts en phase mature
+      if (newRepetitions > 3 && newInterval < 7) {
+        newInterval = 7;
+      }
     }
 
-    // Calculer la prochaine date de révision
+    // Calculer la date de révision
     const nextReview = new Date(now);
     if (response === 'hard') {
-      // Pour "hard", on garde la date actuelle (disponible immédiatement)
-      // Mais on peut ajouter quelques minutes pour éviter la re-sélection immédiate
-      nextReview.setMinutes(now.getMinutes() + 1);
+      // Pour 'hard' : quelques minutes d'attente pour éviter la frustration
+      nextReview.setMinutes(now.getMinutes() + 5);
     } else {
       nextReview.setDate(now.getDate() + newInterval);
+      
+      // Ajouter un peu de randomisation (±10%) pour éviter les "piles" de révisions
+      const randomVariation = Math.floor((Math.random() - 0.5) * 0.2 * newInterval * 24 * 60); // en minutes
+      nextReview.setMinutes(nextReview.getMinutes() + randomVariation);
     }
 
     return {
@@ -117,37 +148,51 @@ export class SpacedRepetitionSystem {
     return cards.filter(card => this.isDue(card.next_review)).length;
   }
 
-  // Obtient le message d'encouragement
-  static getResponseMessage(response: ReviewResponse, interval: number): string {
+  // Messages d'encouragement optimisés selon la phase d'apprentissage
+  static getResponseMessage(response: ReviewResponse, interval: number, repetitions: number = 0): string {
     switch (response) {
       case 'hard':
-        return `Cette carte est encore difficile. Elle restera disponible pour révision immédiate. 🔄`;
+        return `Cette carte nécessite plus de travail. Elle reviendra dans quelques minutes pour consolider l'apprentissage.`;
+      
       case 'medium':
-        const daysMedium = interval === 1 ? '1 jour' : `${interval} jours`;
-        return `Bien joué ! Cette carte reviendra dans ${daysMedium}.`;
+        if (repetitions <= 2) {
+          return `Bien ! Cette carte est en cours d'apprentissage. Prochaine révision dans ${this.formatInterval(interval)}.`;
+        } else {
+          return `Correct, mais avec hésitation. La carte reviendra dans ${this.formatInterval(interval)} pour renforcer la mémorisation.`;
+        }
+      
       case 'easy':
-        const daysEasy = interval === 1 ? '1 jour' : `${interval} jours`;
-        return `Excellent ! Cette carte reviendra dans ${daysEasy}.`;
+        if (repetitions === 1) {
+          return `Excellent ! Première maîtrise confirmée. Révision dans ${this.formatInterval(interval)} pour la consolidation.`;
+        } else if (repetitions === 2) {
+          return `Parfait ! La carte entre en phase de rétention à long terme. Prochaine révision dans ${this.formatInterval(interval)}.`;
+        } else if (repetitions <= 5) {
+          return `Maîtrisé ! Espacement optimal appliqué selon la courbe de l'oubli. Révision dans ${this.formatInterval(interval)}.`;
+        } else {
+          return `Expert ! Cette connaissance est solidement ancrée. Révision dans ${this.formatInterval(interval)}.`;
+        }
+      
       default:
         const days = interval === 1 ? '1 jour' : `${interval} jours`;
         return `Cette carte reviendra dans ${days}.`;
     }
   }
 
-  // Statistiques avancées
-  static getCardMastery(repetitions: number, easeFactor: number): 'nouveau' | 'apprentissage' | 'révision' | 'maîtrisé' {
+  // Statut de maîtrise plus précis
+  static getCardMastery(repetitions: number, easeFactor: number): 'nouveau' | 'apprentissage' | 'consolidation' | 'révision' | 'maîtrisé' {
     if (repetitions === 0) return 'nouveau';
     if (repetitions < 3) return 'apprentissage';
-    if (easeFactor < 2.2) return 'révision';
-    return 'maîtrisé';
+    if (repetitions < 6) return 'consolidation';
+    if (easeFactor > 2.3) return 'maîtrisé';
+    return 'révision';
   }
 
-  // 🆕 NOUVELLE FONCTION : Vérifie si une carte est en mode "hard" (révision immédiate)
+  // Vérifie si une carte est en mode "hard" (révision immédiate)
   static isImmediateReview(interval: number): boolean {
     return interval === 0;
   }
 
-  // 🆕 NOUVELLE FONCTION : Obtient les cartes en révision immédiate
+  // Obtient les cartes en révision immédiate
   static getImmediateReviewCards(cards: Array<{ interval?: number; next_review: string | null }>): Array<any> {
     return cards.filter(card => {
       const interval = card.interval || 1;
@@ -159,11 +204,22 @@ export class SpacedRepetitionSystem {
   static getMaxInterval(): number {
     return this.MAX_INTERVAL;
   }
+
+  // Formatage d'intervalle amélioré
+  private static formatInterval(days: number): string {
+    if (days === 0) return 'quelques minutes';
+    if (days === 1) return '1 jour';
+    if (days < 7) return `${days} jours`;
+    if (days < 14) return `${Math.round(days / 7)} semaine${Math.round(days / 7) > 1 ? 's' : ''}`;
+    if (days < 30) return `${Math.round(days / 7)} semaines`;
+    if (days < 60) return `${Math.round(days / 30)} mois`;
+    return `2 mois`;
+  }
 }
 
-// Fonction utilitaire pour formater les intervalles
+// Fonction utilitaire pour formater les intervalles (version publique)
 export function formatInterval(days: number): string {
-  if (days === 0) return 'Maintenant'; // 🆕 Pour les révisions immédiates
+  if (days === 0) return 'Maintenant';
   if (days === 1) return '1 jour';
   if (days < 30) return `${days} jours`;
   if (days < 365) {
@@ -206,9 +262,9 @@ export function useSpacedRepetition() {
       
       return {
         success: true,
-        message: SpacedRepetitionSystem.getResponseMessage(response, newStats.interval),
+        message: SpacedRepetitionSystem.getResponseMessage(response, newStats.interval, newStats.repetitions),
         stats: newStats,
-        isImmediateReview: response === 'hard' // 🆕 Indique si c'est une révision immédiate
+        isImmediateReview: response === 'hard' // Indique si c'est une révision immédiate
       };
     } catch (error) {
       return {

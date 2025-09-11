@@ -37,6 +37,7 @@ export interface User {
 export interface UserStats {
   id: string;
   user_id: string;
+  username?: string | null;
   collections_created: number;
   cards_studied: number;
   current_streak: number;
