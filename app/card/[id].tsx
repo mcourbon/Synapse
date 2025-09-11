@@ -1,9 +1,10 @@
 // app/card/[id].tsx
 import { View, Text, StyleSheet, Pressable, Animated, Modal, Dimensions } from 'react-native';
+import React from 'react';
 import { useEffect, useState, useRef } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
@@ -359,7 +360,7 @@ export default function CardReview() {
     },
     endSessionOverlay: {
       flex: 1,
-      backgroundColor: theme.isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.6)',
+      backgroundColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.6)',
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 20,
@@ -471,6 +472,54 @@ export default function CardReview() {
       fetchCardAndDeck();
     }
   }, [id, user]);
+
+  // Gestion des raccourcis clavier
+useFocusEffect(
+  React.useCallback(() => {
+    const handleKeyPress = (event) => {
+      // Ignorer si on est dans le modal de fin de session
+      if (showEndSessionModal) return;
+      
+      switch (event.key) {
+        case ' ': // Espace pour révéler/masquer la réponse
+          event.preventDefault();
+          handleToggleAnswer();
+          break;
+        case '1': // Chiffre 1 pour difficile
+          if (showAnswer && !isProcessing) {
+            event.preventDefault();
+            animateButton('hard');
+            handleDifficultyResponse('hard');
+          }
+          break;
+        case '2': // Chiffre 2 pour moyen
+          if (showAnswer && !isProcessing) {
+            event.preventDefault();
+            animateButton('medium');
+            handleDifficultyResponse('medium');
+          }
+          break;
+        case '3': // Chiffre 3 pour facile
+          if (showAnswer && !isProcessing) {
+            event.preventDefault();
+            animateButton('easy');
+            handleDifficultyResponse('easy');
+          }
+          break;
+      }
+    };
+
+    // Ajouter l'event listener
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', handleKeyPress);
+      
+      // Cleanup
+      return () => {
+        window.removeEventListener('keydown', handleKeyPress);
+      };
+    }
+  }, [showAnswer, showEndSessionModal, isProcessing])
+);
 
   async function fetchCardAndDeck() {
     if (!id || !user) return;

@@ -156,6 +156,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error('❌ Erreur lors de la déconnexion:', error.message);
         throw error;
       }
+
+      // Forcer la mise à jour de l'état local immédiatement
+      setSession(null);
+      setUser(null);
       
       console.log('✅ Déconnexion réussie');
     } catch (err) {

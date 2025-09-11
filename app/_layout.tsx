@@ -1,13 +1,13 @@
 // app/_layout.tsx
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
-import { ThemeProvider, useTheme } from '../contexts/ThemeContext'; // Ajouter cette ligne
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import AuthScreen from '../components/AuthScreen';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 
 function RootLayoutNav() {
   const { user, loading } = useAuth();
-  const { theme } = useTheme(); // Utiliser le thème
+  const { theme } = useTheme();
 
   // Créer les styles avec le thème dynamique
   const dynamicStyles = StyleSheet.create({
@@ -15,7 +15,7 @@ function RootLayoutNav() {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: theme.background, // Au lieu de '#f5f5f5'
+      backgroundColor: theme.background,
     },
   });
 

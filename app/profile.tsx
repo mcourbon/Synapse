@@ -31,6 +31,7 @@ export default function Profile() {
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
 
   useEffect(() => {
@@ -137,19 +138,17 @@ export default function Profile() {
   };
 
   const handleSignOut = () => {
-    Alert.alert(
-      'Déconnexion',
-      'Êtes-vous sûr de vouloir vous déconnecter ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { 
-          text: 'Déconnexion', 
-          style: 'destructive',
-          onPress: signOut
-        }
-      ]
-    );
-  };
+  setShowLogoutModal(true);
+};
+
+const confirmLogout = async () => {
+  setShowLogoutModal(false);
+  try {
+    await signOut();
+  } catch (error) {
+    console.error('Erreur:', error);
+  }
+};
 
   // Créer les styles dynamiques avec le thème
   const dynamicStyles = StyleSheet.create({
@@ -745,6 +744,25 @@ modalOverlay: {
             </Pressable>
           </Pressable>
         </Modal>
+        <Modal
+  visible={showLogoutModal}
+  transparent={true}
+  animationType="fade"
+>
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+    <View style={{ backgroundColor: theme.surface, padding: 20, borderRadius: 12, margin: 20 }}>
+      <Text style={{ color: theme.text, marginBottom: 20 }}>Voulez-vous vraiment vous déconnecter ?</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+        <Pressable onPress={() => setShowLogoutModal(false)}>
+          <Text style={{ color: theme.textSecondary, padding: 10 }}>Annuler</Text>
+        </Pressable>
+        <Pressable onPress={confirmLogout}>
+          <Text style={{ color: theme.error, padding: 10 }}>Déconnexion</Text>
+        </Pressable>
+      </View>
+    </View>
+  </View>
+</Modal>
       </View>
     </SafeAreaView>
   );

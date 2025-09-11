@@ -44,16 +44,16 @@ export const lightTheme = {
 
 export const darkTheme = {
   // Couleurs principales
-  background: '#000000',
-  surface: '#1c1c1e',
+  background: '#1a1a1a',
+  surface: '#2d2d30',
   primary: '#0A84FF',
   secondary: '#30D158',
   accent: '#FF9F0A',
   
   // Textes
   text: '#ffffff',
-  textSecondary: '#ebebf5',
-  textMuted: '#8e8e93',
+  textSecondary: '#e1e1e1',
+  textMuted: '#a1a1a6',
   
   // États
   error: '#FF453A',
@@ -61,14 +61,14 @@ export const darkTheme = {
   warning: '#FF9F0A',
   
   // Bordures et séparateurs
-  border: '#38383a',
-  separator: '#2c2c2e',
+  border: '#484848',
+  separator: '#3a3a3c',
   
   // Ombres
   shadow: '#000000',
   
   // Spécifique aux cartes
-  cardBackground: '#1c1c1e',
+  cardBackground: '#2d2d30',
   cardBorder: '#0A84FF',
   
   // Boutons de difficulté
