@@ -136,12 +136,19 @@ export class SpacedRepetitionSystem {
     };
   }
 
-  // Détermine si une carte doit être révisée
+  // Détermine si une carte doit être révisée aujourd'hui
   static isDue(nextReview: Date | string | null): boolean {
-    if (!nextReview) return true;
-    const reviewDate = typeof nextReview === 'string' ? new Date(nextReview) : nextReview;
-    return reviewDate <= new Date();
-  }
+  if (!nextReview) return true;
+  
+  const reviewDate = typeof nextReview === 'string' ? new Date(nextReview) : nextReview;
+  const today = new Date();
+  
+  // Comparaison des dates seulement (sans les heures) - Version robuste
+  const reviewDateOnly = new Date(reviewDate.getFullYear(), reviewDate.getMonth(), reviewDate.getDate());
+  const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  
+  return reviewDateOnly <= todayDateOnly;
+}
 
   // Calcule le nombre de cartes dues
   static getDueCount(cards: Array<{ next_review: string | null }>): number {
