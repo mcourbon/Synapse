@@ -6,12 +6,12 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   ScrollView,
   DimensionValue,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,6 +43,38 @@ const validateEmail = (email: string) => {
   return emailRegex.test(email);
 };
 
+// Composant pour afficher les messages d'erreur
+const ErrorMessage = ({ message, type = 'error' }: { message: string; type?: 'error' | 'warning' | 'info' }) => {
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const colors = {
+    error: { bg: '#fee', border: '#FF3B30', text: '#c00', icon: 'close-circle' },
+    warning: { bg: '#fff3cd', border: '#ffc107', text: '#856404', icon: 'warning' },
+    info: { bg: '#e3f2fd', border: '#2196F3', text: '#1565c0', icon: 'information-circle' },
+  };
+
+  const style = colors[type];
+
+  return (
+    <Animated.View style={[styles.errorMessage, { 
+      backgroundColor: style.bg, 
+      borderColor: style.border,
+      opacity: fadeAnim 
+    }]}>
+      <Ionicons name={style.icon as any} size={20} color={style.text} />
+      <Text style={[styles.errorMessageText, { color: style.text }]}>{message}</Text>
+    </Animated.View>
+  );
+};
+
 export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,8 +86,23 @@ export default function AuthScreen() {
   const [rateLimited, setRateLimited] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [registrationStep, setRegistrationStep] = useState<'form' | 'confirmation'>('form');
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [errorType, setErrorType] = useState<'error' | 'warning' | 'info'>('error');
 
   const { signIn, signUp } = useAuth();
+
+  // Fonction pour afficher une erreur
+  const showError = (message: string, type: 'error' | 'warning' | 'info' = 'error') => {
+    setErrorMessage(message);
+    setErrorType(type);
+    // Auto-hide après 5 secondes
+    setTimeout(() => {
+      setErrorMessage('');
+    }, 5000);
+  };
 
   // Gestion du rate limiting
   const handleRateLimit = () => {
@@ -89,26 +136,29 @@ export default function AuthScreen() {
   };
 
   const handleAuth = async () => {
+    // Réinitialiser l'erreur
+    setErrorMessage('');
+
     // Validation de base pour les champs vides
     if (!email.trim() && !password.trim()) {
-      Alert.alert('Champs requis', 'Veuillez saisir votre email et votre mot de passe');
+      showError('Veuillez saisir votre email et votre mot de passe');
       return;
     }
 
     // Validation de l'email
     if (!email.trim()) {
-      Alert.alert('Email requis', 'Veuillez saisir votre adresse email');
+      showError('Veuillez saisir votre adresse email');
       return;
     }
 
     if (!validateEmail(email.trim())) {
-      Alert.alert('Email invalide', 'Veuillez saisir une adresse email valide');
+      showError('Veuillez saisir une adresse email valide');
       return;
     }
 
     // Validation du mot de passe
     if (!password.trim()) {
-      Alert.alert('Mot de passe requis', 'Veuillez saisir votre mot de passe');
+      showError('Veuillez saisir votre mot de passe');
       return;
     }
 
@@ -116,21 +166,18 @@ export default function AuthScreen() {
       // Validation renforcée pour l'inscription
       const passwordErrors = validatePassword(password);
       if (passwordErrors.length > 0) {
-        Alert.alert(
-          'Mot de passe trop faible',
-          `Votre mot de passe doit contenir :\n• ${passwordErrors.join('\n• ')}`
-        );
+        showError(`Votre mot de passe doit contenir :\n• ${passwordErrors.join('\n• ')}`);
         return;
       }
 
       if (password !== confirmPassword) {
-        Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
+        showError('Les mots de passe ne correspondent pas');
         return;
       }
     } else {
       // Pour la connexion, juste vérifier la longueur minimale
       if (password.length < 6) {
-        Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caractères');
+        showError('Le mot de passe doit contenir au moins 6 caractères');
         return;
       }
     }
@@ -139,7 +186,7 @@ export default function AuthScreen() {
 
     try {
       if (isSignUp) {
-        console.log('🔄 Tentative d\'inscription...', { email: email.trim() });
+        console.log('📄 Tentative d\'inscription...', { email: email.trim() });
         
         const result = await signUp(email.trim(), password);
         console.log('📊 Résultat inscription:', result);
@@ -148,19 +195,19 @@ export default function AuthScreen() {
           console.error('❌ Erreur inscription:', result.error);
           
           // Messages d'erreur personnalisés
-          let errorMessage = result.error.message;
+          let errorMsg = result.error.message;
           if (result.error.message.includes('already registered')) {
-            errorMessage = 'Cet email est déjà utilisé. Essayez de vous connecter.';
+            errorMsg = 'Cet email est déjà utilisé. Essayez de vous connecter.';
           } else if (result.error.message.includes('invalid email')) {
-            errorMessage = 'Format d\'email invalide';
+            errorMsg = 'Format d\'email invalide';
           } else if (result.error.message.includes('weak password')) {
-            errorMessage = 'Mot de passe trop faible';
+            errorMsg = 'Mot de passe trop faible';
           } else if (result.error.message.includes('too many requests') || result.error.message.includes('rate limit')) {
             handleRateLimit();
-            errorMessage = `Trop de tentatives rapides. Veuillez patienter ${countdown} secondes.`;
+            errorMsg = `Trop de tentatives rapides. Veuillez patienter ${countdown} secondes.`;
           }
           
-          Alert.alert('Erreur d\'inscription', errorMessage);
+          showError(errorMsg);
         } else {
           console.log('✅ Inscription réussie');
           // Passer à l'étape de confirmation
@@ -169,7 +216,7 @@ export default function AuthScreen() {
           return; // Sortir ici pour ne pas continuer
         }
       } else {
-        console.log('🔄 Tentative de connexion...', { email: email.trim() });
+        console.log('📄 Tentative de connexion...', { email: email.trim() });
         
         const result = await signIn(email.trim(), password);
         console.log('📊 Résultat connexion:', result);
@@ -178,17 +225,22 @@ export default function AuthScreen() {
           console.error('❌ Erreur connexion:', result.error);
           
           // Messages d'erreur personnalisés
-          let errorMessage = result.error.message;
+          let errorMsg = result.error.message;
           if (result.error.message.includes('Invalid login credentials')) {
-            errorMessage = 'Email ou mot de passe incorrect';
+            errorMsg = 'Email ou mot de passe incorrect. Vérifiez vos identifiants ou créez un compte.';
           } else if (result.error.message.includes('Email not confirmed')) {
-            errorMessage = 'Veuillez confirmer votre email avant de vous connecter';
+            errorMsg = 'Veuillez confirmer votre email avant de vous connecter';
           } else if (result.error.message.includes('too many requests')) {
             handleRateLimit();
-            errorMessage = `Trop de tentatives. Veuillez patienter ${countdown} secondes.`;
+            errorMsg = `Trop de tentatives. Veuillez patienter ${countdown} secondes.`;
+          } else if (result.error.message.includes('User not found') || result.error.message.includes('user not found')) {
+            errorMsg = 'Ce compte n\'existe pas. Veuillez vous inscrire d\'abord.';
+          } else {
+            // Afficher l'erreur générique si non reconnue
+            errorMsg = result.error.message || 'Erreur de connexion. Vérifiez vos identifiants.';
           }
           
-          Alert.alert('Erreur de connexion', errorMessage);
+          showError(errorMsg);
         } else {
           console.log('✅ Connexion réussie');
           // La navigation sera gérée automatiquement par AuthContext
@@ -196,10 +248,7 @@ export default function AuthScreen() {
       }
     } catch (error: any) {
       console.error('💥 Erreur inattendue:', error);
-      Alert.alert(
-        'Erreur', 
-        error.message || 'Une erreur inattendue est survenue. Veuillez réessayer.'
-      );
+      showError(error.message || 'Une erreur inattendue est survenue. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
@@ -212,7 +261,8 @@ export default function AuthScreen() {
     setConfirmPassword('');
     setShowPassword(false);
     setShowConfirmPassword(false);
-    setRegistrationStep('form'); // Reset à l'étape formulaire
+    setRegistrationStep('form');
+    setErrorMessage(''); // Reset error
   };
 
   const backToSignIn = () => {
@@ -220,7 +270,7 @@ export default function AuthScreen() {
     setPassword('');
     setConfirmPassword('');
     setRegistrationStep('form');
-    // Garder l'email pour faciliter la connexion
+    setErrorMessage('');
   };
 
   const passwordStrength = isSignUp ? getPasswordStrength(password) : null;
@@ -250,6 +300,11 @@ export default function AuthScreen() {
               }
             </Text>
           </View>
+
+          {/* Message d'erreur global */}
+          {errorMessage ? (
+            <ErrorMessage message={errorMessage} type={errorType} />
+          ) : null}
 
           {/* Écran de confirmation d'inscription */}
           {registrationStep === 'confirmation' ? (
@@ -299,14 +354,18 @@ export default function AuthScreen() {
                 <Text style={styles.label}>Email</Text>
                 <View style={[
                   styles.inputContainer,
+                  emailFocused && styles.inputContainerFocused,
                   !validateEmail(email) && email.length > 0 && styles.inputError
                 ]}>
                   <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
                   <TextInput
-                    style={styles.textInput}
+                    style={[styles.textInput, { outlineWidth: 0 }]}
                     value={email}
                     onChangeText={setEmail}
+                    onFocus={() => setEmailFocused(true)}
+                    onBlur={() => setEmailFocused(false)}
                     placeholder="votre@email.com"
+                    placeholderTextColor="#999"
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -322,16 +381,24 @@ export default function AuthScreen() {
               {/* Password */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Mot de passe</Text>
-                <View style={styles.inputContainer}>
+                <View style={[
+                  styles.inputContainer,
+                  passwordFocused && styles.inputContainerFocused
+                ]}>
                   <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
                   <TextInput
-                    style={styles.textInput}
+                    style={[styles.textInput, { outlineWidth: 0 }]}
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="••••••••"
+                    onFocus={() => setPasswordFocused(true)}
+                    onBlur={() => setPasswordFocused(false)}
+                    placeholder="Entrez votre mot de passe"
+                    placeholderTextColor="#999"
                     secureTextEntry={!showPassword}
                     autoComplete={isSignUp ? "new-password" : "current-password"}
                     editable={!loading}
+                    onSubmitEditing={handleAuth}
+                    returnKeyType="go"
                   />
                   <Pressable
                     onPress={() => setShowPassword(!showPassword)}
@@ -382,17 +449,23 @@ export default function AuthScreen() {
                   <Text style={styles.label}>Confirmer le mot de passe</Text>
                   <View style={[
                     styles.inputContainer,
+                    confirmPasswordFocused && styles.inputContainerFocused,
                     confirmPassword.length > 0 && password !== confirmPassword && styles.inputError
                   ]}>
                     <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, { outlineWidth: 0 }]}
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
-                      placeholder="••••••••"
+                      onFocus={() => setConfirmPasswordFocused(true)}
+                      onBlur={() => setConfirmPasswordFocused(false)}
+                      placeholder="Confirmez votre mot de passe"
+                      placeholderTextColor="#999"
                       secureTextEntry={!showConfirmPassword}
                       autoComplete="new-password"
                       editable={!loading}
+                      onSubmitEditing={handleAuth}
+                      returnKeyType="go"
                     />
                     <Pressable
                       onPress={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -415,10 +488,10 @@ export default function AuthScreen() {
               <Pressable
                 style={[
                   styles.submitButton, 
-                  (loading || rateLimited || (isSignUp && passwordErrors.length > 0)) && styles.submitButtonDisabled
+                  (loading || rateLimited || (isSignUp && passwordErrors.length > 0) || !email.trim() || !password.trim()) && styles.submitButtonDisabled
                 ]}
                 onPress={handleAuth}
-                disabled={loading || rateLimited || (isSignUp && passwordErrors.length > 0)}
+                disabled={loading || rateLimited || (isSignUp && passwordErrors.length > 0) || !email.trim() || !password.trim()}
               >
                 {loading ? (
                   <View style={styles.loadingContainer}>
@@ -457,7 +530,7 @@ export default function AuthScreen() {
             <View style={styles.securityInfo}>
               <Text style={styles.securityTitle}>🔒 Sécurité</Text>
               <Text style={styles.securityText}>
-                Nous utilisons un chiffrement de niveau bancaire pour protéger vos données. 
+                Nous utilisons un système de sécurité professionnel avec hachage bcrypt pour protéger vos informations. 
                 Votre mot de passe est haché et jamais stocké en clair.
               </Text>
             </View>
@@ -515,6 +588,22 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
+  // Style pour le message d'erreur
+  errorMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 2,
+    marginBottom: 20,
+    gap: 10,
+  },
+  errorMessageText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    lineHeight: 20,
+  },
   form: {
     marginBottom: 30,
   },
@@ -531,10 +620,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#ddd',
     borderRadius: 12,
     paddingHorizontal: 15,
+  },
+  inputContainerFocused: {
+    borderColor: '#007AFF',
   },
   inputError: {
     borderColor: '#FF3B30',
