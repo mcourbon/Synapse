@@ -92,7 +92,7 @@ export default function AuthScreen() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [errorType, setErrorType] = useState<'error' | 'warning' | 'info'>('error');
 
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInAsGuest  } = useAuth();
 
   // Fonction pour afficher une erreur
   const showError = (message: string, type: 'error' | 'warning' | 'info' = 'error') => {
@@ -102,6 +102,20 @@ export default function AuthScreen() {
     setTimeout(() => {
       setErrorMessage('');
     }, 5000);
+  };
+
+  // Mode démo
+  const handleDemoMode = async () => {
+    setLoading(true);
+    try {
+      await signInAsGuest();
+      console.log('✅ Mode démo activé');
+    } catch (error: any) {
+      console.error('❌ Erreur mode démo:', error);
+      showError('Impossible de démarrer le mode démo');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Gestion du rate limiting
@@ -536,14 +550,28 @@ export default function AuthScreen() {
             </View>
           )}
 
-          {/* Demo Info */}
+          {/* Bouton Mode Démo */}
           {!isSignUp && registrationStep === 'form' && (
-            <View style={styles.demoInfo}>
-              <Text style={styles.demoTitle}>💡 Pour tester rapidement</Text>
-              <Text style={styles.demoText}>
-                Vous pouvez créer un compte ou utiliser :{'\n'}
-                Email: demo@synapse.com{'\n'}
-                Mot de passe: Demo123!
+            <View style={styles.demoSection}>
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>ou</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              
+              <Pressable
+                style={styles.demoButton}
+                onPress={handleDemoMode}
+                disabled={loading}
+              >
+                <Ionicons name="play-circle-outline" size={24} color="#007AFF" />
+                <Text style={styles.demoButtonText}>
+                  Continuer en mode démo
+                </Text>
+              </Pressable>
+              
+              <Text style={styles.demoDescription}>
+                Testez l'application sans créer de compte. Vos données resteront locales.
               </Text>
             </View>
           )}
@@ -748,26 +776,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2d5016',
     lineHeight: 20,
+  },// Styles pour le mode démo
+demoSection: {
+  marginTop: 30,
+},
+divider: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: 20,
+},
+dividerLine: {
+  flex: 1,
+  height: 1,
+  backgroundColor: '#ddd',
+},
+dividerText: {
+  marginHorizontal: 15,
+  fontSize: 14,
+  color: '#999',
+  fontWeight: '500',
+},
+demoButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: '#fff',
+  paddingVertical: 16,
+  paddingHorizontal: 20,
+  borderRadius: 12,
+  borderWidth: 2,
+  borderColor: '#007AFF',
+  gap: 10,
+  shadowColor: '#000',
+  shadowOffset: {
+    width: 0,
+    height: 1,
   },
-  demoInfo: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginBottom: 20,
-  },
-  demoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  demoText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
+  shadowOpacity: 0.1,
+  shadowRadius: 2,
+  elevation: 2,
+},
+demoButtonText: {
+  color: '#007AFF',
+  fontSize: 18,
+  fontWeight: '600',
+},
+demoDescription: {
+  fontSize: 13,
+  color: '#666',
+  textAlign: 'center',
+  marginTop: 10,
+  paddingHorizontal: 20,
+  lineHeight: 18,
+},
   // Styles pour l'écran de confirmation
   confirmationContainer: {
     alignItems: 'center',

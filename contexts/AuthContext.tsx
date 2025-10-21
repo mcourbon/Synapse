@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthContextType {
   user: User | null;
@@ -10,6 +11,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ data: any; error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ data: any; error: AuthError | null }>;
   signOut: () => Promise<void>;
+  signInAsGuest: () => Promise<{ data: any; error: any | null }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   signUp: async () => ({ data: null, error: null }),
   signIn: async () => ({ data: null, error: null }),
   signOut: async () => {},
+  signInAsGuest: async () => ({ data: null, error: null }),
 });
 
 export const useAuth = () => {
@@ -41,18 +44,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     console.log('🔄 Initialisation de l\'authentification...');
     
-    // Récupérer la session actuelle
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error('❌ Erreur lors de la récupération de la session:', error);
-      } else {
-        console.log('📊 Session récupérée:', session ? 'Connecté' : 'Non connecté');
+    // Vérifier si on est en mode démo
+    const checkDemoMode = async () => {
+      try {
+        const isDemoMode = await AsyncStorage.getItem('isDemoMode');
+        if (isDemoMode === 'true') {
+          const demoUserStr = await AsyncStorage.getItem('demoUser');
+          if (demoUserStr) {
+            const demoUser = JSON.parse(demoUserStr);
+            setUser(demoUser);
+            setSession({ user: demoUser } as any);
+            setLoading(false);
+            console.log('🎮 Mode démo restauré');
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors de la vérification du mode démo:', error);
       }
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+
+      // Récupérer la session Supabase normale
+      supabase.auth.getSession().then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('❌ Erreur lors de la récupération de la session:', error);
+        } else {
+          console.log('📊 Session récupérée:', session ? 'Connecté' : 'Non connecté');
+        }
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      });
+    };
+
+    checkDemoMode();
 
     // Écouter les changements d'auth
     const {
@@ -71,6 +96,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           break;
         case 'SIGNED_OUT':
           console.log('👋 Utilisateur déconnecté');
+          // Nettoyer le mode démo lors de la déconnexion
+          await AsyncStorage.removeItem('isDemoMode');
+          await AsyncStorage.removeItem('demoUser');
           break;
         case 'TOKEN_REFRESHED':
           console.log('🔄 Token rafraîchi');
@@ -95,7 +123,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email,
         password,
         options: {
-          // Vous pouvez ajouter des métadonnées utilisateur ici
           data: {
             created_at: new Date().toISOString(),
           }
@@ -109,8 +136,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('✅ Inscription réussie:', data.user?.email);
       
-      // Note: L'utilisateur ne sera pas automatiquement connecté 
-      // s'il doit confirmer son email
       if (data.user && !data.user.email_confirmed_at) {
         console.log('📧 Email de confirmation envoyé');
       }
@@ -146,10 +171,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const signInAsGuest = async () => {
+    console.log('🎮 Activation du mode démo...');
+    
+    try {
+      const demoUser = {
+        id: 'demo-user-local',
+        email: 'demo@local',
+        isGuest: true,
+        created_at: new Date().toISOString(),
+      } as any;
+      
+      await AsyncStorage.setItem('isDemoMode', 'true');
+      await AsyncStorage.setItem('demoUser', JSON.stringify(demoUser));
+      
+      setUser(demoUser);
+      setSession({ user: demoUser } as any);
+      
+      console.log('✅ Mode démo activé');
+      return { data: demoUser, error: null };
+    } catch (error) {
+      console.error('❌ Erreur mode démo:', error);
+      return { data: null, error };
+    }
+  };
+
   const signOut = async () => {
     console.log('🔄 Déconnexion en cours...');
     
     try {
+      // Vérifier si on est en mode démo
+      const isDemoMode = await AsyncStorage.getItem('isDemoMode');
+      
+      if (isDemoMode === 'true') {
+        // Déconnexion du mode démo
+        await AsyncStorage.removeItem('isDemoMode');
+        await AsyncStorage.removeItem('demoUser');
+        setSession(null);
+        setUser(null);
+        console.log('✅ Déconnexion du mode démo réussie');
+        return;
+      }
+
+      // Déconnexion Supabase normale
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -157,7 +221,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
 
-      // Forcer la mise à jour de l'état local immédiatement
       setSession(null);
       setUser(null);
       
@@ -175,6 +238,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signUp,
     signIn,
     signOut,
+    signInAsGuest,
   };
 
   return (
