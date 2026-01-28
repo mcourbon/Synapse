@@ -23,6 +23,7 @@ export interface Card {
   repetitions?: number;
   ease_factor?: number;
   last_reviewed?: string;
+  lapses?: number; // ⭐ AJOUT
   // Relation avec le deck
   decks?: Deck;
   categories?: string[];
@@ -48,4 +49,12 @@ export interface UserStats {
   success_rate: number;
   created_at: string;
   updated_at: string;
+  // ⭐ AJOUTS POUR LE NOUVEAU SYSTÈME
+  hard_reviews?: number;
+  medium_reviews?: number;
+  easy_reviews?: number;
+  total_study_time?: number; // en secondes
+  cards_mastered?: number;
+  cards_difficult?: number;
+  study_days?: string[]; // Array de dates JSONB
 }

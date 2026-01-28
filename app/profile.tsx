@@ -7,13 +7,34 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext'; // Ajouter cet import
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { StatsTracker } from '../lib/statsTracker';
 
 interface UserStats {
+  // Stats de base
   totalCards: number;
   totalDecks: number;
   cardsReviewed: number;
+  
+  // Stats de streak
   currentStreak: number;
+  longestStreak: number;
+  
+  // Stats de révision
+  totalReviews: number;
   successRate: number;
+  hardReviews: number;
+  mediumReviews: number;
+  easyReviews: number;
+  
+  // Stats de temps
+  totalStudyTime: number;
+  
+  // Stats de difficulté
+  cardsMastered: number;
+  cardsDifficult: number;
+  
+  // Historique
+  studyDays: string[];
 }
 
 interface UserProfile {
@@ -65,108 +86,50 @@ export default function Profile() {
   if (!user) return;
 
   try {
-    // Récupérer les données utilisateur depuis user_stats
-    const { data: statsData, error: statsError } = await supabase
-      .from('user_stats')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
+    // 1. Récupérer les stats trackées automatiquement
+    const userStats = await StatsTracker.getUserStats(user.id);
+    
+    // 2. Récupérer les stats "live" (nombre de cartes, decks)
+    const liveStats = await StatsTracker.getLiveStats(user.id);
 
-    if (statsError && statsError.code !== 'PGRST116') {
-      console.error('Erreur user_stats:', statsError);
-    } else if (statsData) {
-      // Adapter la structure pour userProfile
+    // 3. Mettre à jour les stats de difficulté des cartes
+    await StatsTracker.updateCardDifficultyStats(user.id);
+
+    // 4. Récupérer le profil utilisateur
+    if (userStats) {
       setUserProfile({
-        id: statsData.user_id,
-        username: statsData.username,
-        email: user.email,
+        id: userStats.user_id,
+        username: userStats.username,
+        email: user.email || '',
         created_at: user.created_at || '',
       });
-      setNewUsername(statsData.username || '');
+      setNewUsername(userStats.username || '');
     }
 
-    // Récupérer le nombre de decks
-    const { data: decksData, error: decksError } = await supabase
-      .from('decks')
-      .select('id')
-      .eq('user_id', user.id);
+    // 5. Calculer le taux de réussite
+    const successRate = StatsTracker.calculateSuccessRate(userStats);
 
-    if (decksError) {
-      console.error('Erreur decks:', decksError);
-    }
-
-    // Récupérer toutes les cartes de l'utilisateur avec leurs statistiques
-    const { data: cardsData, error: cardsError } = await supabase
-      .from('cards')
-      .select(`
-        id,
-        repetitions,
-        ease_factor,
-        last_reviewed,
-        decks!inner(user_id)
-      `)
-      .eq('decks.user_id', user.id);
-
-    if (cardsError) {
-      console.error('Erreur cartes:', cardsError);
-    }
-
-    // Calculer les statistiques
-    const totalDecks = decksData?.length || 0;
-    const totalCards = cardsData?.length || 0;
-    
-    // Calculer le nombre de cartes révisées (au moins une fois)
-    const cardsReviewed = cardsData?.filter(card => 
-      card.repetitions && card.repetitions > 0
-    ).length || 0;
-
-    // Calculer le taux de réussite basé sur l'ease_factor
-    let totalSuccessScore = 0;
-    let reviewedCards = 0;
-
-    cardsData?.forEach(card => {
-      if (card.repetitions && card.repetitions > 0) {
-        reviewedCards++;
-        const easeFactor = card.ease_factor || 2.5;
-        const successScore = Math.min(100, Math.max(0, ((easeFactor - 1.3) / 1.7) * 100));
-        totalSuccessScore += successScore;
-      }
-    });
-
-    const successRate = reviewedCards > 0 
-      ? Math.round(totalSuccessScore / reviewedCards)
-      : 0;
-
-    // Calculer la streak
-    let currentStreak = 0;
-    
-    if (cardsData && cardsData.length > 0) {
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      
-      const recentReviews = cardsData.filter(card => {
-        if (!card.last_reviewed) return false;
-        const reviewDate = new Date(card.last_reviewed);
-        const daysDiff = Math.floor((today.getTime() - reviewDate.getTime()) / (1000 * 60 * 60 * 24));
-        return daysDiff <= 1;
-      });
-
-      if (recentReviews.length > 0) {
-        currentStreak = Math.min(7, Math.floor(cardsReviewed / 5));
-      }
-    }
-
+    // 6. Mettre à jour l'état avec toutes les stats
     setStats({
-      totalCards,
-      totalDecks,
-      cardsReviewed,
-      currentStreak,
-      successRate,
+      totalCards: liveStats.totalCards,
+      totalDecks: liveStats.totalDecks,
+      cardsReviewed: liveStats.cardsReviewed,
+      currentStreak: userStats?.current_streak || 0,
+      successRate: successRate,
+      // Nouvelles stats disponibles :
+      longestStreak: userStats?.longest_streak || 0,
+      totalReviews: userStats?.total_reviews || 0,
+      hardReviews: userStats?.hard_reviews || 0,
+      mediumReviews: userStats?.medium_reviews || 0,
+      easyReviews: userStats?.easy_reviews || 0,
+      totalStudyTime: userStats?.total_study_time || 0,
+      cardsMastered: userStats?.cards_mastered || 0,
+      cardsDifficult: userStats?.cards_difficult || 0,
+      studyDays: userStats?.study_days || [],
     });
 
   } catch (error) {
-    console.error('Erreur lors du calcul des statistiques:', error);
+    console.error('Erreur lors du chargement des statistiques:', error);
   } finally {
     setLoading(false);
   }
@@ -561,6 +524,24 @@ modalOverlay: {
     fontWeight: '500',
     textAlign: 'center',
   },
+    fullWidthCard: {
+    backgroundColor: theme.surface,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 10,
+    width: '100%',
+    shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  statSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.text,
+    marginBottom: 5,
+  },
 });
 
   return (
@@ -667,26 +648,60 @@ modalOverlay: {
               </View>
             ) : (
               <View style={styles.statsGrid}>
-                <View style={dynamicStyles.statCard}>
-                  <Ionicons name="library" size={24} color={theme.primary} />
-                  <Text style={dynamicStyles.statNumber}>{stats.totalCards}</Text>
-                  <Text style={dynamicStyles.statLabel}>Cartes créées</Text>
-                </View>
-                <View style={dynamicStyles.statCard}>
-                  <Ionicons name="checkmark-circle" size={24} color={theme.success} />
-                  <Text style={dynamicStyles.statNumber}>{stats.cardsReviewed}</Text>
-                  <Text style={dynamicStyles.statLabel}>Cartes étudiées</Text>
-                </View>
-                <View style={dynamicStyles.statCard}>
-                  <Ionicons name="flame" size={24} color={theme.warning} />
-                  <Text style={dynamicStyles.statNumber}>{stats.currentStreak}</Text>
-                  <Text style={dynamicStyles.statLabel}>Jours de suite</Text>
-                </View>
-                <View style={dynamicStyles.statCard}>
-                  <Ionicons name="trending-up" size={24} color={theme.error} />
-                  <Text style={dynamicStyles.statNumber}>{stats.successRate}%</Text>
-                  <Text style={dynamicStyles.statLabel}>Taux de réussite</Text>
-                </View>
+                {/* Temps d'étude total */}
+<View style={dynamicStyles.statCard}>
+  <Ionicons name="time-outline" size={20} color={theme.primary} />
+  <Text style={dynamicStyles.statValue}>
+    {StatsTracker.formatStudyTime(stats.totalStudyTime)}
+  </Text>
+  <Text style={dynamicStyles.statLabel}>Temps d'étude</Text>
+</View>
+
+{/* Meilleure streak */}
+<View style={dynamicStyles.statCard}>
+  <Ionicons name="trophy-outline" size={20} color={theme.accent} />
+  <Text style={dynamicStyles.statValue}>{stats.longestStreak}</Text>
+  <Text style={dynamicStyles.statLabel}>Record de jours</Text>
+</View>
+
+{/* Cartes maîtrisées */}
+<View style={dynamicStyles.statCard}>
+  <Ionicons name="star" size={20} color={theme.success} />
+  <Text style={dynamicStyles.statValue}>{stats.cardsMastered}</Text>
+  <Text style={dynamicStyles.statLabel}>Cartes maîtrisées</Text>
+</View>
+
+{/* Cartes difficiles */}
+<View style={dynamicStyles.statCard}>
+  <Ionicons name="alert-circle" size={20} color={theme.error} />
+  <Text style={dynamicStyles.statValue}>{stats.cardsDifficult}</Text>
+  <Text style={dynamicStyles.statLabel}>Cartes difficiles</Text>
+</View>
+
+{/* Répartition des réponses */}
+<View style={dynamicStyles.fullWidthCard}>
+  <Text style={dynamicStyles.statSectionTitle}>Répartition des réponses</Text>
+  <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 10 }}>
+    <View style={{ alignItems: 'center' }}>
+      <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.error }}>
+        {stats.hardReviews}
+      </Text>
+      <Text style={{ fontSize: 12, color: theme.textSecondary }}>Difficile</Text>
+    </View>
+    <View style={{ alignItems: 'center' }}>
+      <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.warning }}>
+        {stats.mediumReviews}
+      </Text>
+      <Text style={{ fontSize: 12, color: theme.textSecondary }}>Moyen</Text>
+    </View>
+    <View style={{ alignItems: 'center' }}>
+      <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.success }}>
+        {stats.easyReviews}
+      </Text>
+      <Text style={{ fontSize: 12, color: theme.textSecondary }}>Facile</Text>
+    </View>
+  </View>
+</View>
               </View>
             )}
           </View>

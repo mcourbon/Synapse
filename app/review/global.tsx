@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import React from 'react';
 import { SpacedRepetitionSystem, useSpacedRepetition } from '../../utils/spacedRepetition';
 import Svg, { Circle, LinearGradient, Stop, Defs } from 'react-native-svg';
+import { StatsTracker } from '../../lib/statsTracker';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -110,6 +111,8 @@ export default function GlobalReview() {
   const router = useRouter();
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
+  const [sessionStartTime] = useState(new Date());
+  const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
 
   // Animations
   const fadeAnimation = useRef(new Animated.Value(0)).current;
@@ -451,15 +454,17 @@ export default function GlobalReview() {
   }
 
   const handleToggleAnswer = () => {
-    if (!showAnswer) {
-      setShowAnswer(true);
-      Animated.timing(fadeAnimation, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-  };
+  if (!showAnswer) {
+    // Quand on révèle la réponse, on démarre le timer
+    setCardStartTime(new Date());
+    setShowAnswer(true);
+    Animated.timing(fadeAnimation, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }
+};
 
   const animateButton = (buttonType: 'hard' | 'medium' | 'easy') => {
     Animated.sequence([
@@ -477,6 +482,7 @@ export default function GlobalReview() {
   };
 
   const goToNextCard = () => {
+    setCardStartTime(new Date()); // ⭐ RESET LE TIMER
     const nextIndex = currentCardIndex + 1;
     
     if (nextIndex >= dueCards.length) {
@@ -564,6 +570,7 @@ export default function GlobalReview() {
       interval: card.interval || 1,
       repetitions: card.repetitions || 0,
       easeFactor: card.ease_factor || 2.5,
+      lapses: card.lapses || 0,
       lastReviewed: card.last_reviewed ? new Date(card.last_reviewed) : undefined,
       nextReview: card.next_review ? new Date(card.next_review) : undefined,
     };
@@ -577,6 +584,7 @@ export default function GlobalReview() {
           ease_factor: stats.easeFactor,
           last_reviewed: stats.lastReviewed.toISOString(),
           next_review: stats.nextReview.toISOString(),
+          lapses: stats.lapses || 0,
         })
         .eq('id', cardId);
 
@@ -590,6 +598,17 @@ export default function GlobalReview() {
       const result = await processReview(card.id, difficulty, currentStats, updateCard);
 
       if (result?.success) {
+        // Tracker les stats utilisateur
+        const studyTime = Math.floor((new Date().getTime() - cardStartTime.getTime()) / 1000);
+        
+        await StatsTracker.trackReview({
+          userId: user!.id,
+          response: difficulty,
+          cardId: card.id,
+          deckId: card.deck_id,
+          studyTime: studyTime,
+        });
+
         setDueCards(prevCards => 
             prevCards.map((c, index) => 
                 index === currentCardIndex 
@@ -600,11 +619,12 @@ export default function GlobalReview() {
                     ease_factor: result.stats?.easeFactor || c.ease_factor,
                     last_reviewed: result.stats?.lastReviewed?.toISOString() || c.last_reviewed,
                     next_review: result.stats?.nextReview?.toISOString() || c.next_review,
+                    lapses: result.stats?.lapses || c.lapses || 0,
                     }
                 : c
             )
         );
-    
+
         setTotalCardsReviewed(prev => prev + 1);
         
         if (difficulty === 'hard') {
@@ -613,6 +633,7 @@ export default function GlobalReview() {
             setShowAnswer(false);
             setSelectedDifficulty(null);
             fadeAnimation.setValue(0);
+            setCardStartTime(new Date());
             
             Animated.timing(borderColorAnimation, {
               toValue: 0,
@@ -634,6 +655,7 @@ export default function GlobalReview() {
               duration: 200,
               useNativeDriver: true,
             }).start(() => {
+              setCardStartTime(new Date());
               goToNextCard();
             });
           }, 500);
@@ -876,12 +898,14 @@ export default function GlobalReview() {
 
             {/* Stats de la carte */}
             <View style={styles.cardStatsContainer}>
-              <Text style={styles.cardStatsText}>
+             <Text style={styles.cardStatsText}>
                 Win Streak: {currentCard.repetitions || 0} • 
+                Lapses: {currentCard.lapses || 0} • 
                 Facilité: {((currentCard.ease_factor || 2.5) * 100 - 250).toFixed(0)}% •
                 Statut: {SpacedRepetitionSystem.getCardMastery(
                   currentCard.repetitions || 0, 
-                  currentCard.ease_factor || 2.5
+                  currentCard.ease_factor || 2.5,
+                  currentCard.lapses || 0  // ⭐ PASSER LAPSES
                 )}
               </Text>
             </View>

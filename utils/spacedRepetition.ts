@@ -7,6 +7,7 @@ export interface CardStats {
   easeFactor: number;      // Facteur de facilité (2.5 par défaut)
   lastReviewed?: Date;
   nextReview?: Date;
+  lapses?: number;         // Nouveau : nombre d'échecs après graduation
 }
 
 export type ReviewResponse = 'hard' | 'medium' | 'easy';
@@ -16,11 +17,14 @@ export class SpacedRepetitionSystem {
   private static readonly INITIAL_EASE_FACTOR = 2.5;
   private static readonly MIN_EASE_FACTOR = 1.3;
   private static readonly MAX_EASE_FACTOR = 3.0;
-  private static readonly MAX_INTERVAL = 60; // Maximum 2 mois
+  private static readonly MAX_INTERVAL = 180; // Maximum 6 mois (au lieu de 2)
 
   // Séquences optimales basées sur la recherche cognitive
   private static readonly LEARNING_INTERVALS = [1, 3]; // 1 jour puis 3 jours pour l'apprentissage initial
   private static readonly GRADUATION_INTERVAL = 7; // 7 jours pour la "graduation"
+  
+  // Nouveau : seuil pour considérer une carte comme "mature"
+  private static readonly MATURE_THRESHOLD = 21; // 21 jours = 3 semaines
 
   static calculateNextReview(
     currentStats: Partial<CardStats>,
@@ -30,21 +34,33 @@ export class SpacedRepetitionSystem {
       interval: currentStats.interval || 0,
       repetitions: currentStats.repetitions || 0,
       easeFactor: currentStats.easeFactor || this.INITIAL_EASE_FACTOR,
+      lapses: currentStats.lapses || 0,
     };
 
     const now = new Date();
     let newInterval: number;
     let newRepetitions: number;
     let newEaseFactor: number = stats.easeFactor;
+    let newLapses: number = stats.lapses;
+
+    // Déterminer si la carte est mature (intervalle >= 21 jours)
+    const isMature = stats.interval >= this.MATURE_THRESHOLD;
 
     switch (response) {
-      case 'hard': // Échec - recommencer l'apprentissage
-        newInterval = 0; // Révision immédiate (quelques minutes)
-        newRepetitions = 0; // Reset complet
-        newEaseFactor = Math.max(
-          stats.easeFactor - 0.2,
-          this.MIN_EASE_FACTOR
-        );
+      case 'hard': // Échec
+        if (isMature) {
+          // Carte mature qui échoue = LAPSE (pas de reset complet)
+          newInterval = Math.max(1, Math.floor(stats.interval * 0.5)); // 50% de l'intervalle
+          newRepetitions = Math.max(1, stats.repetitions - 2); // Recule de 2 niveaux
+          newEaseFactor = Math.max(stats.easeFactor - 0.2, this.MIN_EASE_FACTOR);
+          newLapses = stats.lapses + 1; // Incrémenter les lapses
+        } else {
+          // Carte en apprentissage qui échoue = reset complet
+          newInterval = 0; // Révision immédiate
+          newRepetitions = 0;
+          newEaseFactor = Math.max(stats.easeFactor - 0.2, this.MIN_EASE_FACTOR);
+          // Ne pas incrémenter les lapses pour les cartes non-matures
+        }
         break;
 
       case 'medium': // Hésitant - progression prudente
@@ -83,12 +99,12 @@ export class SpacedRepetitionSystem {
           newInterval = this.LEARNING_INTERVALS[0];
           newRepetitions = 1;
         } else if (stats.repetitions === 1) {
-          // Deuxième réussite : 4 jours (optimal selon Ebbinghaus)
-          newInterval = 4;
+          // Deuxième réussite : 3 jours (au lieu de 4, plus progressif)
+          newInterval = 3;
           newRepetitions = 2;
         } else if (stats.repetitions === 2) {
-          // Graduation : 10 jours (consolidation à long terme)
-          newInterval = 10;
+          // Graduation : 7 jours (au lieu de 10, plus progressif)
+          newInterval = 7;
           newRepetitions = 3;
         } else {
           // Phase mature : progression exponentielle modifiée
@@ -112,18 +128,21 @@ export class SpacedRepetitionSystem {
       if (newRepetitions > 3 && newInterval < 7) {
         newInterval = 7;
       }
+      
+      // Appliquer le fuzz factor pour éviter les patterns
+      newInterval = this.applyFuzz(newInterval);
     }
 
     // Calculer la date de révision
     const nextReview = new Date(now);
-    if (response === 'hard') {
-      // Pour 'hard' : quelques minutes d'attente pour éviter la frustration
+    if (response === 'hard' && !isMature) {
+      // Pour 'hard' sur carte non-mature : quelques minutes d'attente
       nextReview.setMinutes(now.getMinutes() + 5);
     } else {
       nextReview.setDate(now.getDate() + newInterval);
       
-      // Ajouter un peu de randomisation (±10%) pour éviter les "piles" de révisions
-      const randomVariation = Math.floor((Math.random() - 0.5) * 0.2 * newInterval * 24 * 60); // en minutes
+      // Ajouter une randomisation plus importante (±20% au lieu de ±10%)
+      const randomVariation = Math.floor((Math.random() - 0.5) * 0.4 * newInterval * 24 * 60); // en minutes
       nextReview.setMinutes(nextReview.getMinutes() + randomVariation);
     }
 
@@ -133,22 +152,33 @@ export class SpacedRepetitionSystem {
       easeFactor: newEaseFactor,
       lastReviewed: now,
       nextReview,
+      lapses: newLapses,
     };
+  }
+
+  // Nouveau : Appliquer un "fuzz factor" pour éviter les patterns
+  private static applyFuzz(interval: number): number {
+    if (interval < 2) return interval;
+    if (interval === 2) return 2 + Math.floor(Math.random() * 2); // 2-3 jours
+    
+    // Ajouter ±5% de variation
+    const fuzzRange = Math.max(1, Math.floor(interval * 0.05));
+    return interval + Math.floor((Math.random() - 0.5) * 2 * fuzzRange);
   }
 
   // Détermine si une carte doit être révisée aujourd'hui
   static isDue(nextReview: Date | string | null): boolean {
-  if (!nextReview) return true;
-  
-  const reviewDate = typeof nextReview === 'string' ? new Date(nextReview) : nextReview;
-  const today = new Date();
-  
-  // Comparaison des dates seulement (sans les heures) - Version robuste
-  const reviewDateOnly = new Date(reviewDate.getFullYear(), reviewDate.getMonth(), reviewDate.getDate());
-  const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  
-  return reviewDateOnly <= todayDateOnly;
-}
+    if (!nextReview) return true;
+    
+    const reviewDate = typeof nextReview === 'string' ? new Date(nextReview) : nextReview;
+    const today = new Date();
+    
+    // Comparaison des dates seulement (sans les heures) - Version robuste
+    const reviewDateOnly = new Date(reviewDate.getFullYear(), reviewDate.getMonth(), reviewDate.getDate());
+    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    return reviewDateOnly <= todayDateOnly;
+  }
 
   // Calcule le nombre de cartes dues
   static getDueCount(cards: Array<{ next_review: string | null }>): number {
@@ -156,10 +186,16 @@ export class SpacedRepetitionSystem {
   }
 
   // Messages d'encouragement optimisés selon la phase d'apprentissage
-  static getResponseMessage(response: ReviewResponse, interval: number, repetitions: number = 0): string {
+  static getResponseMessage(response: ReviewResponse, interval: number, repetitions: number = 0, lapses: number = 0): string {
     switch (response) {
       case 'hard':
-        return `Cette carte nécessite plus de travail. Elle reviendra dans quelques minutes pour consolider l'apprentissage.`;
+        if (interval > 0) {
+          // Lapse d'une carte mature
+          return `Cette carte nécessite une révision. Elle reviendra dans ${this.formatInterval(interval)} pour la consolider.`;
+        } else {
+          // Reset complet
+          return `Cette carte nécessite plus de travail. Elle reviendra dans quelques minutes pour consolider l'apprentissage.`;
+        }
       
       case 'medium':
         if (repetitions <= 2) {
@@ -186,9 +222,13 @@ export class SpacedRepetitionSystem {
   }
 
   // Statut de maîtrise plus précis
-  static getCardMastery(repetitions: number, easeFactor: number): 'nouveau' | 'apprentissage' | 'consolidation' | 'révision' | 'maîtrisé' {
+  static getCardMastery(repetitions: number, easeFactor: number, lapses: number = 0): 'nouveau' | 'apprentissage' | 'consolidation' | 'révision' | 'maîtrisé' | 'difficile' {
     if (repetitions === 0) return 'nouveau';
     if (repetitions < 3) return 'apprentissage';
+    
+    // Nouveau : détecter les cartes difficiles (beaucoup de lapses)
+    if (lapses >= 3) return 'difficile';
+    
     if (repetitions < 6) return 'consolidation';
     if (easeFactor > 2.3) return 'maîtrisé';
     return 'révision';
@@ -212,6 +252,14 @@ export class SpacedRepetitionSystem {
     return this.MAX_INTERVAL;
   }
 
+  // Nouveau : Statistiques de difficulté d'une carte
+  static getCardDifficulty(lapses: number, easeFactor: number): 'facile' | 'moyen' | 'difficile' | 'très difficile' {
+    if (lapses === 0 && easeFactor >= 2.5) return 'facile';
+    if (lapses <= 1 && easeFactor >= 2.2) return 'moyen';
+    if (lapses <= 2 && easeFactor >= 1.8) return 'difficile';
+    return 'très difficile';
+  }
+
   // Formatage d'intervalle amélioré
   private static formatInterval(days: number): string {
     if (days === 0) return 'quelques minutes';
@@ -220,7 +268,8 @@ export class SpacedRepetitionSystem {
     if (days < 14) return `${Math.round(days / 7)} semaine${Math.round(days / 7) > 1 ? 's' : ''}`;
     if (days < 30) return `${Math.round(days / 7)} semaines`;
     if (days < 60) return `${Math.round(days / 30)} mois`;
-    return `2 mois`;
+    if (days < 180) return `${Math.round(days / 30)} mois`;
+    return `6 mois`;
   }
 }
 
@@ -247,6 +296,7 @@ export interface EnhancedCard {
   ease_factor?: number;
   last_reviewed?: string;
   next_review?: string;
+  lapses?: number; // Nouveau champ
 }
 
 // Hook personnalisé pour la gestion des révisions
@@ -269,9 +319,14 @@ export function useSpacedRepetition() {
       
       return {
         success: true,
-        message: SpacedRepetitionSystem.getResponseMessage(response, newStats.interval, newStats.repetitions),
+        message: SpacedRepetitionSystem.getResponseMessage(
+          response, 
+          newStats.interval, 
+          newStats.repetitions,
+          newStats.lapses
+        ),
         stats: newStats,
-        isImmediateReview: response === 'hard' // Indique si c'est une révision immédiate
+        isImmediateReview: response === 'hard' && newStats.interval === 0 // Plus précis
       };
     } catch (error) {
       return {
