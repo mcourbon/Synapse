@@ -1121,7 +1121,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
         )}
       </View>
       
-      {editMode ? (
+      {editMode && (
         <View style={styles.cardActions}>
           <Pressable 
             style={styles.editButton}
@@ -1136,8 +1136,6 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
             <Ionicons name="trash" size={18} color="#FF3B30" />
           </Pressable>
         </View>
-      ) : (
-        <Ionicons name="chevron-forward" size={20} color="#666" />
       )}
     </Pressable>
   );

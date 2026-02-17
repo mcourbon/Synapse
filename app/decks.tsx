@@ -1,5 +1,5 @@
 // app/decks.tsx
-import { View, Text, StyleSheet, FlatList, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, Alert, Modal, TextInput } from 'react-native';
 import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +18,14 @@ export default function Decks() {
   const router = useRouter();
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
+  const [editMode, setEditMode] = useState(false);
+  const [showEditDeckModal, setShowEditDeckModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
+  const [newDeckName, setNewDeckName] = useState('');
+  const [editingDeck, setEditingDeck] = useState(false);
+  const [deletingDeck, setDeletingDeck] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
   
     const styles = StyleSheet.create({
     container: {
@@ -107,6 +115,8 @@ export default function Decks() {
       borderRadius: 12,
       marginBottom: 15,
       borderLeftWidth: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
       shadowColor: theme.shadow,
       shadowOffset: {
         width: 0,
@@ -161,6 +171,231 @@ export default function Decks() {
       textAlign: 'center',
       lineHeight: 22,
     },
+    editButton: {
+  width: 48,
+  height: 48,
+  borderRadius: 12,
+  backgroundColor: theme.surface,
+  justifyContent: 'center',
+  alignItems: 'center',
+  shadowColor: theme.shadow,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
+},
+editButtonActive: {
+  backgroundColor: theme.primary,
+},
+statsContainer: {
+  paddingHorizontal: 20,
+  paddingVertical: 0,
+},
+statsText: {
+  fontSize: 14,
+  color: theme.textSecondary,
+  fontWeight: '600',
+  textAlign: 'center',
+},
+addButtonContainer: {
+  paddingHorizontal: 20,
+  paddingVertical: 15,
+},
+addCollectionButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: theme.success,
+  paddingVertical: 12,
+  paddingHorizontal: 24,
+  borderRadius: 12,
+  gap: 8,
+  alignSelf: 'center',
+  width: '60%',
+},
+addCollectionButtonText: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: 'bold',
+},
+deckContent: {
+  flex: 1,
+},
+deckActions: {
+  flexDirection: 'row',
+  gap: 8,
+},
+editDeckButton: {
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: `${theme.primary}20`,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+deleteDeckButton: {
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: `${theme.error}20`,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+editDeckContainer: {
+  backgroundColor: theme.surface,
+  borderRadius: 16,
+  padding: 24,
+  width: '90%',
+  maxWidth: 400,
+  shadowColor: theme.shadow,
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 8,
+  elevation: 8,
+},
+editDeckLabel: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: theme.text,
+  marginBottom: 12,
+},
+editDeckInput: {
+  backgroundColor: theme.background,
+  borderWidth: 2,
+  borderColor: theme.primary,
+  borderRadius: 12,
+  padding: 15,
+  fontSize: 16,
+  color: theme.text,
+  marginBottom: 8,
+},
+editDeckButtons: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginTop: 16,
+},
+cancelButton: {
+  fontSize: 16,
+  color: theme.primary,
+},
+saveButton: {
+  backgroundColor: theme.primary,
+  paddingHorizontal: 16,
+  paddingVertical: 8,
+  borderRadius: 8,
+},
+saveButtonDisabled: {
+  backgroundColor: isDark ? '#404040' : '#ccc',
+},
+saveButtonText: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: '600',
+},
+saveButtonTextDisabled: {
+  color: isDark ? '#888' : '#999',
+},
+confirmOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  paddingHorizontal: 20,
+},
+confirmModal: {
+  backgroundColor: theme.surface,
+  borderRadius: 16,
+  padding: 24,
+  width: '100%',
+  maxWidth: 350,
+  shadowColor: theme.shadow,
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 8,
+  elevation: 8,
+},
+confirmTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  color: theme.text,
+  textAlign: 'center',
+  marginBottom: 12,
+},
+confirmMessage: {
+  fontSize: 16,
+  color: theme.textSecondary,
+  textAlign: 'center',
+  lineHeight: 22,
+  marginBottom: 24,
+},
+confirmButtons: {
+  flexDirection: 'row',
+  gap: 12,
+},
+confirmButton: {
+  flex: 1,
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+  borderRadius: 8,
+  alignItems: 'center',
+},
+cancelConfirmButton: {
+  backgroundColor: theme.border,
+},
+confirmButtonDisabled: {
+  opacity: 0.6,
+},
+cancelConfirmText: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: theme.text,
+},
+confirmButtonText: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '#fff',
+},
+confirmButtonTextDisabled: {
+  color: theme.textSecondary,
+},
+toast: {
+  position: 'absolute',
+  top: 75,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+  borderRadius: 8,
+  gap: 8,
+  shadowColor: theme.shadow,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.25,
+  shadowRadius: 4,
+  elevation: 5,
+  zIndex: 1000,
+  width: '90%',
+  maxWidth: 460,
+  alignSelf: 'center',
+},
+toastSuccess: {
+  backgroundColor: theme.success,
+},
+toastError: {
+  backgroundColor: theme.error,
+},
+toastText: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: '500',
+  textAlign: 'center',
+},
   });
 
   useFocusEffect(
@@ -176,6 +411,15 @@ export default function Decks() {
       fetchDecks();
     }
   }, [user]);
+
+  useEffect(() => {
+  if (toast.visible) {
+    const timer = setTimeout(() => {
+      setToast({ ...toast, visible: false });
+    }, 3000);
+    return () => clearTimeout(timer);
+  }
+}, [toast.visible]);
 
   async function fetchDecks() {
     if (!user) return;
@@ -200,33 +444,149 @@ export default function Decks() {
     }
   }
 
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  setToast({ visible: true, message, type });
+};
+
+const handleUpdateDeckName = async () => {
+  const trimmedName = newDeckName.trim();
+  
+  if (!trimmedName) {
+    Alert.alert('Erreur', 'Le nom ne peut pas être vide');
+    return;
+  }
+  
+  if (trimmedName.length > 50) {
+    Alert.alert('Erreur', 'Le nom ne peut pas dépasser 50 caractères');
+    return;
+  }
+  
+  if (!selectedDeck || !user) {
+    Alert.alert('Erreur', 'Impossible de modifier le nom');
+    return;
+  }
+
+  setEditingDeck(true);
+
+  try {
+    const { error } = await supabase
+      .from('decks')
+      .update({ name: trimmedName })
+      .eq('id', selectedDeck.id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setShowEditDeckModal(false);
+    showToast('Collection renommée avec succès !', 'success');
+    fetchDecks();
+  } catch (error: any) {
+    console.error('Erreur:', error);
+    Alert.alert('Erreur', error.message || 'Impossible de modifier le nom');
+  } finally {
+    setEditingDeck(false);
+  }
+};
+
+const handleDeleteDeck = async () => {
+  if (!selectedDeck || !user) {
+    Alert.alert('Erreur', 'Impossible de supprimer la collection');
+    return;
+  }
+
+  setDeletingDeck(true);
+
+  try {
+    // Supprimer d'abord toutes les cartes
+    const { error: cardsError } = await supabase
+      .from('cards')
+      .delete()
+      .eq('deck_id', selectedDeck.id);
+
+    if (cardsError) throw cardsError;
+
+    // Puis supprimer le deck
+    const { error: deckError } = await supabase
+      .from('decks')
+      .delete()
+      .eq('id', selectedDeck.id)
+      .eq('user_id', user.id);
+
+    if (deckError) throw deckError;
+
+    setShowDeleteConfirm(false);
+    showToast('Collection supprimée avec succès !', 'success');
+    fetchDecks();
+  } catch (error: any) {
+    console.error('Erreur:', error);
+    Alert.alert('Erreur', error.message || 'Impossible de supprimer la collection');
+  } finally {
+    setDeletingDeck(false);
+  }
+};
+
   const handleDeckAdded = () => {
     fetchDecks(); // Recharger la liste des decks
     setShowAddModal(false);
   };
 
   const renderDeck = ({ item }: { item: Deck }) => (
-    <Pressable 
-      style={[
-        styles.deckCard,
-        { borderLeftColor: item.color || '#007AFF' }
-      ]}
-      onPress={() => router.push(`/deck/${item.id}`)}
-    >
-      <View style={styles.deckHeader}>
-        <Text 
-          style={styles.deckName}
-          numberOfLines={2}
-          ellipsizeMode="tail"
-        >
-          {item.name}
-        </Text>
-      </View>
+  <Pressable 
+    style={[
+      styles.deckCard,
+      { borderLeftColor: item.color || '#007AFF' }
+    ]}
+    onPress={() => {
+      if (!editMode) {
+        router.push(`/deck/${item.id}`);
+      }
+    }}
+    disabled={editMode}
+  >
+    <View style={styles.deckContent}>
+      <Text 
+        style={styles.deckName}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+      >
+        {item.name}
+      </Text>
       {item.description && (
-        <Text style={styles.deckDescription}>{item.description}</Text>
+        <Text style={styles.deckDescription} numberOfLines={2}>
+          {item.description}
+        </Text>
       )}
-    </Pressable>
-  );
+    </View>
+    
+    <View style={[styles.deckActions, { opacity: editMode ? 1 : 0 }]}>
+      <Pressable 
+        style={styles.editDeckButton}
+        onPress={(e) => {
+          if (editMode) {
+            setSelectedDeck(item);
+            setNewDeckName(item.name);
+            setShowEditDeckModal(true);
+          }
+        }}
+        disabled={!editMode}
+      >
+        <Ionicons name="pencil" size={18} color="#007AFF" />
+      </Pressable>
+      <Pressable 
+        style={styles.deleteDeckButton}
+        onPress={(e) => {
+          if (editMode) {
+            setSelectedDeck(item);
+            setShowDeleteConfirm(true);
+          }
+        }}
+        disabled={!editMode}
+      >
+        <Ionicons name="trash" size={18} color="#FF3B30" />
+      </Pressable>
+    </View>
+  </Pressable>
+);
 
   if (loading) {
     return (
@@ -253,13 +613,38 @@ export default function Decks() {
                 <View style={styles.titleUnderline} />
               </View>
               <Pressable 
-                style={styles.addButton}
-                onPress={() => setShowAddModal(true)}
+                style={[styles.editButton, editMode && styles.editButtonActive]} 
+                onPress={() => setEditMode(!editMode)}
               >
-                <Ionicons name="add" size={24} color="#fff" />
+                <Ionicons 
+                  name={editMode ? "checkmark" : "color-wand-outline"} 
+                  size={24} 
+                  color={editMode ? "#fff" : theme.primary}
+                  style={editMode ? {} : { transform: [{ scaleX: -1 }] }}
+                />
               </Pressable>
             </View>
           </View>
+
+          {/* Stats */}
+            <View style={styles.statsContainer}>
+              <Text style={styles.statsText}>
+                {decks.length} collection{decks.length > 1 ? 's' : ''}
+              </Text>
+            </View>
+
+            {/* Bouton ajouter */}
+{!editMode && (
+  <View style={styles.addButtonContainer}>
+    <Pressable 
+      style={styles.addCollectionButton}
+      onPress={() => setShowAddModal(true)}
+    >
+      <Ionicons name="add" size={24} color="#fff" />
+      <Text style={styles.addCollectionButtonText}>Ajouter une collection</Text>
+    </Pressable>
+  </View>
+)}
 
           {decks.length === 0 ? (
             <View style={styles.emptyState}>
@@ -287,6 +672,122 @@ export default function Decks() {
           onDeckAdded={handleDeckAdded}
         />
       </View>
+
+      {/* Toast */}
+{toast.visible && (
+  <View style={[styles.toast, toast.type === 'success' ? styles.toastSuccess : styles.toastError]}>
+    <Ionicons 
+      name={toast.type === 'success' ? 'checkmark-circle' : 'close-circle'} 
+      size={20} 
+      color="#fff"
+    />
+    <Text style={styles.toastText}>{toast.message}</Text>
+  </View>
+)}
+
+{/* Modal de modification du nom */}
+<Modal
+  visible={showEditDeckModal}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setShowEditDeckModal(false)}
+>
+  <Pressable 
+    style={styles.modalOverlay}
+    onPress={() => setShowEditDeckModal(false)}
+  >
+    <View 
+      style={styles.editDeckContainer} 
+      onStartShouldSetResponder={() => true}
+    >
+      <Text style={styles.editDeckLabel}>Nouveau nom</Text>
+      <TextInput
+        style={[styles.editDeckInput, { outlineWidth: 0 }]}
+        value={newDeckName}
+        onChangeText={setNewDeckName}
+        autoFocus
+        maxLength={100}
+        placeholder="Nom de la collection"
+        selectionColor="#007AFF"
+        underlineColorAndroid="transparent"
+      />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+        {newDeckName.length > 50 && (
+          <Text style={{ fontSize: 12, color: '#E53E3E', fontWeight: '500' }}>
+            ⚠️ Max 50 caractères
+          </Text>
+        )}
+        <Text style={{ fontSize: 12, color: newDeckName.length > 50 ? '#E53E3E' : theme.textSecondary, marginLeft: 'auto' }}>
+          {newDeckName.length}/50
+        </Text>
+      </View>
+      <View style={styles.editDeckButtons}>
+        <Pressable onPress={() => setShowEditDeckModal(false)}>
+          <Text style={styles.cancelButton}>Annuler</Text>
+        </Pressable>
+        <Pressable 
+          onPress={handleUpdateDeckName}
+          disabled={editingDeck || !newDeckName.trim() || newDeckName.length > 50}
+          style={[
+            styles.saveButton,
+            (editingDeck || !newDeckName.trim() || newDeckName.length > 50) && styles.saveButtonDisabled
+          ]}
+        >
+          <Text style={[
+            styles.saveButtonText,
+            (editingDeck || !newDeckName.trim() || newDeckName.length > 50) && styles.saveButtonTextDisabled
+          ]}>
+            {editingDeck ? 'Modification...' : 'Enregistrer'}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  </Pressable>
+</Modal>
+
+{/* Modal de confirmation de suppression */}
+<Modal
+  visible={showDeleteConfirm}
+  animationType="fade"
+  transparent={true}
+  onRequestClose={() => setShowDeleteConfirm(false)}
+>
+  <View style={styles.confirmOverlay}>
+    <View style={styles.confirmModal}>
+      <Text style={styles.confirmTitle}>Supprimer la collection</Text>
+      <Text style={styles.confirmMessage}>
+        Êtes-vous sûr de vouloir supprimer "{selectedDeck?.name}" ? Cette action supprimera également toutes les cartes et ne peut pas être annulée.
+      </Text>
+      
+      <View style={styles.confirmButtons}>
+        <Pressable 
+          style={[styles.confirmButton, styles.cancelConfirmButton]} 
+          onPress={() => setShowDeleteConfirm(false)}
+          disabled={deletingDeck}
+        >
+          <Text style={styles.cancelConfirmText}>Annuler</Text>
+        </Pressable>
+        
+        <Pressable 
+          style={[
+            styles.confirmButton, 
+            { backgroundColor: '#FF3B30' }, 
+            deletingDeck && styles.confirmButtonDisabled
+          ]} 
+          onPress={handleDeleteDeck}
+          disabled={deletingDeck}
+        >
+          <Text style={[
+            styles.confirmButtonText, 
+            deletingDeck && styles.confirmButtonTextDisabled
+          ]}>
+            {deletingDeck ? 'Suppression...' : 'Supprimer'}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  </View>
+</Modal>
     </SafeAreaView>
   );
 }
