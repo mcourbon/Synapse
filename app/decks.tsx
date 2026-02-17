@@ -216,7 +216,7 @@ export default function Decks() {
       <View style={styles.deckHeader}>
         <Text 
           style={styles.deckName}
-          numberOfLines={3}
+          numberOfLines={2}
           ellipsizeMode="tail"
         >
           {item.name}
@@ -275,7 +275,7 @@ export default function Decks() {
               renderItem={renderDeck}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.listContainer}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}       
             />
           )}
         </View>

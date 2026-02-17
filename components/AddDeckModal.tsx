@@ -230,7 +230,7 @@ export default function AddDeckModal({
       return;
     }
     
-    if (cleanName.length > 15) {
+    if (cleanName.length > 50) {
       Alert.alert('Erreur', 'Le nom ne peut pas dépasser 15 caractères');
       return;
     }
@@ -356,7 +356,7 @@ export default function AddDeckModal({
             <Text style={styles.title}>Nouvelle collection</Text>
             <Pressable 
               onPress={handleAddDeck}
-              disabled={loading || !name.trim()}
+              disabled={loading || !name.trim() || name.length > 50 || description.length > 500}
               style={[
                 styles.saveButton, 
                 (loading || !name.trim()) && styles.saveButtonDisabled
@@ -380,10 +380,11 @@ export default function AddDeckModal({
                 <TextInput
                     style={[
                       styles.textInput,
-                      { outlineWidth: 0 }
+                      { outlineWidth: 0 },
+                      name.length > 50 && { borderColor: '#E53E3E' }
                     ]}
                   value={name}
-                  onChangeText={setName}
+                  onChangeText={setName} 
                   placeholder="Ex: Vocabulaire anglais, Histoire..."
                   autoFocus
                   editable={!loading}
@@ -391,13 +392,30 @@ export default function AddDeckModal({
                   underlineColorAndroid="transparent"
                   selectionColor="#007AFF"
                 />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                  {name.length > 50 ? (
+                    <Text style={{ fontSize: 12, color: '#E53E3E', fontWeight: '500' }}>
+                      ⚠️ Le nom ne peut pas dépasser 50 caractères
+                    </Text>
+                  ) : (
+                    <Text />
+                  )}
+                  <Text style={{ fontSize: 12, color: name.length > 50 ? '#E53E3E' : theme.textSecondary, fontWeight: name.length > 50 ? '600' : '400' }}>
+                    {name.length}/50
+                  </Text>
+                </View>
               </View>
 
               {/* Description */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Description (optionnel)</Text>
                 <TextInput
-                  style={[styles.textInput, styles.textArea, { outlineWidth: 0 }]}
+                  style={[
+                    styles.textInput, 
+                    styles.textArea, 
+                    { outlineWidth: 0 },
+                    description.length > 500 && { borderColor: '#E53E3E' }
+                  ]}
                   value={description}
                   onChangeText={setDescription}
                   placeholder="Décrivez brièvement le contenu de cette collection..."
@@ -405,10 +423,22 @@ export default function AddDeckModal({
                   numberOfLines={4}
                   textAlignVertical="top"
                   editable={!loading}
-                  maxLength={500}
+                  maxLength={600}
                   underlineColorAndroid="transparent"
                   selectionColor="#007AFF"
                 />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                  {description.length > 500 ? (
+                    <Text style={{ fontSize: 12, color: '#E53E3E', fontWeight: '500' }}>
+                      ⚠️ La description ne peut pas dépasser 500 caractères
+                    </Text>
+                  ) : (
+                    <Text />
+                  )}
+                  <Text style={{ fontSize: 12, color: description.length > 500 ? '#E53E3E' : theme.textSecondary, fontWeight: description.length > 500 ? '600' : '400' }}>
+                    {description.length}/500
+                  </Text>
+                </View>
               </View>
 
               {/* Sélection de couleur */}
@@ -445,7 +475,10 @@ export default function AddDeckModal({
                     <Text style={[
                       styles.previewName,
                       { color: name ? theme.text : theme.textMuted, fontStyle: name ? 'normal' : 'italic' }
-                    ]}>
+                    ]}
+                      numberOfLines={2}
+                      ellipsizeMode='tail'
+                    >
                       {name || 'Nom de la collection'}
                     </Text>
                     <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
