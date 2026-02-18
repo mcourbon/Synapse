@@ -481,7 +481,6 @@ export default function AddDeckModal({
                     >
                       {name || 'Nom de la collection'}
                     </Text>
-                    <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
                   </View>
                   {(description || !name) && (
                     <Text style={[
