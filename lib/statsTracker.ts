@@ -123,22 +123,43 @@ export class StatsTracker {
    */
   static async updateCardDifficultyStats(userId: string): Promise<void> {
     try {
-      // Compter les cartes maîtrisées (repetitions >= 6 et ease_factor > 2.3)
+      // ✅ 1. Récupérer d'abord les IDs des decks de l'utilisateur
+      const { data: decks } = await supabase
+        .from('decks')
+        .select('id')
+        .eq('user_id', userId);
+
+      if (!decks || decks.length === 0) {
+        // Pas de decks, mettre les stats à 0
+        await supabase
+          .from('user_stats')
+          .update({
+            cards_mastered: 0,
+            cards_difficult: 0,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', userId);
+        return;
+      }
+
+      const deckIds = decks.map(d => d.id);
+
+      // ✅ 2. Compter les cartes maîtrisées avec .in()
       const { count: masteredCount } = await supabase
         .from('cards')
         .select('id', { count: 'exact', head: true })
-        .eq('decks.user_id', userId)
+        .in('deck_id', deckIds)
         .gte('repetitions', 6)
         .gte('ease_factor', 2.3);
 
-      // Compter les cartes difficiles (lapses >= 3)
+      // ✅ 3. Compter les cartes difficiles avec .in()
       const { count: difficultCount } = await supabase
         .from('cards')
         .select('id', { count: 'exact', head: true })
-        .eq('decks.user_id', userId)
+        .in('deck_id', deckIds)
         .gte('lapses', 3);
 
-      // Mettre à jour
+      // 4. Mettre à jour
       await supabase
         .from('user_stats')
         .update({
@@ -195,23 +216,39 @@ export class StatsTracker {
     cardsReviewed: number;
   }> {
     try {
-      // Nombre de decks
+      // ✅ 1. Nombre de decks
       const { count: decksCount } = await supabase
         .from('decks')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId);
 
-      // Nombre total de cartes
+      // ✅ 2. Récupérer les IDs des decks
+      const { data: decks } = await supabase
+        .from('decks')
+        .select('id')
+        .eq('user_id', userId);
+
+      if (!decks || decks.length === 0) {
+        return {
+          totalDecks: decksCount || 0,
+          totalCards: 0,
+          cardsReviewed: 0,
+        };
+      }
+
+      const deckIds = decks.map(d => d.id);
+
+      // ✅ 3. Nombre total de cartes avec .in()
       const { count: cardsCount } = await supabase
         .from('cards')
         .select('id', { count: 'exact', head: true })
-        .eq('decks.user_id', userId);
+        .in('deck_id', deckIds);
 
-      // Nombre de cartes révisées (repetitions > 0)
+      // ✅ 4. Nombre de cartes révisées avec .in()
       const { count: reviewedCount } = await supabase
         .from('cards')
         .select('id', { count: 'exact', head: true })
-        .eq('decks.user_id', userId)
+        .in('deck_id', deckIds)
         .gt('repetitions', 0);
 
       return {

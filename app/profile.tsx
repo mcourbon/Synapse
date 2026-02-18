@@ -8,6 +8,8 @@ import { useTheme } from '../contexts/ThemeContext'; // Ajouter cet import
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { StatsTracker } from '../lib/statsTracker';
+import { AvatarUpload } from '../lib/avatarUpload';
+import { Image } from 'react-native';
 
 interface UserStats {
   // Stats de base
@@ -42,6 +44,7 @@ interface UserProfile {
   username: string | null;
   email: string;
   created_at: string;
+  avatar_url?: string | null;
 }
 
 export default function Profile() {
@@ -65,6 +68,8 @@ export default function Profile() {
   const [newUsername, setNewUsername] = useState('');
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
   const usernameInputRef = useRef<TextInput>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
 
   useEffect(() => {
@@ -97,14 +102,16 @@ export default function Profile() {
 
     // 4. Récupérer le profil utilisateur
     if (userStats) {
-      setUserProfile({
-        id: userStats.user_id,
-        username: userStats.username,
-        email: user.email || '',
-        created_at: user.created_at || '',
-      });
-      setNewUsername(userStats.username || '');
-    }
+  setUserProfile({
+    id: userStats.user_id,
+    username: userStats.username,
+    email: user.email || '',
+    created_at: user.created_at || '',
+    avatar_url: userStats.avatar_url, // ⭐ AJOUTE ÇA
+  });
+  setNewUsername(userStats.username || '');
+  setAvatarUrl(userStats.avatar_url || null); // ⭐ ET ÇA
+}
 
     // 5. Calculer le taux de réussite
     const successRate = StatsTracker.calculateSuccessRate(userStats);
@@ -135,7 +142,45 @@ export default function Profile() {
   }
 };
 
-  const handleSignOut = () => {
+const handleChangeAvatar = async () => {
+  if (!user) return;
+
+  console.log('👤 User ID:', user.id); // ← Ajoute ça
+  
+  try {
+    setUploadingAvatar(true);
+    
+    // Sélectionner l'image
+    const imageAsset = await AvatarUpload.pickImage();
+    if (!imageAsset) {
+      setUploadingAvatar(false);
+      return; // L'utilisateur a annulé
+    }
+
+    // Upload et mise à jour
+    const newAvatarUrl = await AvatarUpload.updateUserAvatar(user.id, imageAsset);
+    
+    // Mettre à jour l'état local
+    setAvatarUrl(newAvatarUrl);
+    setUserProfile(prev => prev ? {...prev, avatar_url: newAvatarUrl} : null);
+    
+    console.log('✅ Avatar mis à jour avec succès');
+  } catch (error: any) {
+    console.error('Erreur changement avatar:', error);
+    if (error.message === 'Permission refusée pour accéder à la galerie') {
+      Alert.alert(
+        'Permission requise',
+        'Veuillez autoriser l\'accès à vos photos dans les paramètres de votre téléphone.'
+      );
+    } else {
+      Alert.alert('Erreur', 'Impossible de changer la photo de profil');
+    }
+  } finally {
+    setUploadingAvatar(false);
+  }
+};
+
+const handleSignOut = () => {
   setShowLogoutModal(true);
 };
 
@@ -542,6 +587,48 @@ modalOverlay: {
     color: theme.text,
     marginBottom: 5,
   },
+  avatarContainer: {
+  position: 'relative',
+  marginBottom: 15,
+},
+avatarImage: {
+  width: 80,
+  height: 80,
+  borderRadius: 40,
+},
+avatarEditButton: {
+  position: 'absolute',
+  bottom: 0,
+  right: -5,
+  backgroundColor: theme.primary,
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  justifyContent: 'center',
+  alignItems: 'center',
+  borderWidth: 3,
+  borderColor: theme.background,
+  shadowColor: theme.shadow,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  elevation: 5,
+},
+avatarPlaceholder: {
+  width: 80,
+  height: 80,
+  borderRadius: 40,
+  backgroundColor: theme.primary,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+statValue: {
+  fontSize: 24,
+  fontWeight: 'bold',
+  color: theme.text,
+  marginTop: 8,
+  marginBottom: 4,
+},
 });
 
   return (
@@ -567,10 +654,31 @@ modalOverlay: {
           </View>
 
           {/* User Info */}
-          <View style={styles.userSection}>
-            <View style={dynamicStyles.avatar}>
-              <Ionicons name="person" size={40} color="#fff" />
-            </View>
+<View style={styles.userSection}>
+  <View style={dynamicStyles.avatarContainer}>
+    {avatarUrl ? (
+      <Image 
+        source={{ uri: avatarUrl }}
+        style={dynamicStyles.avatarImage}
+      />
+    ) : (
+      <View style={dynamicStyles.avatarPlaceholder}>
+        <Ionicons name="person" size={40} color="#fff" />
+      </View>
+    )}
+    
+    <Pressable 
+      style={dynamicStyles.avatarEditButton}
+      onPress={handleChangeAvatar}
+      disabled={uploadingAvatar}
+    >
+      {uploadingAvatar ? (
+        <Ionicons name="hourglass" size={16} color="#fff" />
+      ) : (
+        <Ionicons name="camera" size={16} color="#fff" />
+      )}
+    </Pressable>
+  </View>
             
             {/* Username avec édition inline */}
             <View style={dynamicStyles.usernameContainer}>
@@ -651,31 +759,31 @@ modalOverlay: {
                 {/* Temps d'étude total */}
 <View style={dynamicStyles.statCard}>
   <Ionicons name="time-outline" size={20} color={theme.primary} />
-  <Text style={dynamicStyles.statValue}>
+  <Text style={styles.statValueBlue}>
     {StatsTracker.formatStudyTime(stats.totalStudyTime)}
   </Text>
-  <Text style={dynamicStyles.statLabel}>Temps d'étude</Text>
+  <Text style={styles.statLabelBlue}>Temps d'étude</Text>
 </View>
 
 {/* Meilleure streak */}
 <View style={dynamicStyles.statCard}>
   <Ionicons name="trophy-outline" size={20} color={theme.accent} />
-  <Text style={dynamicStyles.statValue}>{stats.longestStreak}</Text>
-  <Text style={dynamicStyles.statLabel}>Record de jours</Text>
+  <Text style={styles.statValueYellow}>{stats.longestStreak}</Text>
+  <Text style={styles.statLabelYellow}>Record de jours</Text>
 </View>
 
 {/* Cartes maîtrisées */}
 <View style={dynamicStyles.statCard}>
   <Ionicons name="star" size={20} color={theme.success} />
-  <Text style={dynamicStyles.statValue}>{stats.cardsMastered}</Text>
-  <Text style={dynamicStyles.statLabel}>Cartes maîtrisées</Text>
+  <Text style={styles.statValueGreen}>{stats.cardsMastered}</Text>
+  <Text style={styles.statLabelGreen}>Cartes maîtrisées</Text>
 </View>
 
 {/* Cartes difficiles */}
 <View style={dynamicStyles.statCard}>
   <Ionicons name="alert-circle" size={20} color={theme.error} />
-  <Text style={dynamicStyles.statValue}>{stats.cardsDifficult}</Text>
-  <Text style={dynamicStyles.statLabel}>Cartes difficiles</Text>
+  <Text style={styles.statValueRed}>{stats.cardsDifficult}</Text>
+  <Text style={styles.statLabelRed}>Cartes difficiles</Text>
 </View>
 
 {/* Répartition des réponses */}
@@ -1047,5 +1155,57 @@ const styles = StyleSheet.create({
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  statValueBlue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#3B82F6',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  statValueYellow: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#F59E0B',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  statValueGreen: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#10B981',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  statValueRed: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#EF4444',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  statLabelBlue: {
+    fontSize: 12,
+    color: '#3B82F6',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  statLabelYellow: {
+    fontSize: 12,
+    color: '#F59E0B',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  statLabelGreen: {
+    fontSize: 12,
+    color: '#10B981',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  statLabelRed: {
+    fontSize: 12,
+    color: '#EF4444',
+    textAlign: 'center',
+    fontWeight: '600',
   },
 });
