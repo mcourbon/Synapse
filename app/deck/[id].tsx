@@ -1367,7 +1367,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Question</Text>
           <TextInput
-            style={[styles.textInput, { outlineWidth: 0 }]}
+            style={[styles.textInput, { outlineWidth: 0, borderColor: theme.primary }]}
             value={front}
             onChangeText={setFront}
             placeholder="Tapez votre question..."
@@ -1380,7 +1380,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Réponse</Text>
           <TextInput
-            style={[styles.textInput, { outlineWidth: 0 }]}
+            style={[styles.textInput, { outlineWidth: 0, borderColor: theme.primary }]}
             value={back}
             onChangeText={setBack}
             placeholder="Tapez votre réponse..."
@@ -1413,7 +1413,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
           {categories.length < 3 && (
             <View style={styles.categoryInputContainer}>
               <TextInput
-                style={[styles.textInput, styles.categoryInput, { outlineWidth: 0 }]}
+                style={[styles.textInput, styles.categoryInput, { outlineWidth: 0, borderColor: theme.primary }]}
                 value={currentCategoryInput}
                 onChangeText={handleCategoryInputChange}
                 placeholder="Ajouter une catégorie..."

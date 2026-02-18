@@ -702,7 +702,7 @@ const handleDeleteDeck = async () => {
     >
       <Text style={styles.editDeckLabel}>Nouveau nom</Text>
       <TextInput
-        style={[styles.editDeckInput, { outlineWidth: 0 }]}
+        style={[styles.editDeckInput, { outlineWidth: 0, borderColor: theme.primary }]}
         value={newDeckName}
         onChangeText={setNewDeckName}
         autoFocus

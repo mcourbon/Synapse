@@ -368,7 +368,7 @@ export default function AuthScreen() {
                 <Text style={styles.label}>Email</Text>
                 <View style={[
                   styles.inputContainer,
-                  emailFocused && styles.inputContainerFocused,
+                  email.length > 0 && styles.inputContainerFocused,
                   !validateEmail(email) && email.length > 0 && styles.inputError
                 ]}>
                   <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
@@ -397,7 +397,7 @@ export default function AuthScreen() {
                 <Text style={styles.label}>Mot de passe</Text>
                 <View style={[
                   styles.inputContainer,
-                  passwordFocused && styles.inputContainerFocused
+                  password.length > 0 && styles.inputContainerFocused
                 ]}>
                   <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
                   <TextInput
@@ -463,7 +463,7 @@ export default function AuthScreen() {
                   <Text style={styles.label}>Confirmer le mot de passe</Text>
                   <View style={[
                     styles.inputContainer,
-                    confirmPasswordFocused && styles.inputContainerFocused,
+                    confirmPassword.length > 0 && styles.inputContainerFocused,
                     confirmPassword.length > 0 && password !== confirmPassword && styles.inputError
                   ]}>
                     <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
@@ -655,6 +655,7 @@ const styles = StyleSheet.create({
   },
   inputContainerFocused: {
     borderColor: '#007AFF',
+    backgroundColor: 'rgba(0, 122, 255, 0.06)',
   },
   inputError: {
     borderColor: '#FF3B30',
@@ -668,6 +669,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     fontSize: 16,
     color: '#333',
+    backgroundColor: 'transparent',
   },
   eyeIcon: {
     padding: 5,

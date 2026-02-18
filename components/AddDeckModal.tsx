@@ -380,7 +380,7 @@ export default function AddDeckModal({
                 <TextInput
                     style={[
                       styles.textInput,
-                      { outlineWidth: 0 },
+                      { outlineWidth: 0, borderColor: theme.primary },
                       name.length > 50 && { borderColor: '#E53E3E' }
                     ]}
                   value={name}
@@ -413,7 +413,7 @@ export default function AddDeckModal({
                   style={[
                     styles.textInput, 
                     styles.textArea, 
-                    { outlineWidth: 0 },
+                    { outlineWidth: 0, borderColor: theme.primary },
                     description.length > 500 && { borderColor: '#E53E3E' }
                   ]}
                   value={description}

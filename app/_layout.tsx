@@ -3,7 +3,14 @@ import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import AuthScreen from '../components/AuthScreen';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
+
+// Supprime l'outline natif du navigateur sur les inputs (web uniquement)
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = 'input:focus, textarea:focus { outline: none !important; }';
+  document.head.appendChild(style);
+}
 
 function RootLayoutNav() {
   const { user, loading } = useAuth();
