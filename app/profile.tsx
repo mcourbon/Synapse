@@ -56,7 +56,16 @@ export default function Profile() {
     totalDecks: 0,
     cardsReviewed: 0,
     currentStreak: 0,
+    longestStreak: 0,
+    totalReviews: 0,
     successRate: 0,
+    hardReviews: 0,
+    mediumReviews: 0,
+    easyReviews: 0,
+    totalStudyTime: 0,
+    cardsMastered: 0,
+    cardsDifficult: 0,
+    studyDays: [],
   });
   const [loading, setLoading] = useState(true);
   const [showAboutModal, setShowAboutModal] = useState(false);
@@ -904,16 +913,14 @@ statValue: {
           <Pressable 
             style={dynamicStyles.modalOverlay}
             onPress={() => setShowNotificationsModal(false)}
-            activeOpacity={1}
           >
-            <Pressable 
+            <Pressable
               style={dynamicStyles.modalContent}
               onPress={() => {}} // Empêche la fermeture quand on clique dans la modale
-              activeOpacity={1}
             >
               {/* Header de la modale */}
               <View style={dynamicStyles.modalHeader}>
-                <View style={{width: 36}} /> 
+                <View style={{width: 36}} />
                 <Text style={dynamicStyles.modalTitle}>Notifications</Text>
                 <Pressable onPress={() => setShowNotificationsModal(false)} style={dynamicStyles.closeButtonCircle}>
                   <Ionicons name="close" size={20} color={theme.textSecondary} />
@@ -960,15 +967,13 @@ statValue: {
           transparent={true}
           onRequestClose={() => setShowAboutModal(false)}
         >
-          <Pressable 
+          <Pressable
             style={dynamicStyles.modalOverlay}
             onPress={() => setShowAboutModal(false)}
-            activeOpacity={1}
           >
-            <Pressable 
+            <Pressable
               style={dynamicStyles.modalContent}
               onPress={() => {}}
-              activeOpacity={1}
             >
               {/* Header de la modale */}
               <View style={dynamicStyles.modalHeader}>
@@ -1017,12 +1022,10 @@ statValue: {
           <Pressable 
             style={dynamicStyles.modalOverlay}
             onPress={() => setShowHelpModal(false)}
-            activeOpacity={1}
           >
-            <Pressable 
+            <Pressable
               style={dynamicStyles.modalContent}
               onPress={() => {}}
-              activeOpacity={1}
             >
               <View style={dynamicStyles.modalHeader}>
                 <View style={{width: 36}} /> 
