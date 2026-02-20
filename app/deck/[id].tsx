@@ -15,8 +15,6 @@ export default function DeckDetail() {
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showOptionsModal, setShowOptionsModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteCardConfirm, setShowDeleteCardConfirm] = useState(false);
   const [showEditCardModal, setShowEditCardModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -28,7 +26,6 @@ export default function DeckDetail() {
   const [currentCategoryInput, setCurrentCategoryInput] = useState(''); // Remplace newCategory
   const [addingCard, setAddingCard] = useState(false);
   const [editingCard, setEditingCard] = useState(false);
-  const [deletingDeck, setDeletingDeck] = useState(false);
   const [deletingCard, setDeletingCard] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
@@ -1006,60 +1003,6 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
     }
   };
 
-  const handleDeleteDeck = () => {
-    setShowOptionsModal(false);
-    setShowDeleteConfirm(true);
-  };
-
-  const handleToggleEditMode = () => {
-    setEditMode(!editMode);
-    setShowOptionsModal(false);
-  };
-
-  const confirmDeleteDeck = async () => {
-    if (!id || !user) {
-      showError('Impossible de supprimer le deck');
-      return;
-    }
-
-    setDeletingDeck(true);
-
-    try {
-      // Supprimer d'abord toutes les cartes du deck
-      const { error: cardsError } = await supabase
-        .from('cards')
-        .delete()
-        .eq('deck_id', id);
-
-      if (cardsError) {
-        throw cardsError;
-      }
-
-      // Puis supprimer le deck
-      const { error: deckError } = await supabase
-        .from('decks')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-
-      if (deckError) {
-        throw deckError;
-      }
-
-      setShowDeleteConfirm(false);
-      showToast('Deck supprimé avec succès !', 'success');
-      
-      // Attendre un peu avant de naviguer pour que l'utilisateur voie le toast
-      setTimeout(() => {
-        router.back();
-      }, 1500);
-    } catch (error: any) {
-      console.error('Erreur:', error);
-      showError(error.message || 'Impossible de supprimer le deck');
-    } finally {
-      setDeletingDeck(false);
-    }
-  };
 
   const openEditCardModal = (card: Card) => {
     setSelectedCard(card);
@@ -1173,15 +1116,15 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
               <Text style={styles.mainTitle}>{deck.name}</Text>
               <View style={styles.titleUnderline} />
             </View>
-            <Pressable 
-              style={[styles.optionsButton, editMode && styles.optionsButtonEditMode]} 
-              onPress={editMode ? () => setEditMode(false) : () => setShowOptionsModal(true)}
-              disabled={deletingDeck}
+            <Pressable
+              style={[styles.optionsButton, editMode && styles.optionsButtonEditMode]}
+              onPress={() => setEditMode(!editMode)}
             >
-              <Ionicons 
-                name={editMode ? "checkmark" : "ellipsis-horizontal"} 
-                size={24} 
-                color={editMode ? "#fff" : "#007AFF"} 
+              <Ionicons
+                name={editMode ? "checkmark" : "color-wand-outline"}
+                size={24}
+                color={editMode ? "#fff" : theme.primary}
+                style={editMode ? {} : { transform: [{ scaleX: -1 }] }}
               />
             </Pressable>
           </View>
@@ -1242,60 +1185,6 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
         onHide={() => setToast({ ...toast, visible: false })}
       />
 
-      {/* Modal d'options */}
-      <Modal
-        visible={showOptionsModal}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShowOptionsModal(false)}
-      >
-        <Pressable 
-          style={styles.modalOverlay}
-          onPress={() => setShowOptionsModal(false)}
-        >
-          <View style={styles.optionsMenu}>
-            <Pressable 
-              style={styles.optionItem}
-              onPress={handleToggleEditMode}
-            >
-              <Ionicons 
-                name={editMode ? "checkmark-outline" : "create-outline"} 
-                size={20} 
-                color="#007AFF" 
-              />
-              <Text style={styles.optionText}>
-                {editMode ? 'Terminer l\'édition' : 'Modifier les cartes'}
-              </Text>
-            </Pressable>
-            
-            <View style={styles.optionSeparator} />
-            
-            <Pressable 
-              style={styles.optionItem}
-              onPress={handleDeleteDeck}
-              disabled={deletingDeck}
-            >
-              <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-              <Text style={styles.deleteOptionText}>
-                Supprimer le deck
-              </Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
-
-      {/* Modal de confirmation de suppression du deck */}
-      <ConfirmModal
-        visible={showDeleteConfirm}
-        title="Supprimer le deck"
-        message={`Êtes-vous sûr de vouloir supprimer "${deck?.name}" ? Cette action supprimera également toutes les cartes du deck et ne peut pas être annulée.`}
-        onConfirm={confirmDeleteDeck}
-        onCancel={() => setShowDeleteConfirm(false)}
-        confirmText="Supprimer"
-        cancelText="Annuler"
-        confirmColor="#FF3B30"
-        isLoading={deletingDeck}
-      />
 
       {/* Modal de confirmation de suppression de carte */}
       <ConfirmModal
