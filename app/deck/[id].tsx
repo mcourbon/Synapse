@@ -1238,12 +1238,14 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
           <Text style={styles.cancelButton}>Annuler</Text>
         </Pressable>
         <Text style={styles.modalTitle}>Modifier la carte</Text>
-        <Pressable 
-          onPress={handleEditCard}
-          disabled={editingCard}
-          style={[styles.saveButton, editingCard && styles.saveButtonDisabled]}
+        <Pressable
+          onPress={() => {
+            if (editingCard || !front.trim() || !back.trim()) return;
+            handleEditCard();
+          }}
+          style={[styles.saveButton, (editingCard || !front.trim() || !back.trim()) && styles.saveButtonDisabled]}
         >
-          <Text style={[styles.saveButtonText, editingCard && styles.saveButtonTextDisabled]}>
+          <Text style={[styles.saveButtonText, (editingCard || !front.trim() || !back.trim()) && styles.saveButtonTextDisabled]}>
             {editingCard ? 'Modification...' : 'Modifier'}
           </Text>
         </Pressable>

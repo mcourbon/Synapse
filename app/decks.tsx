@@ -693,9 +693,9 @@ const handleDeleteDeck = async () => {
     style={styles.modalOverlay}
     onPress={() => setShowEditDeckModal(false)}
   >
-    <View 
-      style={styles.editDeckContainer} 
-      onStartShouldSetResponder={() => true}
+    <Pressable
+      style={styles.editDeckContainer}
+      onPress={() => {}}
     >
       <Text style={styles.editDeckLabel}>Nouveau nom</Text>
       <TextInput
@@ -722,9 +722,11 @@ const handleDeleteDeck = async () => {
         <Pressable onPress={() => setShowEditDeckModal(false)}>
           <Text style={styles.cancelButton}>Annuler</Text>
         </Pressable>
-        <Pressable 
-          onPress={handleUpdateDeckName}
-          disabled={editingDeck || !newDeckName.trim() || newDeckName.length > 50}
+        <Pressable
+          onPress={() => {
+            if (editingDeck || !newDeckName.trim() || newDeckName.length > 50) return;
+            handleUpdateDeckName();
+          }}
           style={[
             styles.saveButton,
             (editingDeck || !newDeckName.trim() || newDeckName.length > 50) && styles.saveButtonDisabled
@@ -738,7 +740,7 @@ const handleDeleteDeck = async () => {
           </Text>
         </Pressable>
       </View>
-    </View>
+    </Pressable>
   </Pressable>
 </Modal>
 
