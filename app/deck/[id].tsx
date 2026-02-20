@@ -589,8 +589,6 @@ addCategoryButtonInactive: {
     shadowRadius: 4,
     elevation: 5,
     zIndex: 1000,
-    width: '90%',
-    maxWidth: 460,
     alignSelf: 'center',
   },
   toastSuccess: {
