@@ -525,12 +525,12 @@ export default function AddCardModal({
             <Text style={styles.modalTitle}>
               {deckId ? 'Nouvelle carte' : 'Ajout rapide'}
             </Text>
-            <Pressable 
+            <Pressable
               onPress={handleAddCard}
-              disabled={loading}
-              style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+              disabled={loading || !front.trim() || !back.trim()}
+              style={[styles.saveButton, (loading || !front.trim() || !back.trim()) && styles.saveButtonDisabled]}
             >
-              <Text style={[styles.saveButtonText, loading && styles.saveButtonTextDisabled]}>
+              <Text style={[styles.saveButtonText, (loading || !front.trim() || !back.trim()) && styles.saveButtonTextDisabled]}>
                 {loading ? 'Ajout...' : 'Ajouter'}
               </Text>
             </Pressable>
