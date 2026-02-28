@@ -496,13 +496,13 @@ export default function GlobalReview() {
       Animated.parallel([
         Animated.timing(modalBackgroundAnimation, {
           toValue: 1,
-          duration: 300,
+          duration: 150,
           useNativeDriver: true,
         }),
         Animated.spring(modalScaleAnimation, {
           toValue: 1,
-          tension: 100,
-          friction: 8,
+          tension: 200,
+          friction: 10,
           useNativeDriver: true,
         }),
       ]).start();
@@ -676,12 +676,12 @@ export default function GlobalReview() {
     Animated.parallel([
       Animated.timing(modalBackgroundAnimation, {
         toValue: 0,
-        duration: 200,
+        duration: 100,
         useNativeDriver: true,
       }),
       Animated.timing(modalScaleAnimation, {
         toValue: 0.8,
-        duration: 200,
+        duration: 100,
         useNativeDriver: true,
       }),
     ]).start(() => {

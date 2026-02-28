@@ -1,5 +1,5 @@
 // app/profile.tsx
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch, Modal, Linking, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch, Modal, Linking, TextInput, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -26,6 +26,16 @@ export default function Profile() {
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
   const usernameInputRef = useRef<TextInput>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const modalFadeAnim = useRef(new Animated.Value(0)).current;
+  const openModal = (setVisible: (v: boolean) => void) => {
+    setVisible(true);
+    modalFadeAnim.setValue(0);
+    Animated.timing(modalFadeAnim, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+  };
+  const closeModal = (setVisible: (v: boolean) => void) => {
+    Animated.timing(modalFadeAnim, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => setVisible(false));
+  };
 
   // Focus sur l'input quand on commence à éditer
   useEffect(() => {
@@ -75,7 +85,7 @@ const handleChangeAvatar = async () => {
 };
 
 const handleSignOut = () => {
-  setShowLogoutModal(true);
+  openModal(setShowLogoutModal);
 };
 
 const confirmLogout = async () => {
@@ -722,7 +732,7 @@ statValue: {
             
             <Pressable 
               style={dynamicStyles.settingItem}
-              onPress={() => setShowNotificationsModal(true)}>
+              onPress={() => openModal(setShowNotificationsModal)}>
               <View style={styles.settingLeft}>
                 <Ionicons name="notifications-outline" size={24} color={theme.textSecondary} />
                 <Text style={dynamicStyles.settingText}>Notifications</Text>
@@ -751,7 +761,7 @@ statValue: {
 
             <Pressable 
               style={dynamicStyles.settingItem}
-              onPress={() => setShowHelpModal(true)}>
+              onPress={() => openModal(setShowHelpModal)}>
               <View style={styles.settingLeft}>
                 <Ionicons name="help-circle-outline" size={24} color={theme.textSecondary} />
                 <Text style={dynamicStyles.settingText}>Aide & Support</Text>
@@ -761,7 +771,7 @@ statValue: {
 
             <Pressable 
               style={dynamicStyles.settingItem}  
-              onPress={() => setShowAboutModal(true)}>
+              onPress={() => openModal(setShowAboutModal)}>
               <View style={styles.settingLeft}>
                 <Ionicons name="information-circle-outline" size={24} color={theme.textSecondary} />
                 <Text style={dynamicStyles.settingText}>À propos</Text>
@@ -780,23 +790,24 @@ statValue: {
           {/* Notifications Modal */}
         <Modal
           visible={showNotificationsModal}
-          animationType="fade"
+          animationType="none"
           transparent={true}
-          onRequestClose={() => setShowNotificationsModal(false)}
+          onRequestClose={() => closeModal(setShowNotificationsModal)}
         >
-          <Pressable 
+          <Animated.View style={{ flex: 1, opacity: modalFadeAnim }}>
+          <Pressable
             style={dynamicStyles.modalOverlay}
-            onPress={() => setShowNotificationsModal(false)}
+            onPress={() => closeModal(setShowNotificationsModal)}
           >
             <Pressable
               style={dynamicStyles.modalContent}
-              onPress={() => {}} // Empêche la fermeture quand on clique dans la modale
+              onPress={() => {}}
             >
               {/* Header de la modale */}
               <View style={dynamicStyles.modalHeader}>
                 <View style={{width: 36}} />
                 <Text style={dynamicStyles.modalTitle}>Notifications</Text>
-                <Pressable onPress={() => setShowNotificationsModal(false)} style={dynamicStyles.closeButtonCircle}>
+                <Pressable onPress={() => closeModal(setShowNotificationsModal)} style={dynamicStyles.closeButtonCircle}>
                   <Ionicons name="close" size={20} color={theme.textSecondary} />
                 </Pressable>
               </View>
@@ -832,18 +843,20 @@ statValue: {
               </Text>
             </Pressable>
           </Pressable>
+          </Animated.View>
         </Modal>
 
           {/* About Modal */}
         <Modal
           visible={showAboutModal}
-          animationType="fade"
+          animationType="none"
           transparent={true}
-          onRequestClose={() => setShowAboutModal(false)}
+          onRequestClose={() => closeModal(setShowAboutModal)}
         >
+          <Animated.View style={{ flex: 1, opacity: modalFadeAnim }}>
           <Pressable
             style={dynamicStyles.modalOverlay}
-            onPress={() => setShowAboutModal(false)}
+            onPress={() => closeModal(setShowAboutModal)}
           >
             <Pressable
               style={dynamicStyles.modalContent}
@@ -851,9 +864,9 @@ statValue: {
             >
               {/* Header de la modale */}
               <View style={dynamicStyles.modalHeader}>
-                <View style={{width: 36}} /> 
+                <View style={{width: 36}} />
                 <Text style={dynamicStyles.modalTitle}>À propos de l'application</Text>
-                <Pressable onPress={() => setShowAboutModal(false)} style={dynamicStyles.closeButtonCircle}>
+                <Pressable onPress={() => closeModal(setShowAboutModal)} style={dynamicStyles.closeButtonCircle}>
                   <Ionicons name="close" size={20} color={theme.textSecondary} />
                 </Pressable>
               </View>
@@ -884,27 +897,29 @@ statValue: {
               </ScrollView>
             </Pressable>
           </Pressable>
+          </Animated.View>
         </Modal>
 
         {/* Help & Support Modal */}
         <Modal
           visible={showHelpModal}
-          animationType="fade"
+          animationType="none"
           transparent={true}
-          onRequestClose={() => setShowHelpModal(false)}
+          onRequestClose={() => closeModal(setShowHelpModal)}
         >
-          <Pressable 
+          <Animated.View style={{ flex: 1, opacity: modalFadeAnim }}>
+          <Pressable
             style={dynamicStyles.modalOverlay}
-            onPress={() => setShowHelpModal(false)}
+            onPress={() => closeModal(setShowHelpModal)}
           >
             <Pressable
               style={dynamicStyles.modalContent}
               onPress={() => {}}
             >
               <View style={dynamicStyles.modalHeader}>
-                <View style={{width: 36}} /> 
+                <View style={{width: 36}} />
                 <Text style={dynamicStyles.modalTitle}>Aide & Support</Text>
-                <Pressable onPress={() => setShowHelpModal(false)} style={dynamicStyles.closeButtonCircle}>
+                <Pressable onPress={() => closeModal(setShowHelpModal)} style={dynamicStyles.closeButtonCircle}>
                   <Ionicons name="close" size={20} color={theme.textSecondary} />
                 </Pressable>
               </View>
@@ -943,19 +958,20 @@ statValue: {
               </ScrollView>
             </Pressable>
           </Pressable>
+          </Animated.View>
         </Modal>
 
         {/* Logout Modal */}
         <Modal
           visible={showLogoutModal}
           transparent={true}
-          animationType="fade"
+          animationType="none"
         >
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', opacity: modalFadeAnim }}>
             <View style={{ backgroundColor: theme.surface, padding: 20, borderRadius: 12, margin: 20 }}>
               <Text style={{ color: theme.text, marginBottom: 20 }}>Voulez-vous vraiment vous déconnecter ?</Text>
               <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-                <Pressable onPress={() => setShowLogoutModal(false)}>
+                <Pressable onPress={() => closeModal(setShowLogoutModal)}>
                   <Text style={{ color: theme.textSecondary, padding: 10 }}>Annuler</Text>
                 </Pressable>
                 <Pressable onPress={confirmLogout}>
@@ -963,7 +979,7 @@ statValue: {
                 </Pressable>
               </View>
             </View>
-          </View>
+          </Animated.View>
         </Modal>
       </View>
     </SafeAreaView>

@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView } from 'react-native';
-import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView, Animated } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -74,6 +74,15 @@ export default function DeckDetail() {
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
   const [showCardStatsModal, setShowCardStatsModal] = useState(false);
   const [selectedCardForStats, setSelectedCardForStats] = useState<Card | null>(null);
+  const statsFadeAnim = useRef(new Animated.Value(0)).current;
+  const openCardStatsModal = () => {
+    statsFadeAnim.setValue(0);
+    setShowCardStatsModal(true);
+    Animated.timing(statsFadeAnim, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+  };
+  const closeCardStatsModal = () => {
+    Animated.timing(statsFadeAnim, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => setShowCardStatsModal(false));
+  };
 
   // Nouveaux états pour le système de tags avancé
   const [existingCategories, setExistingCategories] = useState<string[]>([]);
@@ -672,40 +681,53 @@ addCategoryButtonInactive: {
   // Modal stats carte
   statsOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   statsSheet: {
     backgroundColor: theme.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 12,
-    paddingBottom: 36,
-    paddingHorizontal: 20,
-    shadowColor: theme.shadow,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 16,
+    borderRadius: 28,
     width: '100%',
-    maxWidth: 500,
-    alignSelf: 'center',
+    maxWidth: 420,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 15,
+    overflow: 'hidden',
   },
-  statsHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: theme.border,
-    borderRadius: 2,
-    alignSelf: 'center' as const,
-    marginBottom: 20,
+  statsModalHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border + '40',
   },
   statsSheetTitle: {
-    fontSize: 11,
-    fontWeight: '600' as const,
-    color: theme.textSecondary,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 0.5,
-    marginBottom: 12,
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: theme.text,
+    textAlign: 'center' as const,
+    letterSpacing: -0.3,
+  },
+  statsCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.border + '30',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    borderWidth: 1,
+    borderColor: theme.border + '50',
+  },
+  statsBody: {
+    padding: 20,
   },
   statsPreviewBox: {
     backgroundColor: theme.background,
@@ -1199,7 +1221,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
         onPress={() => {
           if (editMode) return;
           setSelectedCardForStats(item);
-          setShowCardStatsModal(true);
+          openCardStatsModal();
         }}
       >
         <View style={styles.cardContent}>
@@ -1388,13 +1410,13 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
       {/* Modal stats d'une carte */}
       <Modal
         visible={showCardStatsModal}
-        animationType="slide"
+        animationType="none"
         transparent={true}
-        onRequestClose={() => setShowCardStatsModal(false)}
+        onRequestClose={() => closeCardStatsModal()}
       >
-        <Pressable style={styles.statsOverlay} onPress={() => setShowCardStatsModal(false)}>
+        <Animated.View style={{ flex: 1, opacity: statsFadeAnim }}>
+        <Pressable style={styles.statsOverlay} onPress={() => closeCardStatsModal()}>
           <Pressable style={styles.statsSheet} onPress={e => e.stopPropagation()}>
-            <View style={styles.statsHandle} />
 
             {selectedCardForStats && (() => {
               const card = selectedCardForStats;
@@ -1415,52 +1437,62 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
 
               return (
                 <>
-                  <Text style={styles.statsSheetTitle}>Stats de la carte</Text>
-
-                  {/* Aperçu front / back */}
-                  <View style={styles.statsPreviewBox}>
-                    <Text style={styles.statsPreviewFront} numberOfLines={2}>{card.front}</Text>
-                    <Text style={styles.statsPreviewBack} numberOfLines={3}>{card.back}</Text>
+                  {/* Header */}
+                  <View style={styles.statsModalHeader}>
+                    <View style={{ width: 36 }} />
+                    <Text style={styles.statsSheetTitle}>Stats de la carte</Text>
+                    <Pressable style={styles.statsCloseButton} onPress={() => closeCardStatsModal()}>
+                      <Ionicons name="close" size={20} color={theme.textSecondary} />
+                    </Pressable>
                   </View>
 
-                  {/* Statut */}
-                  <View style={styles.statsMasteryRow}>
-                    <Text style={styles.statsMasteryLabel}>Statut</Text>
-                    <View style={[staticStyles.badge, { backgroundColor: masteryColor }]}>
-                      <Text style={staticStyles.badgeText}>{MASTERY_LABELS[mastery] ?? mastery}</Text>
+                  <View style={styles.statsBody}>
+                    {/* Aperçu front / back */}
+                    <View style={styles.statsPreviewBox}>
+                      <Text style={styles.statsPreviewFront} numberOfLines={2}>{card.front}</Text>
+                      <Text style={styles.statsPreviewBack} numberOfLines={3}>{card.back}</Text>
                     </View>
-                  </View>
 
-                  {/* Grille 4 stats */}
-                  <View style={styles.statsGrid}>
-                    <View style={styles.statsCell}>
-                      <Text style={styles.statsCellLabel}>Win Streak</Text>
-                      <Text style={staticStyles.statValYellow}>{streak}</Text>
+                    {/* Statut */}
+                    <View style={styles.statsMasteryRow}>
+                      <Text style={styles.statsMasteryLabel}>Statut</Text>
+                      <View style={[staticStyles.badge, { backgroundColor: masteryColor }]}>
+                        <Text style={staticStyles.badgeText}>{MASTERY_LABELS[mastery] ?? mastery}</Text>
+                      </View>
                     </View>
-                    <View style={styles.statsCell}>
-                      <Text style={styles.statsCellLabel}>Lapses</Text>
-                      <Text style={lapses > 0 ? staticStyles.statValRed : staticStyles.statValGray}>{lapses}</Text>
-                    </View>
-                    <View style={styles.statsCell}>
-                      <Text style={styles.statsCellLabel}>Facilité</Text>
-                      <Text style={ease >= 0 ? staticStyles.statValBlue : staticStyles.statValRed}>{easeLabel}</Text>
-                    </View>
-                    <View style={styles.statsCell}>
-                      <Text style={styles.statsCellLabel}>Intervalle</Text>
-                      <Text style={styles.statsCellValuePrimary}>{intervalLabel}</Text>
-                    </View>
-                  </View>
 
-                  {/* Prochaine révision */}
-                  <View style={[styles.statsCell, { marginTop: 10, alignItems: 'flex-start' }]}>
-                    <Text style={styles.statsCellLabel}>Prochaine révision</Text>
-                    <Text style={styles.statsCellValuePrimary}>{nextReviewLabel}</Text>
+                    {/* Grille 4 stats */}
+                    <View style={styles.statsGrid}>
+                      <View style={styles.statsCell}>
+                        <Text style={styles.statsCellLabel}>Win Streak</Text>
+                        <Text style={staticStyles.statValYellow}>{streak}</Text>
+                      </View>
+                      <View style={styles.statsCell}>
+                        <Text style={styles.statsCellLabel}>Lapses</Text>
+                        <Text style={lapses > 0 ? staticStyles.statValRed : staticStyles.statValGray}>{lapses}</Text>
+                      </View>
+                      <View style={styles.statsCell}>
+                        <Text style={styles.statsCellLabel}>Facilité</Text>
+                        <Text style={ease >= 0 ? staticStyles.statValBlue : staticStyles.statValRed}>{easeLabel}</Text>
+                      </View>
+                      <View style={styles.statsCell}>
+                        <Text style={styles.statsCellLabel}>Intervalle</Text>
+                        <Text style={styles.statsCellValuePrimary}>{intervalLabel}</Text>
+                      </View>
+                    </View>
+
+                    {/* Prochaine révision */}
+                    <View style={[styles.statsCell, { marginTop: 10, alignItems: 'flex-start' }]}>
+                      <Text style={styles.statsCellLabel}>Prochaine révision</Text>
+                      <Text style={styles.statsCellValuePrimary}>{nextReviewLabel}</Text>
+                    </View>
                   </View>
                 </>
               );
             })()}
           </Pressable>
         </Pressable>
+        </Animated.View>
       </Modal>
 
       {/* Modal d'ajout de carte */}
