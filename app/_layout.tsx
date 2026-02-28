@@ -2,6 +2,7 @@
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import { StatsProvider } from '../contexts/StatsContext';
 import AuthScreen from '../components/AuthScreen';
 import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
 
@@ -59,9 +60,11 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider> {/* Ajouter le ThemeProvider ici */}
+    <ThemeProvider>
       <AuthProvider>
-        <RootLayoutNav />
+        <StatsProvider>
+          <RootLayoutNav />
+        </StatsProvider>
       </AuthProvider>
     </ThemeProvider>
   );

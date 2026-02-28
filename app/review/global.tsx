@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { Card } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useStats } from '../../contexts/StatsContext';
 import { useFocusEffect } from '@react-navigation/native';
 import React from 'react';
 import { SpacedRepetitionSystem, useSpacedRepetition } from '../../utils/spacedRepetition';
@@ -111,6 +112,7 @@ export default function GlobalReview() {
   const router = useRouter();
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
+  const { refreshStats } = useStats();
   const [sessionStartTime] = useState(new Date());
   const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
 
@@ -486,7 +488,8 @@ export default function GlobalReview() {
     const nextIndex = currentCardIndex + 1;
     
     if (nextIndex >= dueCards.length) {
-      // Session terminée - afficher le modal de succès
+      // Session terminée - rafraîchir les stats en arrière-plan
+      refreshStats();
       setShowEndSessionModal(true);
       
       // Animations du modal

@@ -4,88 +4,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext'; // Ajouter cet import
+import { useTheme } from '../contexts/ThemeContext';
+import { useStats } from '../contexts/StatsContext';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { StatsTracker } from '../lib/statsTracker';
 import { AvatarUpload } from '../lib/avatarUpload';
 import { Image } from 'react-native';
 
-interface UserStats {
-  // Stats de base
-  totalCards: number;
-  totalDecks: number;
-  cardsReviewed: number;
-  
-  // Stats de streak
-  currentStreak: number;
-  longestStreak: number;
-  
-  // Stats de révision
-  totalReviews: number;
-  successRate: number;
-  hardReviews: number;
-  mediumReviews: number;
-  easyReviews: number;
-  
-  // Stats de temps
-  totalStudyTime: number;
-  
-  // Stats de difficulté
-  cardsMastered: number;
-  cardsDifficult: number;
-  
-  // Historique
-  studyDays: string[];
-}
-
-interface UserProfile {
-  id: string;
-  username: string | null;
-  email: string;
-  created_at: string;
-  avatar_url?: string | null;
-}
-
 export default function Profile() {
   const { user, signOut } = useAuth();
-  const { theme, isDark, toggleTheme } = useTheme(); // Utiliser le contexte theme
+  const { theme, isDark, toggleTheme } = useTheme();
+  const { stats, userProfile, avatarUrl, setAvatarUrl, setUserProfile } = useStats();
   const router = useRouter();
-  const [stats, setStats] = useState<UserStats>({
-    totalCards: 0,
-    totalDecks: 0,
-    cardsReviewed: 0,
-    currentStreak: 0,
-    longestStreak: 0,
-    totalReviews: 0,
-    successRate: 0,
-    hardReviews: 0,
-    mediumReviews: 0,
-    easyReviews: 0,
-    totalStudyTime: 0,
-    cardsMastered: 0,
-    cardsDifficult: 0,
-    studyDays: [],
-  });
-  const [loading, setLoading] = useState(true);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
   const usernameInputRef = useRef<TextInput>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
-
-  useEffect(() => {
-    if (user) {
-      fetchUserStats();
-    }
-  }, [user]);
 
   // Focus sur l'input quand on commence à éditer
   useEffect(() => {
@@ -95,61 +35,6 @@ export default function Profile() {
       }, 100);
     }
   }, [isEditingUsername]);
-
-  const fetchUserStats = async () => {
-  if (!user) return;
-
-  try {
-    // 1. Récupérer les stats trackées automatiquement
-    const userStats = await StatsTracker.getUserStats(user.id);
-    
-    // 2. Récupérer les stats "live" (nombre de cartes, decks)
-    const liveStats = await StatsTracker.getLiveStats(user.id);
-
-    // 3. Mettre à jour les stats de difficulté des cartes
-    await StatsTracker.updateCardDifficultyStats(user.id);
-
-    // 4. Récupérer le profil utilisateur
-    if (userStats) {
-  setUserProfile({
-    id: userStats.user_id,
-    username: userStats.username,
-    email: user.email || '',
-    created_at: user.created_at || '',
-    avatar_url: userStats.avatar_url, // ⭐ AJOUTE ÇA
-  });
-  setNewUsername(userStats.username || '');
-  setAvatarUrl(userStats.avatar_url || null); // ⭐ ET ÇA
-}
-
-    // 5. Calculer le taux de réussite
-    const successRate = StatsTracker.calculateSuccessRate(userStats);
-
-    // 6. Mettre à jour l'état avec toutes les stats
-    setStats({
-      totalCards: liveStats.totalCards,
-      totalDecks: liveStats.totalDecks,
-      cardsReviewed: liveStats.cardsReviewed,
-      currentStreak: userStats?.current_streak || 0,
-      successRate: successRate,
-      // Nouvelles stats disponibles :
-      longestStreak: userStats?.longest_streak || 0,
-      totalReviews: userStats?.total_reviews || 0,
-      hardReviews: userStats?.hard_reviews || 0,
-      mediumReviews: userStats?.medium_reviews || 0,
-      easyReviews: userStats?.easy_reviews || 0,
-      totalStudyTime: userStats?.total_study_time || 0,
-      cardsMastered: userStats?.cards_mastered || 0,
-      cardsDifficult: userStats?.cards_difficult || 0,
-      studyDays: userStats?.study_days || [],
-    });
-
-  } catch (error) {
-    console.error('Erreur lors du chargement des statistiques:', error);
-  } finally {
-    setLoading(false);
-  }
-};
 
 const handleChangeAvatar = async () => {
   if (!user) return;
@@ -363,11 +248,6 @@ const updateUsername = async () => {
       fontWeight: 'bold',
       color: theme.text,
       marginBottom: 15,
-    },
-    loadingText: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      fontStyle: 'italic',
     },
     statCard: {
       flex: 1,
@@ -759,13 +639,8 @@ statValue: {
           {/* Stats */}
           <View style={styles.statsSection}>
             <Text style={dynamicStyles.sectionTitle}>Vos statistiques</Text>
-            {loading ? (
-              <View style={styles.loadingStats}>
-                <Text style={dynamicStyles.loadingText}>Chargement des statistiques...</Text>
-              </View>
-            ) : (
-              <View style={styles.statsGrid}>
-                {/* Temps d'étude total */}
+            <View style={styles.statsGrid}>
+              {/* Temps d'étude total */}
 <View style={dynamicStyles.statCard}>
   <Ionicons name="time-outline" size={20} color={theme.primary} />
   <Text style={styles.statValueBlue}>
@@ -819,8 +694,7 @@ statValue: {
     </View>
   </View>
 </View>
-              </View>
-            )}
+            </View>
           </View>
 
           {/* Additional Stats */}
@@ -1137,10 +1011,6 @@ const styles = StyleSheet.create({
   statsSection: {
     marginBottom: 20,
     paddingHorizontal: 20,
-  },
-  loadingStats: {
-    padding: 40,
-    alignItems: 'center',
   },
   statsGrid: {
     flexDirection: 'row',
