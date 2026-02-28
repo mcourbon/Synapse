@@ -8,6 +8,49 @@ import { Card, Deck } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import AddCardModal from '../../components/AddCardModal';
+import { SpacedRepetitionSystem } from '../../utils/spacedRepetition';
+
+// Couleurs de statut — module level (iOS safe, jamais dans StyleSheet inside component)
+const MASTERY_COLORS: Record<string, string> = {
+  nouveau: '#8E8E93',
+  apprentissage: '#3B82F6',
+  consolidation: '#F59E0B',
+  révision: '#8B5CF6',
+  maîtrisé: '#10B981',
+  difficile: '#EF4444',
+};
+
+const MASTERY_LABELS: Record<string, string> = {
+  nouveau: 'Nouveau',
+  apprentissage: 'En apprentissage',
+  consolidation: 'Consolidation',
+  révision: 'En révision',
+  maîtrisé: 'Maîtrisé',
+  difficile: 'Difficile',
+};
+
+const staticStyles = StyleSheet.create({
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  badgeText: { fontSize: 11, fontWeight: '600', color: '#fff' },
+  statValYellow: { color: '#F59E0B', fontSize: 24, fontWeight: '700' },
+  statValRed:    { color: '#EF4444', fontSize: 24, fontWeight: '700' },
+  statValBlue:   { color: '#3B82F6', fontSize: 24, fontWeight: '700' },
+  statValGray:   { color: '#8E8E93', fontSize: 24, fontWeight: '700' },
+});
+
+function formatNextReview(nextReview: string | null | undefined): string {
+  if (!nextReview) return 'Nouveau';
+  const today = new Date();
+  const reviewDate = new Date(nextReview);
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const reviewOnly = new Date(reviewDate.getFullYear(), reviewDate.getMonth(), reviewDate.getDate());
+  const diffDays = Math.round((reviewOnly.getTime() - todayOnly.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) return "Aujourd'hui";
+  if (diffDays === 1) return 'Demain';
+  if (diffDays < 7) return `Dans ${diffDays}j`;
+  if (diffDays < 30) return `Dans ${Math.round(diffDays / 7)}sem`;
+  return `Dans ${Math.round(diffDays / 30)}mois`;
+}
 
 export default function DeckDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -29,7 +72,9 @@ export default function DeckDetail() {
   const [deletingCard, setDeletingCard] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
-  
+  const [showCardStatsModal, setShowCardStatsModal] = useState(false);
+  const [selectedCardForStats, setSelectedCardForStats] = useState<Card | null>(null);
+
   // Nouveaux états pour le système de tags avancé
   const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<string[]>([]);
@@ -606,6 +651,117 @@ addCategoryButtonInactive: {
   optionsButtonEditMode: {
     backgroundColor: theme.primary,
   },
+  // Badges sur les cartes
+  cardBadgeRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 6,
+    flexWrap: 'wrap' as const,
+  },
+  reviewDateBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    backgroundColor: `${theme.primary}18`,
+  },
+  reviewDateText: {
+    fontSize: 11,
+    fontWeight: '500' as const,
+    color: theme.primary,
+  },
+  // Modal stats carte
+  statsOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  statsSheet: {
+    backgroundColor: theme.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingBottom: 36,
+    paddingHorizontal: 20,
+    shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 16,
+    width: '100%',
+    maxWidth: 500,
+    alignSelf: 'center',
+  },
+  statsHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: theme.border,
+    borderRadius: 2,
+    alignSelf: 'center' as const,
+    marginBottom: 20,
+  },
+  statsSheetTitle: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: theme.textSecondary,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  statsPreviewBox: {
+    backgroundColor: theme.background,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  statsPreviewFront: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: theme.text,
+    marginBottom: 4,
+  },
+  statsPreviewBack: {
+    fontSize: 13,
+    color: theme.textSecondary,
+    lineHeight: 18,
+  },
+  statsMasteryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  statsMasteryLabel: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    fontWeight: '500' as const,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  statsCell: {
+    flex: 1,
+    backgroundColor: theme.background,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: theme.border,
+    alignItems: 'center' as const,
+  },
+  statsCellLabel: {
+    fontSize: 11,
+    color: theme.textSecondary,
+    fontWeight: '500' as const,
+    marginBottom: 6,
+    textAlign: 'center' as const,
+  },
+  statsCellValuePrimary: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: theme.primary,
+  },
 });
 
 // Composant Modal de Confirmation Personnalisé
@@ -1028,58 +1184,75 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
     setFilteredCategories([]);
   };
 
-  const renderCard = ({ item }: { item: Card }) => (
-    <Pressable 
-      style={styles.cardItem}
-      onPress={() => {
-        if (editMode) {
-          // En mode édition, ne pas naviguer vers la carte
-          return;
-        }
-        router.push(`/card/${item.id}`);
-      }}
-    >
-      <View style={styles.cardContent}>
-        <Text style={styles.cardFront} numberOfLines={2}>
-          {item.front}
-        </Text>
-        <Text style={styles.cardBack} numberOfLines={2}>
-          {item.back}
-        </Text>
-        {item.categories && item.categories.length > 0 && (
-          <View style={styles.cardCategoriesContainer}>
-            {item.categories.slice(0, 3).map((cat, index) => (
-              <Text key={index} style={styles.cardCategory}>
-                {cat}
-              </Text>
-            ))}
-            {item.categories.length > 3 && (
-              <Text style={styles.cardCategory}>
-                +{item.categories.length - 3}
-              </Text>
-            )}
+  const renderCard = ({ item }: { item: Card }) => {
+    const mastery = SpacedRepetitionSystem.getCardMastery(
+      item.repetitions || 0,
+      item.ease_factor || 2.5,
+      item.lapses || 0
+    );
+    const masteryColor = MASTERY_COLORS[mastery] ?? '#8E8E93';
+    const nextReviewLabel = formatNextReview(item.next_review);
+
+    return (
+      <Pressable
+        style={styles.cardItem}
+        onPress={() => {
+          if (editMode) return;
+          setSelectedCardForStats(item);
+          setShowCardStatsModal(true);
+        }}
+      >
+        <View style={styles.cardContent}>
+          <Text style={styles.cardFront} numberOfLines={2}>
+            {item.front}
+          </Text>
+          <Text style={styles.cardBack} numberOfLines={2}>
+            {item.back}
+          </Text>
+          {item.categories && item.categories.length > 0 && (
+            <View style={styles.cardCategoriesContainer}>
+              {item.categories.slice(0, 3).map((cat, index) => (
+                <Text key={index} style={styles.cardCategory}>
+                  {cat}
+                </Text>
+              ))}
+              {item.categories.length > 3 && (
+                <Text style={styles.cardCategory}>
+                  +{item.categories.length - 3}
+                </Text>
+              )}
+            </View>
+          )}
+          {/* Badges statut + prochaine révision */}
+          <View style={styles.cardBadgeRow}>
+            <View style={[staticStyles.badge, { backgroundColor: masteryColor }]}>
+              <Text style={staticStyles.badgeText}>{MASTERY_LABELS[mastery] ?? mastery}</Text>
+            </View>
+            <View style={styles.reviewDateBadge}>
+              <Text style={styles.reviewDateText}>{nextReviewLabel}</Text>
+            </View>
+          </View>
+        </View>
+
+        {editMode && (
+          <View style={styles.cardActions}>
+            <Pressable
+              style={styles.editButton}
+              onPress={() => openEditCardModal(item)}
+            >
+              <Ionicons name="pencil" size={18} color="#007AFF" />
+            </Pressable>
+            <Pressable
+              style={styles.deleteButton}
+              onPress={() => openDeleteCardConfirm(item)}
+            >
+              <Ionicons name="trash" size={18} color="#FF3B30" />
+            </Pressable>
           </View>
         )}
-      </View>
-      
-      {editMode && (
-        <View style={styles.cardActions}>
-          <Pressable 
-            style={styles.editButton}
-            onPress={() => openEditCardModal(item)}
-          >
-            <Ionicons name="pencil" size={18} color="#007AFF" />
-          </Pressable>
-          <Pressable 
-            style={styles.deleteButton}
-            onPress={() => openDeleteCardConfirm(item)}
-          >
-            <Ionicons name="trash" size={18} color="#FF3B30" />
-          </Pressable>
-        </View>
-      )}
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
 
   if (loading) {
     return (
@@ -1211,6 +1384,84 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
         cancelText=""
         confirmColor="#007AFF"
       />
+
+      {/* Modal stats d'une carte */}
+      <Modal
+        visible={showCardStatsModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCardStatsModal(false)}
+      >
+        <Pressable style={styles.statsOverlay} onPress={() => setShowCardStatsModal(false)}>
+          <Pressable style={styles.statsSheet} onPress={e => e.stopPropagation()}>
+            <View style={styles.statsHandle} />
+
+            {selectedCardForStats && (() => {
+              const card = selectedCardForStats;
+              const mastery = SpacedRepetitionSystem.getCardMastery(
+                card.repetitions || 0,
+                card.ease_factor || 2.5,
+                card.lapses || 0
+              );
+              const masteryColor = MASTERY_COLORS[mastery] ?? '#8E8E93';
+              const streak = card.repetitions || 0;
+              const lapses = card.lapses || 0;
+              const ease = Math.round(((card.ease_factor || 2.5) - 2.5) * 100);
+              const easeLabel = ease >= 0 ? `+${ease}%` : `${ease}%`;
+              const nextReviewLabel = formatNextReview(card.next_review);
+              const interval = card.interval || 0;
+              const neverReviewed = !card.repetitions && !card.last_reviewed;
+              const intervalLabel = neverReviewed ? '—' : interval === 0 ? '< 1j' : `${interval}j`;
+
+              return (
+                <>
+                  <Text style={styles.statsSheetTitle}>Stats de la carte</Text>
+
+                  {/* Aperçu front / back */}
+                  <View style={styles.statsPreviewBox}>
+                    <Text style={styles.statsPreviewFront} numberOfLines={2}>{card.front}</Text>
+                    <Text style={styles.statsPreviewBack} numberOfLines={3}>{card.back}</Text>
+                  </View>
+
+                  {/* Statut */}
+                  <View style={styles.statsMasteryRow}>
+                    <Text style={styles.statsMasteryLabel}>Statut</Text>
+                    <View style={[staticStyles.badge, { backgroundColor: masteryColor }]}>
+                      <Text style={staticStyles.badgeText}>{MASTERY_LABELS[mastery] ?? mastery}</Text>
+                    </View>
+                  </View>
+
+                  {/* Grille 4 stats */}
+                  <View style={styles.statsGrid}>
+                    <View style={styles.statsCell}>
+                      <Text style={styles.statsCellLabel}>Win Streak</Text>
+                      <Text style={staticStyles.statValYellow}>{streak}</Text>
+                    </View>
+                    <View style={styles.statsCell}>
+                      <Text style={styles.statsCellLabel}>Lapses</Text>
+                      <Text style={lapses > 0 ? staticStyles.statValRed : staticStyles.statValGray}>{lapses}</Text>
+                    </View>
+                    <View style={styles.statsCell}>
+                      <Text style={styles.statsCellLabel}>Facilité</Text>
+                      <Text style={ease >= 0 ? staticStyles.statValBlue : staticStyles.statValRed}>{easeLabel}</Text>
+                    </View>
+                    <View style={styles.statsCell}>
+                      <Text style={styles.statsCellLabel}>Intervalle</Text>
+                      <Text style={styles.statsCellValuePrimary}>{intervalLabel}</Text>
+                    </View>
+                  </View>
+
+                  {/* Prochaine révision */}
+                  <View style={[styles.statsCell, { marginTop: 10, alignItems: 'flex-start' }]}>
+                    <Text style={styles.statsCellLabel}>Prochaine révision</Text>
+                    <Text style={styles.statsCellValuePrimary}>{nextReviewLabel}</Text>
+                  </View>
+                </>
+              );
+            })()}
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Modal d'ajout de carte */}
       <AddCardModal
