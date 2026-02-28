@@ -585,9 +585,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    alignItems: 'center',
   },
   keyboardView: {
     flex: 1,
+    width: '100%',
+    maxWidth: 500,
   },
   scrollView: {
     flex: 1,
