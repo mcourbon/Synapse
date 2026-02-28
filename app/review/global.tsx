@@ -614,12 +614,12 @@ export default function GlobalReview() {
                 index === currentCardIndex 
                 ? {
                     ...c,
-                    interval: result.stats?.interval || c.interval,
-                    repetitions: result.stats?.repetitions || c.repetitions,
-                    ease_factor: result.stats?.easeFactor || c.ease_factor,
-                    last_reviewed: result.stats?.lastReviewed?.toISOString() || c.last_reviewed,
-                    next_review: result.stats?.nextReview?.toISOString() || c.next_review,
-                    lapses: result.stats?.lapses || c.lapses || 0,
+                    interval: result.stats?.interval ?? c.interval,
+                    repetitions: result.stats?.repetitions ?? c.repetitions,
+                    ease_factor: result.stats?.easeFactor ?? c.ease_factor,
+                    last_reviewed: result.stats?.lastReviewed?.toISOString() ?? c.last_reviewed,
+                    next_review: result.stats?.nextReview?.toISOString() ?? c.next_review,
+                    lapses: result.stats?.lapses ?? c.lapses ?? 0,
                     }
                 : c
             )

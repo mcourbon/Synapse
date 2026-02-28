@@ -47,19 +47,12 @@ export class SpacedRepetitionSystem {
     const isMature = stats.interval >= this.MATURE_THRESHOLD;
 
     switch (response) {
-      case 'hard': // Échec
+      case 'hard': // Échec - reset complet de la win streak
+        newInterval = 0; // Révision immédiate
+        newRepetitions = 0;
+        newEaseFactor = Math.max(stats.easeFactor - 0.2, this.MIN_EASE_FACTOR);
         if (isMature) {
-          // Carte mature qui échoue = LAPSE (pas de reset complet)
-          newInterval = Math.max(1, Math.floor(stats.interval * 0.5)); // 50% de l'intervalle
-          newRepetitions = Math.max(1, stats.repetitions - 2); // Recule de 2 niveaux
-          newEaseFactor = Math.max(stats.easeFactor - 0.2, this.MIN_EASE_FACTOR);
-          newLapses = stats.lapses + 1; // Incrémenter les lapses
-        } else {
-          // Carte en apprentissage qui échoue = reset complet
-          newInterval = 0; // Révision immédiate
-          newRepetitions = 0;
-          newEaseFactor = Math.max(stats.easeFactor - 0.2, this.MIN_EASE_FACTOR);
-          // Ne pas incrémenter les lapses pour les cartes non-matures
+          newLapses = stats.lapses + 1; // Incrémenter les lapses seulement pour les cartes matures
         }
         break;
 
@@ -135,8 +128,8 @@ export class SpacedRepetitionSystem {
 
     // Calculer la date de révision
     const nextReview = new Date(now);
-    if (response === 'hard' && !isMature) {
-      // Pour 'hard' sur carte non-mature : quelques minutes d'attente
+    if (response === 'hard') {
+      // Pour 'hard' : quelques minutes d'attente (révision immédiate)
       nextReview.setMinutes(now.getMinutes() + 5);
     } else {
       nextReview.setDate(now.getDate() + newInterval);
@@ -189,13 +182,7 @@ export class SpacedRepetitionSystem {
   static getResponseMessage(response: ReviewResponse, interval: number, repetitions: number = 0, lapses: number = 0): string {
     switch (response) {
       case 'hard':
-        if (interval > 0) {
-          // Lapse d'une carte mature
-          return `Cette carte nécessite une révision. Elle reviendra dans ${this.formatInterval(interval)} pour la consolider.`;
-        } else {
-          // Reset complet
-          return `Cette carte nécessite plus de travail. Elle reviendra dans quelques minutes pour consolider l'apprentissage.`;
-        }
+        return `Cette carte nécessite plus de travail. Elle reviendra dans quelques minutes pour consolider l'apprentissage.`;
       
       case 'medium':
         if (repetitions <= 2) {
