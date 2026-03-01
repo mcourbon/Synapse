@@ -7,7 +7,7 @@ export interface CardStats {
   easeFactor: number;      // Facteur de facilité (2.5 par défaut)
   lastReviewed?: Date;
   nextReview?: Date;
-  lapses?: number;         // Nouveau : nombre d'échecs après graduation
+  lapses?: number;         // Nombre de fois que "Difficile" a été appuyé
 }
 
 export type ReviewResponse = 'hard' | 'medium' | 'easy';
@@ -22,9 +22,6 @@ export class SpacedRepetitionSystem {
   // Séquences optimales basées sur la recherche cognitive
   private static readonly LEARNING_INTERVALS = [1, 3]; // 1 jour puis 3 jours pour l'apprentissage initial
   private static readonly GRADUATION_INTERVAL = 7; // 7 jours pour la "graduation"
-  
-  // Nouveau : seuil pour considérer une carte comme "mature"
-  private static readonly MATURE_THRESHOLD = 21; // 21 jours = 3 semaines
 
   static calculateNextReview(
     currentStats: Partial<CardStats>,
@@ -43,17 +40,12 @@ export class SpacedRepetitionSystem {
     let newEaseFactor: number = stats.easeFactor;
     let newLapses: number = stats.lapses;
 
-    // Déterminer si la carte est mature (intervalle >= 21 jours)
-    const isMature = stats.interval >= this.MATURE_THRESHOLD;
-
     switch (response) {
       case 'hard': // Échec - reset complet de la win streak
         newInterval = 0; // Révision immédiate
         newRepetitions = 0;
         newEaseFactor = Math.max(stats.easeFactor - 0.2, this.MIN_EASE_FACTOR);
-        if (isMature) {
-          newLapses = stats.lapses + 1; // Incrémenter les lapses seulement pour les cartes matures
-        }
+        newLapses = stats.lapses + 1; // Incrémenter à chaque fois que hard est appuyé
         break;
 
       case 'medium': // Hésitant - progression prudente
@@ -97,7 +89,7 @@ export class SpacedRepetitionSystem {
           newRepetitions = 2;
         } else if (stats.repetitions === 2) {
           // Graduation : 7 jours (au lieu de 10, plus progressif)
-          newInterval = 7;
+          newInterval = this.GRADUATION_INTERVAL;
           newRepetitions = 3;
         } else {
           // Phase mature : progression exponentielle modifiée
@@ -179,18 +171,15 @@ export class SpacedRepetitionSystem {
   }
 
   // Messages d'encouragement optimisés selon la phase d'apprentissage
-  static getResponseMessage(response: ReviewResponse, interval: number, repetitions: number = 0, lapses: number = 0): string {
+  static getResponseMessage(response: ReviewResponse, interval: number, repetitions: number = 0): string {
     switch (response) {
       case 'hard':
         return `Cette carte nécessite plus de travail. Elle reviendra dans quelques minutes pour consolider l'apprentissage.`;
-      
       case 'medium':
         if (repetitions <= 2) {
           return `Bien ! Cette carte est en cours d'apprentissage. Prochaine révision dans ${this.formatInterval(interval)}.`;
-        } else {
-          return `Correct, mais avec hésitation. La carte reviendra dans ${this.formatInterval(interval)} pour renforcer la mémorisation.`;
         }
-      
+        return `Correct, mais avec hésitation. La carte reviendra dans ${this.formatInterval(interval)} pour renforcer la mémorisation.`;
       case 'easy':
         if (repetitions === 1) {
           return `Excellent ! Première maîtrise confirmée. Révision dans ${this.formatInterval(interval)} pour la consolidation.`;
@@ -198,13 +187,8 @@ export class SpacedRepetitionSystem {
           return `Parfait ! La carte entre en phase de rétention à long terme. Prochaine révision dans ${this.formatInterval(interval)}.`;
         } else if (repetitions <= 5) {
           return `Maîtrisé ! Espacement optimal appliqué selon la courbe de l'oubli. Révision dans ${this.formatInterval(interval)}.`;
-        } else {
-          return `Expert ! Cette connaissance est solidement ancrée. Révision dans ${this.formatInterval(interval)}.`;
         }
-      
-      default:
-        const days = interval === 1 ? '1 jour' : `${interval} jours`;
-        return `Cette carte reviendra dans ${days}.`;
+        return `Expert ! Cette connaissance est solidement ancrée. Révision dans ${this.formatInterval(interval)}.`;
     }
   }
 
@@ -307,10 +291,9 @@ export function useSpacedRepetition() {
       return {
         success: true,
         message: SpacedRepetitionSystem.getResponseMessage(
-          response, 
-          newStats.interval, 
+          response,
+          newStats.interval,
           newStats.repetitions,
-          newStats.lapses
         ),
         stats: newStats,
         isImmediateReview: response === 'hard' && newStats.interval === 0 // Plus précis

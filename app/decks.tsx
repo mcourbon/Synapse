@@ -639,17 +639,15 @@ const handleDeleteDeck = async () => {
             </View>
 
             {/* Bouton ajouter */}
-{!editMode && (
-  <View style={styles.addButtonContainer}>
-    <Pressable 
+<View style={styles.addButtonContainer}>
+    <Pressable
       style={styles.addCollectionButton}
-      onPress={() => setShowAddModal(true)}
+      onPress={() => { setEditMode(false); setShowAddModal(true); }}
     >
       <Ionicons name="add" size={24} color="#fff" />
       <Text style={styles.addCollectionButtonText}>Ajouter une collection</Text>
     </Pressable>
   </View>
-)}
 
           {decks.length === 0 ? (
             <View style={styles.emptyState}>

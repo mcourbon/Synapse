@@ -1342,7 +1342,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
         </View>
 
       {/* Informations du deck */}
-      <View style={[styles.deckInfo, editMode && { marginBottom: 15 }]}>
+      <View style={styles.deckInfo}>
         {deck.description && (
           <Text style={styles.deckDescription}>{deck.description}</Text>
         )}
@@ -1352,21 +1352,18 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
       </View>
 
       {/* Boutons d'action */}
-      {!editMode && (
-        <View style={styles.actionButtons}>
-          {cards.length > 0 && (
-            <Pressable style={styles.reviewButton} onPress={handleStartReview}>
-              <Ionicons name="play" size={24} color="#fff" />
-              <Text style={styles.reviewButtonText}>S'entraîner</Text>
-            </Pressable>
-          )}
-          
-          <Pressable style={styles.addButton} onPress={() => setShowAddModal(true)}>
-            <Ionicons name="add" size={24} color="#fff" />
-            <Text style={styles.addButtonText}>Ajouter</Text>
+      <View style={styles.actionButtons}>
+        {cards.length > 0 && (
+          <Pressable style={styles.reviewButton} onPress={() => { setEditMode(false); handleStartReview(); }}>
+            <Ionicons name="play" size={24} color="#fff" />
+            <Text style={styles.reviewButtonText}>S'entraîner</Text>
           </Pressable>
-        </View>
-      )}
+        )}
+        <Pressable style={styles.addButton} onPress={() => { setEditMode(false); setShowAddModal(true); }}>
+          <Ionicons name="add" size={24} color="#fff" />
+          <Text style={styles.addButtonText}>Ajouter</Text>
+        </Pressable>
+      </View>
 
       {/* Liste des cartes */}
       {cards.length === 0 ? (
