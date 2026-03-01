@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView, Animated, Platform } from 'react-native';
 import { useEffect, useState, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -692,6 +692,7 @@ addCategoryButtonInactive: {
     borderRadius: 28,
     width: '100%',
     maxWidth: 420,
+    maxHeight: '85%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
@@ -1341,7 +1342,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
         </View>
 
       {/* Informations du deck */}
-      <View style={styles.deckInfo}>
+      <View style={[styles.deckInfo, editMode && { marginBottom: 15 }]}>
         {deck.description && (
           <Text style={styles.deckDescription}>{deck.description}</Text>
         )}
@@ -1473,12 +1474,12 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
                     </Pressable>
                   </View>
 
-                  <View style={styles.statsBody}>
+                  <ScrollView style={styles.statsBody} contentContainerStyle={{ paddingBottom: 4 }} showsVerticalScrollIndicator={false} bounces={Platform.OS === 'ios'}>
                     {/* Aperçu front / back */}
                     <View style={styles.statsPreview}>
-                      <Text style={styles.statsPreviewFront} numberOfLines={2}>{card.front}</Text>
+                      <Text style={styles.statsPreviewFront}>{card.front}</Text>
                       <View style={styles.statsPreviewDivider} />
-                      <Text style={styles.statsPreviewBack} numberOfLines={3}>{card.back}</Text>
+                      <Text style={styles.statsPreviewBack}>{card.back}</Text>
                     </View>
 
                     {/* Mastery banner */}
@@ -1521,7 +1522,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
                       <Text style={styles.statsNextReviewLabel}>Prochaine révision</Text>
                       <Text style={styles.statsNextReviewValue}>{nextReviewLabel}</Text>
                     </View>
-                  </View>
+                  </ScrollView>
                 </>
               );
             })()}
@@ -1581,7 +1582,11 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
             multiline
             numberOfLines={4}
             textAlignVertical="top"
+            maxLength={300}
           />
+          <Text style={{ fontSize: 12, color: front.length >= 300 ? '#EF4444' : front.length > 270 ? '#F59E0B' : theme.textSecondary, textAlign: 'right', marginTop: 4 }}>
+            {front.length}/300
+          </Text>
         </View>
 
         <View style={styles.inputGroup}>
@@ -1594,7 +1599,11 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
             multiline
             numberOfLines={4}
             textAlignVertical="top"
+            maxLength={300}
           />
+          <Text style={{ fontSize: 12, color: back.length >= 300 ? '#EF4444' : back.length > 270 ? '#F59E0B' : theme.textSecondary, textAlign: 'right', marginTop: 4 }}>
+            {back.length}/300
+          </Text>
         </View>
 
         <View style={styles.inputGroup}>

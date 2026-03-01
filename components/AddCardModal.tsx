@@ -596,7 +596,11 @@ export default function AddCardModal({
                     multiline
                     numberOfLines={4}
                     textAlignVertical="top"
+                    maxLength={300}
                   />
+                  <Text style={{ fontSize: 12, color: front.length >= 300 ? '#EF4444' : front.length > 270 ? '#F59E0B' : theme.textSecondary, textAlign: 'right', marginTop: 4 }}>
+                    {front.length}/300
+                  </Text>
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -609,7 +613,11 @@ export default function AddCardModal({
                     multiline
                     numberOfLines={4}
                     textAlignVertical="top"
+                    maxLength={300}
                   />
+                  <Text style={{ fontSize: 12, color: back.length >= 300 ? '#EF4444' : back.length > 270 ? '#F59E0B' : theme.textSecondary, textAlign: 'right', marginTop: 4 }}>
+                    {back.length}/300
+                  </Text>
                 </View>
 
                 <View style={styles.inputGroup}>
