@@ -623,12 +623,6 @@ avatarPlaceholder: {
   )}
 </View>
             
-            <Text style={dynamicStyles.userInfo}>
-              {user?.email}
-            </Text>
-            <Text style={dynamicStyles.userInfo}>
-              Membre depuis {new Date(user?.created_at || '').toLocaleDateString('fr-FR')}
-            </Text>
           </View>
 
           {/* Stats */}
@@ -766,6 +760,12 @@ avatarPlaceholder: {
           </View>
 
           {/* Logout */}
+          <View style={{ alignItems: 'center', marginBottom: 30 }}>
+            <Text style={dynamicStyles.userInfo}>{user?.email}</Text>
+            <Text style={dynamicStyles.userInfo}>
+              Membre depuis {new Date(user?.created_at || '').toLocaleDateString('fr-FR')}
+            </Text>
+          </View>
           <Pressable style={dynamicStyles.logoutButton} onPress={handleSignOut}>
             <Ionicons name="log-out-outline" size={24} color={theme.error} />
             <Text style={dynamicStyles.logoutText}>Se déconnecter</Text>
@@ -1006,7 +1006,7 @@ const styles = StyleSheet.create({
   },
   userSection: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 20,
     paddingHorizontal: 20,
   },
   statsSection: {
@@ -1023,7 +1023,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   settingsSection: {
-    marginBottom: 30,
+    marginBottom: 20,
     paddingHorizontal: 20,
   },
   settingLeft: {
