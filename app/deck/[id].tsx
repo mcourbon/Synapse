@@ -670,13 +670,14 @@ addCategoryButtonInactive: {
   reviewDateBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 10,
-    backgroundColor: `${theme.primary}18`,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   reviewDateText: {
     fontSize: 11,
-    fontWeight: '500' as const,
-    color: theme.primary,
+    fontWeight: '400' as const,
+    color: theme.textSecondary,
   },
   // Modal stats carte
   statsOverlay: {
@@ -729,58 +730,81 @@ addCategoryButtonInactive: {
   statsBody: {
     padding: 20,
   },
-  statsPreviewBox: {
+  statsPreview: {
     backgroundColor: theme.background,
     borderRadius: 12,
     padding: 14,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: theme.border,
   },
   statsPreviewFront: {
     fontSize: 15,
     fontWeight: '600' as const,
     color: theme.text,
-    marginBottom: 4,
+  },
+  statsPreviewDivider: {
+    height: 1,
+    backgroundColor: theme.border,
+    marginVertical: 10,
+    opacity: 0.5,
   },
   statsPreviewBack: {
     fontSize: 13,
     color: theme.textSecondary,
     lineHeight: 18,
   },
-  statsMasteryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  statsMasteryBanner: {
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center' as const,
     marginBottom: 16,
   },
-  statsMasteryLabel: {
-    fontSize: 14,
-    color: theme.textSecondary,
-    fontWeight: '500' as const,
-  },
   statsGrid: {
-    flexDirection: 'row',
-    gap: 10,
+    marginBottom: 14,
+  },
+  statsRow: {
+    flexDirection: 'row' as const,
   },
   statsCell: {
     flex: 1,
-    backgroundColor: theme.background,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: theme.border,
     alignItems: 'center' as const,
+    paddingVertical: 18,
+  },
+  statsDividerV: {
+    width: 1,
+    backgroundColor: theme.border + '50',
+  },
+  statsDividerH: {
+    height: 1,
+    backgroundColor: theme.border + '50',
   },
   statsCellLabel: {
     fontSize: 11,
     color: theme.textSecondary,
     fontWeight: '500' as const,
-    marginBottom: 6,
+    marginTop: 4,
     textAlign: 'center' as const,
   },
   statsCellValuePrimary: {
-    fontSize: 20,
+    fontSize: 22,
+    fontWeight: '700' as const,
+    color: theme.primary,
+  },
+  statsNextReview: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 6,
+    borderTopWidth: 1,
+    borderTopColor: theme.border + '50',
+    paddingTop: 14,
+    marginTop: 2,
+  },
+  statsNextReviewLabel: {
+    fontSize: 13,
+    color: theme.textSecondary,
+  },
+  statsNextReviewValue: {
+    fontSize: 13,
     fontWeight: '700' as const,
     color: theme.primary,
   },
@@ -1409,7 +1433,17 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
       >
         <Animated.View style={{ flex: 1, opacity: statsFadeAnim }}>
         <Pressable style={styles.statsOverlay} onPress={() => closeCardStatsModal()}>
-          <Pressable style={styles.statsSheet} onPress={e => e.stopPropagation()}>
+          <Pressable
+            style={[styles.statsSheet, selectedCardForStats && {
+              borderWidth: 2,
+              borderColor: (MASTERY_COLORS[SpacedRepetitionSystem.getCardMastery(
+                selectedCardForStats.repetitions || 0,
+                selectedCardForStats.ease_factor || 2.5,
+                selectedCardForStats.lapses || 0
+              )] ?? '#8E8E93') + '70',
+            }]}
+            onPress={e => e.stopPropagation()}
+          >
 
             {selectedCardForStats && (() => {
               const card = selectedCardForStats;
@@ -1441,43 +1475,51 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
 
                   <View style={styles.statsBody}>
                     {/* Aperçu front / back */}
-                    <View style={styles.statsPreviewBox}>
+                    <View style={styles.statsPreview}>
                       <Text style={styles.statsPreviewFront} numberOfLines={2}>{card.front}</Text>
+                      <View style={styles.statsPreviewDivider} />
                       <Text style={styles.statsPreviewBack} numberOfLines={3}>{card.back}</Text>
                     </View>
 
-                    {/* Statut */}
-                    <View style={styles.statsMasteryRow}>
-                      <Text style={styles.statsMasteryLabel}>Statut</Text>
-                      <View style={[staticStyles.badge, { backgroundColor: masteryColor }]}>
-                        <Text style={staticStyles.badgeText}>{MASTERY_LABELS[mastery] ?? mastery}</Text>
+                    {/* Mastery banner */}
+                    <View style={[styles.statsMasteryBanner, { backgroundColor: masteryColor + '20' }]}>
+                      <View style={[staticStyles.badge, { backgroundColor: masteryColor, paddingHorizontal: 14, paddingVertical: 6 }]}>
+                        <Text style={[staticStyles.badgeText, { fontSize: 13 }]}>{MASTERY_LABELS[mastery] ?? mastery}</Text>
                       </View>
                     </View>
 
-                    {/* Grille 4 stats */}
+                    {/* Grille 2x2 */}
                     <View style={styles.statsGrid}>
-                      <View style={styles.statsCell}>
-                        <Text style={styles.statsCellLabel}>Win Streak</Text>
-                        <Text style={staticStyles.statValYellow}>{streak}</Text>
+                      <View style={styles.statsRow}>
+                        <View style={styles.statsCell}>
+                          <Text style={staticStyles.statValYellow}>{streak}</Text>
+                          <Text style={styles.statsCellLabel}>Win Streak</Text>
+                        </View>
+                        <View style={styles.statsDividerV} />
+                        <View style={styles.statsCell}>
+                          <Text style={lapses > 0 ? staticStyles.statValRed : staticStyles.statValGray}>{lapses}</Text>
+                          <Text style={styles.statsCellLabel}>Lapses</Text>
+                        </View>
                       </View>
-                      <View style={styles.statsCell}>
-                        <Text style={styles.statsCellLabel}>Lapses</Text>
-                        <Text style={lapses > 0 ? staticStyles.statValRed : staticStyles.statValGray}>{lapses}</Text>
-                      </View>
-                      <View style={styles.statsCell}>
-                        <Text style={styles.statsCellLabel}>Facilité</Text>
-                        <Text style={ease >= 0 ? staticStyles.statValBlue : staticStyles.statValRed}>{easeLabel}</Text>
-                      </View>
-                      <View style={styles.statsCell}>
-                        <Text style={styles.statsCellLabel}>Intervalle</Text>
-                        <Text style={styles.statsCellValuePrimary}>{intervalLabel}</Text>
+                      <View style={styles.statsDividerH} />
+                      <View style={styles.statsRow}>
+                        <View style={styles.statsCell}>
+                          <Text style={ease >= 0 ? staticStyles.statValBlue : staticStyles.statValRed}>{easeLabel}</Text>
+                          <Text style={styles.statsCellLabel}>Facilité</Text>
+                        </View>
+                        <View style={styles.statsDividerV} />
+                        <View style={styles.statsCell}>
+                          <Text style={styles.statsCellValuePrimary}>{intervalLabel}</Text>
+                          <Text style={styles.statsCellLabel}>Intervalle</Text>
+                        </View>
                       </View>
                     </View>
 
                     {/* Prochaine révision */}
-                    <View style={[styles.statsCell, { marginTop: 10, alignItems: 'flex-start' }]}>
-                      <Text style={styles.statsCellLabel}>Prochaine révision</Text>
-                      <Text style={styles.statsCellValuePrimary}>{nextReviewLabel}</Text>
+                    <View style={styles.statsNextReview}>
+                      <Ionicons name="calendar-outline" size={14} color={theme.textSecondary} />
+                      <Text style={styles.statsNextReviewLabel}>Prochaine révision</Text>
+                      <Text style={styles.statsNextReviewValue}>{nextReviewLabel}</Text>
                     </View>
                   </View>
                 </>
