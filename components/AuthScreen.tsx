@@ -109,9 +109,7 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       await signInAsGuest();
-      console.log('✅ Mode démo activé');
     } catch (error: any) {
-      console.error('❌ Erreur mode démo:', error);
       showError('Impossible de démarrer le mode démo');
     } finally {
       setLoading(false);
@@ -200,13 +198,10 @@ export default function AuthScreen() {
 
     try {
       if (isSignUp) {
-        console.log('📄 Tentative d\'inscription...', { email: email.trim() });
         
         const result = await signUp(email.trim(), password);
-        console.log('📊 Résultat inscription:', result);
         
         if (result.error) {
-          console.error('❌ Erreur inscription:', result.error);
           
           // Messages d'erreur personnalisés
           let errorMsg = result.error.message;
@@ -223,20 +218,16 @@ export default function AuthScreen() {
           
           showError(errorMsg);
         } else {
-          console.log('✅ Inscription réussie');
           // Passer à l'étape de confirmation
           setRegistrationStep('confirmation');
           setLoading(false);
           return; // Sortir ici pour ne pas continuer
         }
       } else {
-        console.log('📄 Tentative de connexion...', { email: email.trim() });
         
         const result = await signIn(email.trim(), password);
-        console.log('📊 Résultat connexion:', result);
         
         if (result.error) {
-          console.error('❌ Erreur connexion:', result.error);
           
           // Messages d'erreur personnalisés
           let errorMsg = result.error.message;
@@ -256,12 +247,10 @@ export default function AuthScreen() {
           
           showError(errorMsg);
         } else {
-          console.log('✅ Connexion réussie');
           // La navigation sera gérée automatiquement par AuthContext
         }
       }
     } catch (error: any) {
-      console.error('💥 Erreur inattendue:', error);
       showError(error.message || 'Une erreur inattendue est survenue. Veuillez réessayer.');
     } finally {
       setLoading(false);

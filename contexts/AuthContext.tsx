@@ -42,7 +42,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🔄 Initialisation de l\'authentification...');
     
     // Vérifier si on est en mode démo
     const checkDemoMode = async () => {
@@ -55,20 +54,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setUser(demoUser);
             setSession({ user: demoUser } as any);
             setLoading(false);
-            console.log('🎮 Mode démo restauré');
             return;
           }
         }
       } catch (error) {
-        console.error('Erreur lors de la vérification du mode démo:', error);
       }
 
       // Récupérer la session Supabase normale
       supabase.auth.getSession().then(({ data: { session }, error }) => {
         if (error) {
-          console.error('❌ Erreur lors de la récupération de la session:', error);
         } else {
-          console.log('📊 Session récupérée:', session ? 'Connecté' : 'Non connecté');
         }
         
         setSession(session);
@@ -83,7 +78,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔔 Changement d\'état d\'auth:', event, session ? 'Connecté' : 'Déconnecté');
       
       setSession(session);
       setUser(session?.user ?? null);
@@ -92,31 +86,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Gestion spécifique des événements
       switch (event) {
         case 'SIGNED_IN':
-          console.log('✅ Utilisateur connecté:', session?.user?.email);
           break;
         case 'SIGNED_OUT':
-          console.log('👋 Utilisateur déconnecté');
           // Nettoyer le mode démo lors de la déconnexion
           await AsyncStorage.removeItem('isDemoMode');
           await AsyncStorage.removeItem('demoUser');
           break;
         case 'TOKEN_REFRESHED':
-          console.log('🔄 Token rafraîchi');
           break;
         case 'USER_UPDATED':
-          console.log('👤 Utilisateur mis à jour');
           break;
       }
     });
 
     return () => {
-      console.log('🧹 Nettoyage de l\'abonnement auth');
       subscription.unsubscribe();
     };
   }, []);
 
   const signUp = async (email: string, password: string) => {
-    console.log('🔄 Tentative d\'inscription pour:', email);
     
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -130,26 +118,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (error) {
-        console.error('❌ Erreur d\'inscription:', error.message);
         return { data: null, error };
       }
 
-      console.log('✅ Inscription réussie:', data.user?.email);
       
       if (data.user && !data.user.email_confirmed_at) {
-        console.log('📧 Email de confirmation envoyé');
       }
 
       return { data, error: null };
     } catch (err) {
-      console.error('💥 Erreur inattendue lors de l\'inscription:', err);
       const error = err as AuthError;
       return { data: null, error };
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    console.log('🔄 Tentative de connexion pour:', email);
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -158,21 +141,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (error) {
-        console.error('❌ Erreur de connexion:', error.message);
         return { data: null, error };
       }
 
-      console.log('✅ Connexion réussie:', data.user?.email);
       return { data, error: null };
     } catch (err) {
-      console.error('💥 Erreur inattendue lors de la connexion:', err);
       const error = err as AuthError;
       return { data: null, error };
     }
   };
 
   const signInAsGuest = async () => {
-    console.log('🎮 Activation du mode démo...');
     
     try {
       const demoUser = {
@@ -188,16 +167,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(demoUser);
       setSession({ user: demoUser } as any);
       
-      console.log('✅ Mode démo activé');
       return { data: demoUser, error: null };
     } catch (error) {
-      console.error('❌ Erreur mode démo:', error);
       return { data: null, error };
     }
   };
 
   const signOut = async () => {
-    console.log('🔄 Déconnexion en cours...');
     
     try {
       // Vérifier si on est en mode démo
@@ -209,7 +185,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await AsyncStorage.removeItem('demoUser');
         setSession(null);
         setUser(null);
-        console.log('✅ Déconnexion du mode démo réussie');
         return;
       }
 
@@ -217,16 +192,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { error } = await supabase.auth.signOut();
       
       if (error) {
-        console.error('❌ Erreur lors de la déconnexion:', error.message);
         throw error;
       }
 
       setSession(null);
       setUser(null);
       
-      console.log('✅ Déconnexion réussie');
     } catch (err) {
-      console.error('💥 Erreur inattendue lors de la déconnexion:', err);
       throw err;
     }
   };

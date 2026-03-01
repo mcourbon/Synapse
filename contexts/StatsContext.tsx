@@ -107,8 +107,7 @@ export function StatsProvider({ children }: { children: React.ReactNode }) {
         cardsDifficult: userStats?.cards_difficult || 0,
         studyDays: userStats?.study_days || [],
       });
-    } catch (error) {
-      console.error('Erreur chargement stats:', error);
+    } catch {
     }
   }, [user]);
 

@@ -49,7 +49,6 @@ export class AvatarUpload {
   userId: string,
   imageAsset: ImagePicker.ImagePickerAsset
 ): Promise<string> {
-  console.log('🌐 Upload Web pour userId:', userId);
 
   try {
     // Sur web, l'URI est souvent un data URI
@@ -61,7 +60,6 @@ export class AvatarUpload {
       if (mimeMatch) {
         fileExt = mimeMatch[1].toLowerCase();
       }
-      console.log('📸 Data URI détecté, extension extraite:', fileExt);
     } else {
       // Sinon, extraire normalement
       fileExt = imageAsset.uri.split('.').pop()?.toLowerCase() || 'jpg';
@@ -70,13 +68,10 @@ export class AvatarUpload {
     // Nom de fichier COURT et simple
     const fileName = `${userId}/avatar-${Date.now()}.${fileExt}`;
     
-    console.log('📝 Nom du fichier:', fileName);
-    console.log('📏 Longueur du nom:', fileName.length);
 
     const response = await fetch(imageAsset.uri);
     const blob = await response.blob();
     
-    console.log('📦 Blob créé, taille:', blob.size, 'type:', blob.type);
 
     const { data, error } = await supabase.storage
       .from('avatars')
@@ -86,21 +81,17 @@ export class AvatarUpload {
       });
 
     if (error) {
-      console.error('❌ Erreur upload:', error);
       throw error;
     }
 
-    console.log('✅ Upload réussi, path:', data.path);
 
     const { data: urlData } = supabase.storage
       .from('avatars')
       .getPublicUrl(data.path);
 
-    console.log('🔗 URL publique:', urlData.publicUrl);
 
     return urlData.publicUrl;
   } catch (error) {
-    console.error('💥 Erreur complète:', error);
     throw error;
   }
 }
@@ -112,14 +103,12 @@ export class AvatarUpload {
     userId: string,
     imageAsset: ImagePicker.ImagePickerAsset
   ): Promise<string> {
-    console.log('📱 Upload Mobile pour userId:', userId);
 
     const { decode } = require('base64-arraybuffer');
     
     const fileExt = imageAsset.uri.split('.').pop()?.toLowerCase() || 'jpg';
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
     
-    console.log('📝 Nom du fichier:', fileName);
 
     try {
       // Lire le fichier avec FileSystem
@@ -127,12 +116,10 @@ export class AvatarUpload {
         encoding: FileSystem.EncodingType.Base64,
       });
       
-      console.log('📏 Base64 lu, taille:', base64.length);
 
       // Convertir en ArrayBuffer
       const arrayBuffer = decode(base64);
       
-      console.log('📦 ArrayBuffer créé, taille:', arrayBuffer.byteLength);
 
       const { data, error } = await supabase.storage
         .from('avatars')
@@ -142,21 +129,17 @@ export class AvatarUpload {
         });
 
       if (error) {
-        console.error('❌ Erreur upload:', error);
         throw error;
       }
 
-      console.log('✅ Upload réussi, path:', data.path);
 
       const { data: urlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(data.path);
 
-      console.log('🔗 URL publique:', urlData.publicUrl);
 
       return urlData.publicUrl;
     } catch (error) {
-      console.error('💥 Erreur complète:', error);
       throw error;
     }
   }
@@ -185,7 +168,6 @@ export class AvatarUpload {
         .list(userId);
 
       if (listError || !files || files.length === 0) {
-        console.log('ℹ️ Pas d\'ancien avatar à supprimer');
         return;
       }
 
@@ -196,12 +178,9 @@ export class AvatarUpload {
         .remove(filePaths);
 
       if (deleteError) {
-        console.error('⚠️ Erreur suppression:', deleteError);
       } else {
-        console.log('🗑️ Ancien(s) avatar(s) supprimé(s):', filePaths.length);
       }
     } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
     }
   }
 
@@ -212,7 +191,6 @@ export class AvatarUpload {
     userId: string,
     imageAsset: ImagePicker.ImagePickerAsset
   ): Promise<string> {
-    console.log('🚀 Début updateUserAvatar pour:', userId);
     
     // 1. Supprimer l'ancien avatar
     await this.deleteOldAvatar(userId);
@@ -230,11 +208,9 @@ export class AvatarUpload {
       .eq('user_id', userId);
 
     if (updateError) {
-      console.error('❌ Erreur mise à jour BDD:', updateError);
       throw updateError;
     }
 
-    console.log('✅ Avatar mis à jour dans la BDD');
 
     return avatarUrl;
   }

@@ -351,7 +351,6 @@ export default function AddCardModal({
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Erreur:', error);
       } else {
         setDecks(data || []);
         if (data && data.length > 0) {
@@ -359,7 +358,6 @@ export default function AddCardModal({
         }
       }
     } catch (err) {
-      console.error('Erreur:', err);
     }
   };
 
@@ -394,12 +392,10 @@ export default function AddCardModal({
       
       setExistingCategories(uniqueCategories);
     } catch (error) {
-      console.error('Erreur lors du chargement des catégories:', error);
     }
   };
 
   const handleDeckCreated = async () => {
-    console.log('Deck créé, rafraîchissement...');
     await fetchDecks();
     setShowAddDeckModal(false);
   };
@@ -443,7 +439,6 @@ export default function AddCardModal({
       closeModal();
       onCardAdded();
     } catch (error: any) {
-      console.error('Erreur:', error);
       Alert.alert('Erreur', error.message || 'Impossible d\'ajouter la carte');
     } finally {
       setLoading(false);

@@ -930,7 +930,6 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
       
       setExistingCategories(uniqueCategories);
     } catch (error) {
-      console.error('Erreur lors du chargement des catégories:', error);
     }
   };
 
@@ -1020,7 +1019,6 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
         .single();
 
       if (deckError) {
-        console.error('Erreur deck:', deckError);
         showError('Impossible de charger le deck');
         router.back();
         return;
@@ -1034,7 +1032,6 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
         .order('created_at', { ascending: false });
 
       if (cardsError) {
-        console.error('Erreur cartes:', cardsError);
         showError('Impossible de charger les cartes');
       } else {
         setCards(cardsData || []);
@@ -1042,7 +1039,6 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
 
       setDeck(deckData);
     } catch (err) {
-      console.error('Erreur:', err);
       showError('Une erreur est survenue');
     } finally {
       setLoading(false);
@@ -1097,7 +1093,6 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
       showToast('Carte ajoutée avec succès !', 'success');
       fetchDeckAndCards();
     } catch (error: any) {
-      console.error('Erreur:', error);
       showError(error.message || 'Impossible d\'ajouter la carte');
     } finally {
       setAddingCard(false);
@@ -1141,7 +1136,6 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
       showToast('Carte modifiée avec succès !', 'success');
       fetchDeckAndCards();
     } catch (error: any) {
-      console.error('Erreur:', error);
       showError(error.message || 'Impossible de modifier la carte');
     } finally {
       setEditingCard(false);
@@ -1172,7 +1166,6 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
       showToast('Carte supprimée avec succès !', 'success');
       fetchDeckAndCards();
     } catch (error: any) {
-      console.error('Erreur:', error);
       showError(error.message || 'Impossible de supprimer la carte');
     } finally {
       setDeletingCard(false);

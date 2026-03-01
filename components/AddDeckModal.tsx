@@ -218,7 +218,6 @@ export default function AddDeckModal({
 });
 
   const handleAddDeck = async () => {
-    console.log('=== DÉBUT handleAddDeck ===');
     
     // Validation et nettoyage des inputs
     const cleanName = name.trim();
@@ -253,10 +252,8 @@ export default function AddDeckModal({
     }
 
     setLoading(true);
-    console.log('Loading activé');
 
     try {
-      console.log('Tentative d\'insertion dans Supabase...');
       
       const insertData = {
         name: cleanName,
@@ -265,65 +262,42 @@ export default function AddDeckModal({
         user_id: user.id
       };
       
-      console.log('Données à insérer:', insertData);
       
       const { data, error } = await supabase
         .from('decks')
         .insert([insertData])
         .select();
 
-      console.log('Réponse Supabase - data:', data);
-      console.log('Réponse Supabase - error:', error);
 
       if (error) {
-        console.error('Erreur Supabase:', error);
         throw error;
       }
 
       if (!data || data.length === 0) {
-        console.error('Aucune donnée retournée par Supabase');
         throw new Error('Aucune donnée retournée par la base de données');
       }
 
-      console.log('Collection créé avec succès:', data[0]);
 
       // Réinitialiser les champs
-      console.log('Réinitialisation des champs...');
       setName('');
       setDescription('');
       setSelectedColor(DECK_COLORS[0].value);
-      console.log('Champs réinitialisés');
       
-      console.log('=== AVANT CALLBACKS ===');
-      console.log('Type de onDeckAdded:', typeof onDeckAdded);
-      console.log('Type de onClose:', typeof onClose);
       
-      console.log('Appel de onDeckAdded...');
       await onDeckAdded();
-      console.log('onDeckAdded terminé');
       
-      console.log('Appel de onClose...');
       onClose();
-      console.log('onClose terminé');
       
-      console.log('Affichage du message de succès...');
       Alert.alert('Succès', 'Collection créée avec succès !');
-      console.log('Message de succès affiché');
       
     } catch (error: any) {
-      console.error('=== ERREUR COMPLÈTE ===');
-      console.error('Message:', error?.message);
-      console.error('Code:', error?.code);
-      console.error('Stack:', error?.stack);
       
       Alert.alert(
         'Erreur', 
         `Impossible de créer la collection.\n\nDétails: ${error?.message || 'Erreur inconnue'}`
       );
     } finally {
-      console.log('Loading désactivé');
       setLoading(false);
-      console.log('=== FIN handleAddDeck ===');
     }
   };
 

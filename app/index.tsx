@@ -506,7 +506,6 @@ async function updateHomeScreenCard() {
       setCard(null);
     }
   } catch (err) {
-    console.error('Erreur lors de la mise à jour de la carte d\'accueil:', err);
     setCard(null); // En cas d'erreur, on n'affiche rien non plus
   }
 }
@@ -526,7 +525,6 @@ async function fetchAllDueCards() {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Erreur lors de la récupération des cartes:', error);
       return [];
     }
 
@@ -539,7 +537,6 @@ async function fetchAllDueCards() {
 
     return dueCards;
   } catch (err) {
-    console.error('Erreur:', err);
     return [];
   }
 }
@@ -555,15 +552,13 @@ async function fetchAllDueCards() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Erreur:', error);
       } else {
         setDecks(data || []);
         if (data && data.length > 0) {
           setSelectedDeckId(data[0].id);
         }
       }
-    } catch (err) {
-      console.error('Erreur:', err);
+    } catch {
     }
   }
 
@@ -573,8 +568,7 @@ async function fetchAllDueCards() {
   try {
     const dueCards = await fetchAllDueCards();
     setDueCardsCount(dueCards.length);
-  } catch (err) {
-    console.error('Erreur:', err);
+  } catch {
   }
 }
 
@@ -590,19 +584,16 @@ async function fetchTotalCardsCount() {
       .eq('decks.user_id', user.id);
 
     if (error) {
-      console.error('Erreur lors du comptage total des cartes:', error);
       return;
     }
     
     setTotalCardsCount(count || 0);
 
-  } catch (err) {
-    console.error('Erreur dans fetchTotalCardsCount:', err);
+  } catch {
   }
 }
 
   const handleDeckCreated = async () => {
-    console.log('Deck créé, rafraîchissement...');
     await fetchDecks();
   };
 
@@ -650,7 +641,6 @@ async function fetchTotalCardsCount() {
       
       updateHomeScreenCard();
     } catch (error: any) {
-      console.error('Erreur:', error);
       Alert.alert('Erreur', error.message || 'Impossible d\'ajouter la carte');
     } finally {
       setLoading(false);
@@ -767,8 +757,7 @@ const handleCategoryInputSubmit = () => {
     
     const uniqueCategories = [...new Set(allCategories)];
     setExistingCategories(uniqueCategories);
-  } catch (error) {
-    console.error('Erreur lors du chargement des catégories:', error);
+  } catch {
   }
   };
 

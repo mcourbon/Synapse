@@ -9,8 +9,6 @@ import { Card } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useStats } from '../../contexts/StatsContext';
-import { useFocusEffect } from '@react-navigation/native';
-import React from 'react';
 import { SpacedRepetitionSystem, useSpacedRepetition } from '../../utils/spacedRepetition';
 import Svg, { Circle, LinearGradient, Stop, Defs } from 'react-native-svg';
 import { StatsTracker } from '../../lib/statsTracker';
@@ -397,13 +395,6 @@ export default function GlobalReview() {
     }
   }, [user]);
 
-  useFocusEffect(
-  React.useCallback(() => {
-    // Force immediate header hide
-    return () => {};
-  }, [])
-);
-
   async function fetchDueCards() {
     if (!user) return;
 
@@ -417,7 +408,6 @@ export default function GlobalReview() {
         .eq('decks.user_id', user.id);
 
       if (error) {
-        console.error('Erreur:', error);
         return;
       }
 
@@ -448,8 +438,7 @@ export default function GlobalReview() {
       }
 
       setDueCards(shuffledCards);
-    } catch (err) {
-      console.error('Erreur:', err);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -592,7 +581,6 @@ export default function GlobalReview() {
         .eq('id', cardId);
 
       if (error) {
-        console.error('Erreur DB:', error);
         throw new Error('Erreur lors de la mise à jour');
       }
     };
@@ -667,7 +655,6 @@ export default function GlobalReview() {
         goToNextCard();
       }
     } catch (error) {
-      console.error('Erreur:', error);
       goToNextCard();
     }
   };

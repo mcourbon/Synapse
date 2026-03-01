@@ -26,7 +26,6 @@ export class StatsTracker {
         .single();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('Erreur fetch stats:', fetchError);
         return;
       }
 
@@ -52,7 +51,6 @@ export class StatsTracker {
           });
 
         if (insertError) {
-          console.error('Erreur création stats:', insertError);
         }
         return;
       }
@@ -111,10 +109,8 @@ export class StatsTracker {
         .eq('user_id', userId);
 
       if (updateError) {
-        console.error('Erreur update stats:', updateError);
       }
     } catch (error) {
-      console.error('Erreur tracking review:', error);
     }
   }
 
@@ -170,7 +166,6 @@ export class StatsTracker {
         .eq('user_id', userId);
 
     } catch (error) {
-      console.error('Erreur update difficulty stats:', error);
     }
   }
 
@@ -186,13 +181,11 @@ export class StatsTracker {
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Erreur get stats:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Erreur getUserStats:', error);
       return null;
     }
   }
@@ -257,7 +250,6 @@ export class StatsTracker {
         cardsReviewed: reviewedCount || 0,
       };
     } catch (error) {
-      console.error('Erreur getLiveStats:', error);
       return {
         totalDecks: 0,
         totalCards: 0,

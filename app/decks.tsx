@@ -429,13 +429,11 @@ toastText: {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Erreur:', error);
         Alert.alert('Erreur', 'Impossible de charger les decks');
       } else {
         setDecks(data || []);
       }
-    } catch (err) {
-      console.error('Erreur:', err);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -478,7 +476,6 @@ const handleUpdateDeckName = async () => {
     showToast('Collection renommée avec succès !', 'success');
     fetchDecks();
   } catch (error: any) {
-    console.error('Erreur:', error);
     Alert.alert('Erreur', error.message || 'Impossible de modifier le nom');
   } finally {
     setEditingDeck(false);
@@ -515,7 +512,6 @@ const handleDeleteDeck = async () => {
     showToast('Collection supprimée avec succès !', 'success');
     fetchDecks();
   } catch (error: any) {
-    console.error('Erreur:', error);
     Alert.alert('Erreur', error.message || 'Impossible de supprimer la collection');
   } finally {
     setDeletingDeck(false);

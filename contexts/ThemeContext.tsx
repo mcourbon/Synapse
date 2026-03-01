@@ -115,7 +115,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         setIsDark(systemTheme === 'dark');
       }
     } catch (error) {
-      console.error('Erreur lors du chargement du thème:', error);
       // Fallback sur le thème système
       const systemTheme = Appearance.getColorScheme();
       setIsDark(systemTheme === 'dark');
@@ -128,7 +127,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     try {
       await AsyncStorage.setItem('theme', darkMode ? 'dark' : 'light');
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde du thème:', error);
     }
   };
 

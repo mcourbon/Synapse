@@ -49,7 +49,6 @@ export default function Profile() {
 const handleChangeAvatar = async () => {
   if (!user) return;
 
-  console.log('👤 User ID:', user.id); // ← Ajoute ça
   
   try {
     setUploadingAvatar(true);
@@ -68,9 +67,7 @@ const handleChangeAvatar = async () => {
     setAvatarUrl(newAvatarUrl);
     setUserProfile(prev => prev ? {...prev, avatar_url: newAvatarUrl} : null);
     
-    console.log('✅ Avatar mis à jour avec succès');
   } catch (error: any) {
-    console.error('Erreur changement avatar:', error);
     if (error.message === 'Permission refusée pour accéder à la galerie') {
       Alert.alert(
         'Permission requise',
@@ -92,8 +89,7 @@ const confirmLogout = async () => {
   setShowLogoutModal(false);
   try {
     await signOut();
-  } catch (error) {
-    console.error('Erreur:', error);
+  } catch {
   }
 };
 
@@ -124,17 +120,13 @@ const updateUsername = async () => {
       .eq('user_id', user.id);
 
     if (error) {
-      console.error('Erreur mise à jour username:', error);
-      console.log('Erreur', 'Impossible de mettre à jour le pseudo');
+      Alert.alert('Erreur', 'Impossible de mettre à jour le pseudo');
     } else {
-      // Mettre à jour l'état local
       setUserProfile(prev => prev ? {...prev, username: newUsername.trim()} : null);
       setIsEditingUsername(false);
-      console.log('Succès', 'Pseudo mis à jour avec succès !');
     }
-  } catch (error) {
-    console.error('Erreur:', error);
-    console.log('Erreur', 'Une erreur est survenue');
+  } catch {
+    Alert.alert('Erreur', 'Une erreur est survenue');
   } finally {
     setIsUpdatingUsername(false);
   }
@@ -520,13 +512,6 @@ avatarPlaceholder: {
   backgroundColor: theme.primary,
   justifyContent: 'center',
   alignItems: 'center',
-},
-statValue: {
-  fontSize: 24,
-  fontWeight: 'bold',
-  color: theme.text,
-  marginTop: 8,
-  marginBottom: 4,
 },
 });
 
