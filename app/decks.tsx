@@ -23,6 +23,7 @@ export default function Decks() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
   const [newDeckName, setNewDeckName] = useState('');
+  const [newDeckDescription, setNewDeckDescription] = useState('');
   const [editingDeck, setEditingDeck] = useState(false);
   const [deletingDeck, setDeletingDeck] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
@@ -140,6 +141,12 @@ export default function Decks() {
       flex: 1,
       marginRight: 12,
       lineHeight: 24,
+    },
+    deckCardCount: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      marginTop: 2,
+      marginBottom: 4,
     },
     deckDescription: {
       fontSize: 14,
@@ -424,8 +431,8 @@ toastText: {
     try {
       const { data, error } = await supabase
         .from('decks')
-        .select('*')
-        .eq('user_id', user.id) // ✅ Filtrer par utilisateur connecté
+        .select('*, cards(count)')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -443,21 +450,22 @@ toastText: {
   setToast({ visible: true, message, type });
 };
 
-const handleUpdateDeckName = async () => {
+const handleUpdateDeck = async () => {
   const trimmedName = newDeckName.trim();
-  
+  const trimmedDescription = newDeckDescription.trim();
+
   if (!trimmedName) {
     Alert.alert('Erreur', 'Le nom ne peut pas être vide');
     return;
   }
-  
+
   if (trimmedName.length > 50) {
     Alert.alert('Erreur', 'Le nom ne peut pas dépasser 50 caractères');
     return;
   }
-  
+
   if (!selectedDeck || !user) {
-    Alert.alert('Erreur', 'Impossible de modifier le nom');
+    Alert.alert('Erreur', 'Impossible de modifier la collection');
     return;
   }
 
@@ -466,17 +474,17 @@ const handleUpdateDeckName = async () => {
   try {
     const { error } = await supabase
       .from('decks')
-      .update({ name: trimmedName })
+      .update({ name: trimmedName, description: trimmedDescription || null })
       .eq('id', selectedDeck.id)
       .eq('user_id', user.id);
 
     if (error) throw error;
 
     setShowEditDeckModal(false);
-    showToast('Collection renommée avec succès !', 'success');
+    showToast('Collection modifiée avec succès !', 'success');
     fetchDecks();
   } catch (error: any) {
-    Alert.alert('Erreur', error.message || 'Impossible de modifier le nom');
+    Alert.alert('Erreur', error.message || 'Impossible de modifier la collection');
   } finally {
     setEditingDeck(false);
   }
@@ -537,12 +545,15 @@ const handleDeleteDeck = async () => {
     disabled={editMode}
   >
     <View style={styles.deckContent}>
-      <Text 
+      <Text
         style={styles.deckName}
         numberOfLines={2}
         ellipsizeMode="tail"
       >
         {item.name}
+      </Text>
+      <Text style={styles.deckCardCount}>
+        {(() => { const count = (item as any).cards?.[0]?.count ?? 0; return `${count} carte${count > 1 ? 's' : ''}`; })()}
       </Text>
       {item.description && (
         <Text style={styles.deckDescription} numberOfLines={2}>
@@ -558,6 +569,7 @@ const handleDeleteDeck = async () => {
           if (editMode) {
             setSelectedDeck(item);
             setNewDeckName(item.name);
+            setNewDeckDescription(item.description || '');
             setShowEditDeckModal(true);
           }
         }}
@@ -693,7 +705,7 @@ const handleDeleteDeck = async () => {
       style={styles.editDeckContainer}
       onPress={() => {}}
     >
-      <Text style={styles.editDeckLabel}>Nouveau nom</Text>
+      <Text style={styles.editDeckLabel}>Nom</Text>
       <TextInput
         style={[styles.editDeckInput, { outlineWidth: 0, borderColor: theme.primary }]}
         value={newDeckName}
@@ -714,6 +726,22 @@ const handleDeleteDeck = async () => {
           {newDeckName.length}/50
         </Text>
       </View>
+      <Text style={styles.editDeckLabel}>Description (optionnelle)</Text>
+      <TextInput
+        style={[styles.editDeckInput, { outlineWidth: 0, borderColor: theme.border, minHeight: 80, textAlignVertical: 'top' }]}
+        value={newDeckDescription}
+        onChangeText={setNewDeckDescription}
+        placeholder="Description de la collection"
+        selectionColor="#007AFF"
+        underlineColorAndroid="transparent"
+        multiline
+        maxLength={200}
+      />
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <Text style={{ fontSize: 12, color: theme.textSecondary }}>
+          {newDeckDescription.length}/200
+        </Text>
+      </View>
       <View style={styles.editDeckButtons}>
         <Pressable onPress={() => setShowEditDeckModal(false)}>
           <Text style={styles.cancelButton}>Annuler</Text>
@@ -721,7 +749,7 @@ const handleDeleteDeck = async () => {
         <Pressable
           onPress={() => {
             if (editingDeck || !newDeckName.trim() || newDeckName.length > 50) return;
-            handleUpdateDeckName();
+            handleUpdateDeck();
           }}
           style={[
             styles.saveButton,
