@@ -28,6 +28,7 @@ export default function CardReview() {
   const { theme, isDark } = useTheme();
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [streak, setStreak] = useState(0);
+  const answeringRef = useRef(false);
 
   // Animations
   const fadeAnimation = useRef(new Animated.Value(0)).current;
@@ -664,7 +665,8 @@ useFocusEffect(
   };
 
   const handleDifficultyResponse = async (difficulty: 'hard' | 'medium' | 'easy') => {
-  if (isProcessing || !card) return;
+  if (answeringRef.current || isProcessing || !card) return;
+  answeringRef.current = true;
 
   console.log('Bouton cliqué:', difficulty);
 
@@ -718,6 +720,7 @@ useFocusEffect(
         duration: 300,
         useNativeDriver: false,
       }).start();
+      answeringRef.current = false;
     }, 1000);
   } else {
     // Pour "medium" et "easy", passer à la carte suivante après un délai
@@ -736,6 +739,7 @@ useFocusEffect(
         useNativeDriver: true,
       }).start(() => {
         goToNextCard();
+        answeringRef.current = false;
       });
     }, 500);
   }

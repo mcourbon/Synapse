@@ -109,6 +109,7 @@ export default function GlobalReview() {
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [totalCardsReviewed, setTotalCardsReviewed] = useState(0);
   const [streak, setStreak] = useState(0);
+  const answeringRef = useRef(false);
   const router = useRouter();
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
@@ -536,7 +537,8 @@ export default function GlobalReview() {
   };
 
   const handleDifficultyResponse = async (difficulty: 'hard' | 'medium' | 'easy') => {
-    if (isProcessing || !dueCards[currentCardIndex]) return;
+    if (answeringRef.current || isProcessing || !dueCards[currentCardIndex]) return;
+    answeringRef.current = true;
 
     const card = dueCards[currentCardIndex];
     setSelectedDifficulty(difficulty);
@@ -637,6 +639,7 @@ export default function GlobalReview() {
               duration: 300,
               useNativeDriver: false,
             }).start();
+            answeringRef.current = false;
           }, 1000);
         } else {
           // Pour "medium" et "easy", passer à la suivante
@@ -654,14 +657,17 @@ export default function GlobalReview() {
             }).start(() => {
               setCardStartTime(new Date());
               goToNextCard();
+              answeringRef.current = false;
             });
           }, 500);
         }
       } else {
         goToNextCard();
+        answeringRef.current = false;
       }
     } catch (error) {
       goToNextCard();
+      answeringRef.current = false;
     }
   };
 
