@@ -652,11 +652,11 @@ avatarPlaceholder: {
   <Text style={styles.statLabelGreen}>Cartes maîtrisées</Text>
 </View>
 
-{/* Cartes difficiles */}
+{/* Plus longue streak de réussites */}
 <View style={dynamicStyles.statCard}>
-  <Ionicons name="alert-circle" size={20} color={theme.error} />
-  <Text style={styles.statValueRed}>{stats.cardsDifficult}</Text>
-  <Text style={styles.statLabelRed}>Cartes difficiles</Text>
+  <Ionicons name="flame" size={20} color="#FF9500" />
+  <Text style={styles.statValueOrange}>{stats.bestAnswerStreak}</Text>
+  <Text style={styles.statLabelOrange}>Plus longue streak</Text>
 </View>
 
 {/* Répartition des réponses */}
@@ -1051,10 +1051,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 4,
   },
-  statValueRed: {
+  statValueOrange: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#EF4444',
+    color: '#FF9500',
     marginTop: 8,
     marginBottom: 4,
   },
@@ -1076,9 +1076,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
   },
-  statLabelRed: {
+  statLabelOrange: {
     fontSize: 12,
-    color: '#EF4444',
+    color: '#FF9500',
     textAlign: 'center',
     fontWeight: '600',
   },

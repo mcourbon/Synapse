@@ -12,6 +12,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { SpacedRepetitionSystem, useSpacedRepetition } from '../../utils/spacedRepetition';
 import ProfessionalProgressCircle from '../../components/ProfessionalProgressCircle';
 import AnimatedSuccessIcon from '../../components/AnimatedSuccessIcon';
+import StreakFlame from '../../components/StreakFlame';
 
 export default function CardReview() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,7 +27,8 @@ export default function CardReview() {
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
-  
+  const [streak, setStreak] = useState(0);
+
   // Animations
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(1)).current;
@@ -128,9 +130,6 @@ export default function CardReview() {
       shadowOpacity: 0.1,
       shadowRadius: 2,
       elevation: 2,
-    },
-    headerSpacer: {
-      width: 48,
     },
     mainContent: {
       flex: 1,
@@ -672,6 +671,13 @@ useFocusEffect(
   // Changer la couleur du texte immédiatement
   setSelectedDifficulty(difficulty);
 
+  // Streak de réussites d'affilée : "Facile" l'incrémente, "Difficile" le remet à zéro
+  if (difficulty === 'easy') {
+    setStreak(prev => prev + 1);
+  } else if (difficulty === 'hard') {
+    setStreak(0);
+  }
+
   // ANIMATION DE COULEUR POUR TOUS LES BOUTONS
   borderColorAnimation.setValue(1);
 
@@ -831,7 +837,7 @@ const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
             </Text>
           )}
         </View>
-        <View style={styles.headerSpacer} />
+        <StreakFlame streak={streak} />
       </View>
 
       {/* Container principal - Zone cliquable */}

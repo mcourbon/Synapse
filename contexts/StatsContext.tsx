@@ -19,6 +19,7 @@ export interface UserStats {
   cardsMastered: number;
   cardsDifficult: number;
   studyDays: string[];
+  bestAnswerStreak: number;
 }
 
 export interface UserProfile {
@@ -53,6 +54,7 @@ const defaultStats: UserStats = {
   cardsMastered: 0,
   cardsDifficult: 0,
   studyDays: [],
+  bestAnswerStreak: 0,
 };
 
 const StatsContext = createContext<StatsContextType>({
@@ -106,6 +108,7 @@ export function StatsProvider({ children }: { children: React.ReactNode }) {
         cardsMastered: userStats?.cards_mastered || 0,
         cardsDifficult: userStats?.cards_difficult || 0,
         studyDays: userStats?.study_days || [],
+        bestAnswerStreak: userStats?.best_answer_streak || 0,
       });
     } catch {
     }

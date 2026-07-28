@@ -12,6 +12,7 @@ import { useStats } from '../../contexts/StatsContext';
 import { SpacedRepetitionSystem, useSpacedRepetition } from '../../utils/spacedRepetition';
 import Svg, { Circle, LinearGradient, Stop, Defs } from 'react-native-svg';
 import { StatsTracker } from '../../lib/statsTracker';
+import StreakFlame from '../../components/StreakFlame';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -107,6 +108,7 @@ export default function GlobalReview() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<'hard' | 'medium' | 'easy' | null>(null);
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [totalCardsReviewed, setTotalCardsReviewed] = useState(0);
+  const [streak, setStreak] = useState(0);
   const router = useRouter();
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
@@ -207,9 +209,6 @@ export default function GlobalReview() {
       shadowOpacity: 0.1,
       shadowRadius: 2,
       elevation: 2,
-    },
-    headerSpacer: {
-      width: 48,
     },
     mainContent: {
       flex: 1,
@@ -543,6 +542,13 @@ export default function GlobalReview() {
     setSelectedDifficulty(difficulty);
     borderColorAnimation.setValue(1);
 
+    // Streak de réussites d'affilée : "Facile" l'incrémente, "Difficile" le remet à zéro
+    if (difficulty === 'easy') {
+      setStreak(prev => prev + 1);
+    } else if (difficulty === 'hard') {
+      setStreak(0);
+    }
+
     if (difficulty !== 'hard') {
       Animated.sequence([
         Animated.timing(scaleAnimation, {
@@ -763,7 +769,7 @@ export default function GlobalReview() {
             {currentCardIndex + 1} / {dueCards.length}
           </Text>
         </View>
-        <View style={styles.headerSpacer} />
+        <StreakFlame streak={streak} />
       </View>
 
       {/* Zone cliquable principale */}

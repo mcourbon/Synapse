@@ -57,4 +57,6 @@ export interface UserStats {
   cards_mastered?: number;
   cards_difficult?: number;
   study_days?: string[]; // Array de dates JSONB
+  current_answer_streak?: number;
+  best_answer_streak?: number;
 }
