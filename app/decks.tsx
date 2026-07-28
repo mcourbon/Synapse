@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { Deck } from '../types/database';
 import AddDeckModal from '../components/AddDeckModal';
+import ConfirmModal from '../components/ConfirmModal';
+import Toast from '../components/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
@@ -307,99 +309,6 @@ saveButtonText: {
 saveButtonTextDisabled: {
   color: isDark ? '#888' : '#999',
 },
-confirmOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  justifyContent: 'center',
-  alignItems: 'center',
-  paddingHorizontal: 20,
-},
-confirmModal: {
-  backgroundColor: theme.surface,
-  borderRadius: 16,
-  padding: 24,
-  width: '100%',
-  maxWidth: 350,
-  shadowColor: theme.shadow,
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
-  shadowRadius: 8,
-  elevation: 8,
-},
-confirmTitle: {
-  fontSize: 18,
-  fontWeight: 'bold',
-  color: theme.text,
-  textAlign: 'center',
-  marginBottom: 12,
-},
-confirmMessage: {
-  fontSize: 16,
-  color: theme.textSecondary,
-  textAlign: 'center',
-  lineHeight: 22,
-  marginBottom: 24,
-},
-confirmButtons: {
-  flexDirection: 'row',
-  gap: 12,
-},
-confirmButton: {
-  flex: 1,
-  paddingVertical: 12,
-  paddingHorizontal: 20,
-  borderRadius: 8,
-  alignItems: 'center',
-},
-cancelConfirmButton: {
-  backgroundColor: theme.border,
-},
-confirmButtonDisabled: {
-  opacity: 0.6,
-},
-cancelConfirmText: {
-  fontSize: 16,
-  fontWeight: '600',
-  color: theme.text,
-},
-confirmButtonText: {
-  fontSize: 16,
-  fontWeight: '600',
-  color: '#fff',
-},
-confirmButtonTextDisabled: {
-  color: theme.textSecondary,
-},
-toast: {
-  position: 'absolute',
-  top: 75,
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  paddingHorizontal: 16,
-  paddingVertical: 12,
-  borderRadius: 8,
-  gap: 8,
-  shadowColor: theme.shadow,
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.25,
-  shadowRadius: 4,
-  elevation: 5,
-  zIndex: 1000,
-  alignSelf: 'center',
-},
-toastSuccess: {
-  backgroundColor: theme.success,
-},
-toastError: {
-  backgroundColor: theme.error,
-},
-toastText: {
-  color: '#fff',
-  fontSize: 16,
-  fontWeight: '500',
-  textAlign: 'center',
-},
   });
 
   useFocusEffect(
@@ -415,15 +324,6 @@ toastText: {
       fetchDecks();
     }
   }, [user]);
-
-  useEffect(() => {
-  if (toast.visible) {
-    const timer = setTimeout(() => {
-      setToast({ ...toast, visible: false });
-    }, 3000);
-    return () => clearTimeout(timer);
-  }
-}, [toast.visible]);
 
   async function fetchDecks() {
     if (!user) return;
@@ -677,16 +577,12 @@ const handleDeleteDeck = async () => {
       </View>
 
       {/* Toast */}
-{toast.visible && (
-  <View style={[styles.toast, toast.type === 'success' ? styles.toastSuccess : styles.toastError]}>
-    <Ionicons 
-      name={toast.type === 'success' ? 'checkmark-circle' : 'close-circle'} 
-      size={20} 
-      color="#fff"
-    />
-    <Text style={styles.toastText}>{toast.message}</Text>
-  </View>
-)}
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast({ ...toast, visible: false })}
+      />
 
 {/* Modal de modification du nom */}
 <Modal
@@ -767,48 +663,17 @@ const handleDeleteDeck = async () => {
 </Modal>
 
 {/* Modal de confirmation de suppression */}
-<Modal
+<ConfirmModal
   visible={showDeleteConfirm}
-  animationType="fade"
-  transparent={true}
-  onRequestClose={() => setShowDeleteConfirm(false)}
->
-  <View style={styles.confirmOverlay}>
-    <View style={styles.confirmModal}>
-      <Text style={styles.confirmTitle}>Supprimer la collection</Text>
-      <Text style={styles.confirmMessage}>
-        Êtes-vous sûr de vouloir supprimer "{selectedDeck?.name}" ? Cette action supprimera également toutes les cartes et ne peut pas être annulée.
-      </Text>
-      
-      <View style={styles.confirmButtons}>
-        <Pressable 
-          style={[styles.confirmButton, styles.cancelConfirmButton]} 
-          onPress={() => setShowDeleteConfirm(false)}
-          disabled={deletingDeck}
-        >
-          <Text style={styles.cancelConfirmText}>Annuler</Text>
-        </Pressable>
-        
-        <Pressable 
-          style={[
-            styles.confirmButton, 
-            { backgroundColor: '#FF3B30' }, 
-            deletingDeck && styles.confirmButtonDisabled
-          ]} 
-          onPress={handleDeleteDeck}
-          disabled={deletingDeck}
-        >
-          <Text style={[
-            styles.confirmButtonText, 
-            deletingDeck && styles.confirmButtonTextDisabled
-          ]}>
-            {deletingDeck ? 'Suppression...' : 'Supprimer'}
-          </Text>
-        </Pressable>
-      </View>
-    </View>
-  </View>
-</Modal>
+  title="Supprimer la collection"
+  message={`Êtes-vous sûr de vouloir supprimer "${selectedDeck?.name}" ? Cette action supprimera également toutes les cartes et ne peut pas être annulée.`}
+  onConfirm={handleDeleteDeck}
+  onCancel={() => setShowDeleteConfirm(false)}
+  confirmText="Supprimer"
+  cancelText="Annuler"
+  confirmColor="#FF3B30"
+  isLoading={deletingDeck}
+/>
     </SafeAreaView>
   );
 }

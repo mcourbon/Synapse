@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView, Animated, Platform } from 'react-native';
-import { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView } from 'react-native';
+import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -8,49 +8,17 @@ import { Card, Deck } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import AddCardModal from '../../components/AddCardModal';
+import ConfirmModal from '../../components/ConfirmModal';
+import Toast from '../../components/Toast';
+import CardStatsModal from '../../components/CardStatsModal';
 import { SpacedRepetitionSystem } from '../../utils/spacedRepetition';
+import { MASTERY_COLORS, MASTERY_LABELS, formatNextReview } from '../../utils/cardMastery';
 
 // Couleurs de statut — module level (iOS safe, jamais dans StyleSheet inside component)
-const MASTERY_COLORS: Record<string, string> = {
-  nouveau: '#8E8E93',
-  apprentissage: '#3B82F6',
-  consolidation: '#F59E0B',
-  révision: '#8B5CF6',
-  maîtrisé: '#10B981',
-  difficile: '#EF4444',
-};
-
-const MASTERY_LABELS: Record<string, string> = {
-  nouveau: 'Nouveau',
-  apprentissage: 'En apprentissage',
-  consolidation: 'Consolidation',
-  révision: 'En révision',
-  maîtrisé: 'Maîtrisé',
-  difficile: 'Difficile',
-};
-
 const staticStyles = StyleSheet.create({
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   badgeText: { fontSize: 11, fontWeight: '600', color: '#fff' },
-  statValYellow: { color: '#F59E0B', fontSize: 24, fontWeight: '700' },
-  statValRed:    { color: '#EF4444', fontSize: 24, fontWeight: '700' },
-  statValBlue:   { color: '#3B82F6', fontSize: 24, fontWeight: '700' },
-  statValGray:   { color: '#8E8E93', fontSize: 24, fontWeight: '700' },
 });
-
-function formatNextReview(nextReview: string | null | undefined): string {
-  if (!nextReview) return 'Nouveau';
-  const today = new Date();
-  const reviewDate = new Date(nextReview);
-  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const reviewOnly = new Date(reviewDate.getFullYear(), reviewDate.getMonth(), reviewDate.getDate());
-  const diffDays = Math.round((reviewOnly.getTime() - todayOnly.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays <= 0) return "Aujourd'hui";
-  if (diffDays === 1) return 'Demain';
-  if (diffDays < 7) return `Dans ${diffDays}j`;
-  if (diffDays < 30) return `Dans ${Math.round(diffDays / 7)}sem`;
-  return `Dans ${Math.round(diffDays / 30)}mois`;
-}
 
 export default function DeckDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -74,15 +42,6 @@ export default function DeckDetail() {
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
   const [showCardStatsModal, setShowCardStatsModal] = useState(false);
   const [selectedCardForStats, setSelectedCardForStats] = useState<Card | null>(null);
-  const statsFadeAnim = useRef(new Animated.Value(0)).current;
-  const openCardStatsModal = () => {
-    statsFadeAnim.setValue(0);
-    setShowCardStatsModal(true);
-    Animated.timing(statsFadeAnim, { toValue: 1, duration: 150, useNativeDriver: true }).start();
-  };
-  const closeCardStatsModal = () => {
-    Animated.timing(statsFadeAnim, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => setShowCardStatsModal(false));
-  };
 
   // Nouveaux états pour le système de tags avancé
   const [existingCategories, setExistingCategories] = useState<string[]>([]);
@@ -564,99 +523,6 @@ addCategoryButtonInactive: {
     color: theme.text,
     lineHeight: 20,
   },
-  confirmOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  confirmModal: {
-    backgroundColor: theme.surface,
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 350,
-    shadowColor: theme.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  confirmTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.text,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  confirmMessage: {
-    fontSize: 16,
-    color: theme.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  confirmButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  confirmButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelConfirmButton: {
-    backgroundColor: theme.border,
-  },
-  confirmButtonDisabled: {
-    opacity: 0.6,
-  },
-  cancelConfirmText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.text,
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  confirmButtonTextDisabled: {
-    color: theme.textSecondary,
-  },
-  toast: {
-    position: 'absolute',
-    top: 75,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-    shadowColor: theme.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    zIndex: 1000,
-    alignSelf: 'center',
-  },
-  toastSuccess: {
-    backgroundColor: theme.success,
-  },
-  toastError: {
-    backgroundColor: theme.error,
-  },
-  toastText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
   optionsButtonEditMode: {
     backgroundColor: theme.primary,
   },
@@ -679,228 +545,7 @@ addCategoryButtonInactive: {
     fontWeight: '400' as const,
     color: theme.textSecondary,
   },
-  // Modal stats carte
-  statsOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  statsSheet: {
-    backgroundColor: theme.surface,
-    borderRadius: 28,
-    width: '100%',
-    maxWidth: 420,
-    maxHeight: '85%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    elevation: 15,
-    overflow: 'hidden',
-  },
-  statsModalHeader: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border + '40',
-  },
-  statsSheetTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: theme.text,
-    textAlign: 'center' as const,
-    letterSpacing: -0.3,
-  },
-  statsCloseButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.border + '30',
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    borderWidth: 1,
-    borderColor: theme.border + '50',
-  },
-  statsBody: {
-    padding: 20,
-  },
-  statsPreview: {
-    backgroundColor: theme.background,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-  },
-  statsPreviewFront: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: theme.text,
-  },
-  statsPreviewDivider: {
-    height: 1,
-    backgroundColor: theme.border,
-    marginVertical: 10,
-    opacity: 0.5,
-  },
-  statsPreviewBack: {
-    fontSize: 13,
-    color: theme.textSecondary,
-    lineHeight: 18,
-  },
-  statsMasteryBanner: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center' as const,
-    marginBottom: 16,
-  },
-  statsGrid: {
-    marginBottom: 14,
-  },
-  statsRow: {
-    flexDirection: 'row' as const,
-  },
-  statsCell: {
-    flex: 1,
-    alignItems: 'center' as const,
-    paddingVertical: 18,
-  },
-  statsDividerV: {
-    width: 1,
-    backgroundColor: theme.border + '50',
-  },
-  statsDividerH: {
-    height: 1,
-    backgroundColor: theme.border + '50',
-  },
-  statsCellLabel: {
-    fontSize: 11,
-    color: theme.textSecondary,
-    fontWeight: '500' as const,
-    marginTop: 4,
-    textAlign: 'center' as const,
-  },
-  statsCellValuePrimary: {
-    fontSize: 22,
-    fontWeight: '700' as const,
-    color: theme.primary,
-  },
-  statsNextReview: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    gap: 6,
-    borderTopWidth: 1,
-    borderTopColor: theme.border + '50',
-    paddingTop: 14,
-    marginTop: 2,
-  },
-  statsNextReviewLabel: {
-    fontSize: 13,
-    color: theme.textSecondary,
-  },
-  statsNextReviewValue: {
-    fontSize: 13,
-    fontWeight: '700' as const,
-    color: theme.primary,
-  },
 });
-
-// Composant Modal de Confirmation Personnalisé
-interface ConfirmModalProps {
-  visible: boolean;
-  title: string;
-  message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-  confirmText?: string;
-  cancelText?: string;
-  confirmColor?: string;
-  isLoading?: boolean;
-}
-
-const ConfirmModal = ({ 
-  visible, 
-  title, 
-  message, 
-  onConfirm, 
-  onCancel,
-  confirmText = 'Confirmer',
-  cancelText = 'Annuler',
-  confirmColor = '#FF3B30',
-  isLoading = false
-}: ConfirmModalProps) => (
-  <Modal
-    visible={visible}
-    animationType="fade"
-    transparent={true}
-    onRequestClose={onCancel}
-  >
-    <View style={styles.confirmOverlay}>
-      <View style={styles.confirmModal}>
-        <Text style={styles.confirmTitle}>{title}</Text>
-        <Text style={styles.confirmMessage}>{message}</Text>
-        
-        <View style={styles.confirmButtons}>
-          <Pressable 
-            style={[styles.confirmButton, styles.cancelConfirmButton]} 
-            onPress={onCancel}
-            disabled={isLoading}
-          >
-            <Text style={styles.cancelConfirmText}>{cancelText}</Text>
-          </Pressable>
-          
-          <Pressable 
-            style={[styles.confirmButton, { backgroundColor: confirmColor }, isLoading && styles.confirmButtonDisabled]} 
-            onPress={onConfirm}
-            disabled={isLoading}
-          >
-            <Text style={[styles.confirmButtonText, isLoading && styles.confirmButtonTextDisabled]}>
-              {isLoading ? 'Chargement...' : confirmText}
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-    </View>
-  </Modal>
-);
-
-// Composant Toast personnalisé
-interface ToastProps {
-  visible: boolean;
-  message: string;
-  type: 'success' | 'error';
-  onHide: () => void;
-}
-
-const Toast = ({ visible, message, type, onHide }: ToastProps) => {
-  useEffect(() => {
-    if (visible) {
-      const timer = setTimeout(() => {
-        onHide();
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [visible, onHide]);
-
-  if (!visible) return null;
-
-  return (
-    <View style={[styles.toast, type === 'success' ? styles.toastSuccess : styles.toastError]}>
-      <Ionicons 
-        name={type === 'success' ? 'checkmark-circle' : 'close-circle'} 
-        size={20} 
-        color="#fff"
-      />
-      <Text style={styles.toastText}>{message}</Text>
-    </View>
-  );
-};
 
   // Charger les catégories existantes quand on ouvre le modal d'édition
   useEffect(() => {
@@ -1239,7 +884,7 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
         onPress={() => {
           if (editMode) return;
           setSelectedCardForStats(item);
-          openCardStatsModal();
+          setShowCardStatsModal(true);
         }}
       >
         <View style={styles.cardContent}>
@@ -1423,110 +1068,11 @@ const Toast = ({ visible, message, type, onHide }: ToastProps) => {
       />
 
       {/* Modal stats d'une carte */}
-      <Modal
+      <CardStatsModal
         visible={showCardStatsModal}
-        animationType="none"
-        transparent={true}
-        onRequestClose={() => closeCardStatsModal()}
-      >
-        <Animated.View style={{ flex: 1, opacity: statsFadeAnim }}>
-        <Pressable style={styles.statsOverlay} onPress={() => closeCardStatsModal()}>
-          <Pressable
-            style={[styles.statsSheet, selectedCardForStats && {
-              borderWidth: 2,
-              borderColor: (MASTERY_COLORS[SpacedRepetitionSystem.getCardMastery(
-                selectedCardForStats.repetitions || 0,
-                selectedCardForStats.ease_factor || 2.5,
-                selectedCardForStats.lapses || 0
-              )] ?? '#8E8E93') + '70',
-            }]}
-            onPress={e => e.stopPropagation()}
-          >
-
-            {selectedCardForStats && (() => {
-              const card = selectedCardForStats;
-              const mastery = SpacedRepetitionSystem.getCardMastery(
-                card.repetitions || 0,
-                card.ease_factor || 2.5,
-                card.lapses || 0
-              );
-              const masteryColor = MASTERY_COLORS[mastery] ?? '#8E8E93';
-              const streak = card.repetitions || 0;
-              const lapses = card.lapses || 0;
-              const ease = Math.round(((card.ease_factor || 2.5) - 2.5) * 100);
-              const easeLabel = ease >= 0 ? `+${ease}%` : `${ease}%`;
-              const nextReviewLabel = formatNextReview(card.next_review);
-              const interval = card.interval || 0;
-              const neverReviewed = !card.repetitions && !card.last_reviewed;
-              const intervalLabel = neverReviewed ? '—' : interval === 0 ? '< 1j' : `${interval}j`;
-
-              return (
-                <>
-                  {/* Header */}
-                  <View style={styles.statsModalHeader}>
-                    <View style={{ width: 36 }} />
-                    <Text style={styles.statsSheetTitle}>Stats de la carte</Text>
-                    <Pressable style={styles.statsCloseButton} onPress={() => closeCardStatsModal()}>
-                      <Ionicons name="close" size={20} color={theme.textSecondary} />
-                    </Pressable>
-                  </View>
-
-                  <ScrollView style={styles.statsBody} contentContainerStyle={{ paddingBottom: 4 }} showsVerticalScrollIndicator={false} bounces={Platform.OS === 'ios'}>
-                    {/* Aperçu front / back */}
-                    <View style={styles.statsPreview}>
-                      <Text style={styles.statsPreviewFront}>{card.front}</Text>
-                      <View style={styles.statsPreviewDivider} />
-                      <Text style={styles.statsPreviewBack}>{card.back}</Text>
-                    </View>
-
-                    {/* Mastery banner */}
-                    <View style={[styles.statsMasteryBanner, { backgroundColor: masteryColor + '20' }]}>
-                      <View style={[staticStyles.badge, { backgroundColor: masteryColor, paddingHorizontal: 14, paddingVertical: 6 }]}>
-                        <Text style={[staticStyles.badgeText, { fontSize: 13 }]}>{MASTERY_LABELS[mastery] ?? mastery}</Text>
-                      </View>
-                    </View>
-
-                    {/* Grille 2x2 */}
-                    <View style={styles.statsGrid}>
-                      <View style={styles.statsRow}>
-                        <View style={styles.statsCell}>
-                          <Text style={staticStyles.statValYellow}>{streak}</Text>
-                          <Text style={styles.statsCellLabel}>Win Streak</Text>
-                        </View>
-                        <View style={styles.statsDividerV} />
-                        <View style={styles.statsCell}>
-                          <Text style={lapses > 0 ? staticStyles.statValRed : staticStyles.statValGray}>{lapses}</Text>
-                          <Text style={styles.statsCellLabel}>Lapses</Text>
-                        </View>
-                      </View>
-                      <View style={styles.statsDividerH} />
-                      <View style={styles.statsRow}>
-                        <View style={styles.statsCell}>
-                          <Text style={ease >= 0 ? staticStyles.statValBlue : staticStyles.statValRed}>{easeLabel}</Text>
-                          <Text style={styles.statsCellLabel}>Facilité</Text>
-                        </View>
-                        <View style={styles.statsDividerV} />
-                        <View style={styles.statsCell}>
-                          <Text style={styles.statsCellValuePrimary}>{intervalLabel}</Text>
-                          <Text style={styles.statsCellLabel}>Intervalle</Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* Prochaine révision */}
-                    <View style={styles.statsNextReview}>
-                      <Ionicons name="calendar-outline" size={14} color={theme.textSecondary} />
-                      <Text style={styles.statsNextReviewLabel}>Prochaine révision</Text>
-                      <Text style={styles.statsNextReviewValue}>{nextReviewLabel}</Text>
-                    </View>
-                  </ScrollView>
-                </>
-              );
-            })()}
-          </Pressable>
-        </Pressable>
-        </Animated.View>
-      </Modal>
+        card={selectedCardForStats}
+        onClose={() => setShowCardStatsModal(false)}
+      />
 
       {/* Modal d'ajout de carte */}
       <AddCardModal
