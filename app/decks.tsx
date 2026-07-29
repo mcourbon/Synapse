@@ -1,6 +1,6 @@
 // app/decks.tsx
-import { View, Text, StyleSheet, FlatList, Pressable, Alert, Modal, TextInput } from 'react-native';
-import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, Alert, Modal, TextInput, Animated } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
@@ -29,7 +29,25 @@ export default function Decks() {
   const [editingDeck, setEditingDeck] = useState(false);
   const [deletingDeck, setDeletingDeck] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
-  
+  const [editDeckModalRendered, setEditDeckModalRendered] = useState(false);
+  const editDeckFadeAnim = useRef(new Animated.Value(0)).current;
+  const editDeckScaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    if (showEditDeckModal) {
+      setEditDeckModalRendered(true);
+      editDeckFadeAnim.setValue(0);
+      editDeckScaleAnim.setValue(0.9);
+      Animated.parallel([
+        Animated.timing(editDeckFadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.spring(editDeckScaleAnim, { toValue: 1, tension: 200, friction: 18, useNativeDriver: true }),
+      ]).start();
+    } else if (editDeckModalRendered) {
+      Animated.timing(editDeckFadeAnim, { toValue: 0, duration: 120, useNativeDriver: true }).start(() => setEditDeckModalRendered(false));
+    }
+  }, [showEditDeckModal]);
+
+
     const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -585,18 +603,20 @@ const handleDeleteDeck = async () => {
       />
 
 {/* Modal de modification du nom */}
+{editDeckModalRendered && (
 <Modal
-  visible={showEditDeckModal}
+  visible={editDeckModalRendered}
   transparent
-  animationType="fade"
+  animationType="none"
   onRequestClose={() => setShowEditDeckModal(false)}
 >
-  <Pressable 
-    style={styles.modalOverlay}
+  <Animated.View style={[styles.modalOverlay, { opacity: editDeckFadeAnim }]}>
+  <Pressable
+    style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
     onPress={() => setShowEditDeckModal(false)}
   >
+    <Animated.View style={[styles.editDeckContainer, { transform: [{ scale: editDeckScaleAnim }] }]}>
     <Pressable
-      style={styles.editDeckContainer}
       onPress={() => {}}
     >
       <Text style={styles.editDeckLabel}>Nom</Text>
@@ -659,8 +679,11 @@ const handleDeleteDeck = async () => {
         </Pressable>
       </View>
     </Pressable>
+    </Animated.View>
   </Pressable>
+  </Animated.View>
 </Modal>
+)}
 
 {/* Modal de confirmation de suppression */}
 <ConfirmModal

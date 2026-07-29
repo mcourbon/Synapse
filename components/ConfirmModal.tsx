@@ -1,5 +1,6 @@
 // components/ConfirmModal.tsx
-import { View, Text, Modal, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Modal, Pressable, StyleSheet, Animated } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface ConfirmModalProps {
@@ -34,6 +35,23 @@ export default function ConfirmModal({
   isLoading = false,
 }: ConfirmModalProps) {
   const { theme } = useTheme();
+  const [rendered, setRendered] = useState(visible);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    if (visible) {
+      setRendered(true);
+      fadeAnim.setValue(0);
+      scaleAnim.setValue(0.9);
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.spring(scaleAnim, { toValue: 1, tension: 200, friction: 18, useNativeDriver: true }),
+      ]).start();
+    } else if (rendered) {
+      Animated.timing(fadeAnim, { toValue: 0, duration: 120, useNativeDriver: true }).start(() => setRendered(false));
+    }
+  }, [visible]);
 
   const styles = StyleSheet.create({
     confirmOverlay: {
@@ -96,10 +114,12 @@ export default function ConfirmModal({
     },
   });
 
+  if (!rendered) return null;
+
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onCancel}>
-      <View style={styles.confirmOverlay}>
-        <View style={styles.confirmModal}>
+    <Modal visible={rendered} animationType="none" transparent onRequestClose={onCancel}>
+      <Animated.View style={[styles.confirmOverlay, { opacity: fadeAnim }]}>
+        <Animated.View style={[styles.confirmModal, { transform: [{ scale: scaleAnim }] }]}>
           <Text style={styles.confirmTitle}>{title}</Text>
           <Text style={styles.confirmMessage}>{message}</Text>
 
@@ -122,8 +142,8 @@ export default function ConfirmModal({
               </Text>
             </Pressable>
           </View>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }
