@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView, Animated, Platform } from 'react-native';
-import { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView } from 'react-native';
+import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -42,33 +42,6 @@ export default function DeckDetail() {
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
   const [showCardStatsModal, setShowCardStatsModal] = useState(false);
   const [selectedCardForStats, setSelectedCardForStats] = useState<Card | null>(null);
-  const [editCardModalRendered, setEditCardModalRendered] = useState(false);
-  const editCardFadeAnim = useRef(new Animated.Value(0)).current;
-  const editCardSlideAnim = useRef(new Animated.Value(300)).current;
-
-  // Anim d'ouverture/fermeture custom pour le web (animationType natif ne s'anime pas sur react-native-web)
-  useEffect(() => {
-    if (showEditCardModal) {
-      setEditCardModalRendered(true);
-      if (Platform.OS === 'web') {
-        editCardFadeAnim.setValue(0);
-        editCardSlideAnim.setValue(300);
-        Animated.parallel([
-          Animated.timing(editCardFadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-          Animated.spring(editCardSlideAnim, { toValue: 0, tension: 65, friction: 11, useNativeDriver: true }),
-        ]).start();
-      }
-    } else if (editCardModalRendered) {
-      if (Platform.OS === 'web') {
-        Animated.parallel([
-          Animated.timing(editCardFadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
-          Animated.timing(editCardSlideAnim, { toValue: 300, duration: 150, useNativeDriver: true }),
-        ]).start(() => setEditCardModalRendered(false));
-      } else {
-        setEditCardModalRendered(false);
-      }
-    }
-  }, [showEditCardModal]);
 
   // Nouveaux états pour le système de tags avancé
   const [existingCategories, setExistingCategories] = useState<string[]>([]);
@@ -1113,16 +1086,12 @@ addCategoryButtonInactive: {
       />
 
       {/* Modal de modification de carte avec système de tags avancé */}
-{editCardModalRendered && (
 <Modal
-  visible={editCardModalRendered}
-  animationType={Platform.OS === 'web' ? 'none' : 'slide'}
-  presentationStyle={Platform.OS === 'web' ? undefined : 'pageSheet'}
-  transparent={Platform.OS === 'web'}
+  visible={showEditCardModal}
+  animationType="slide"
+  presentationStyle="pageSheet"
   onRequestClose={closeModal}
 >
-  <Animated.View style={Platform.OS === 'web' ? { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', opacity: editCardFadeAnim, justifyContent: 'flex-end' } : { flex: 1 }}>
-  <Animated.View style={Platform.OS === 'web' ? { maxHeight: '92%', transform: [{ translateY: editCardSlideAnim }] } : { flex: 1 }}>
   <SafeAreaView style={styles.modalContainer}>
     <View style={styles.mainContent}>
       {/* Header */}
@@ -1283,10 +1252,7 @@ addCategoryButtonInactive: {
       </ScrollView>
     </View>
   </SafeAreaView>
-  </Animated.View>
-  </Animated.View>
 </Modal>
-)}
     </SafeAreaView>
   );
 }
