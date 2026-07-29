@@ -17,6 +17,7 @@ import { Deck } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import AddDeckModal from './AddDeckModal';
+import { getDeckCardCount, MAX_CARDS_PER_DECK } from '../lib/deckLimits';
 
 interface AddCardModalProps {
   visible: boolean;
@@ -420,6 +421,12 @@ export default function AddCardModal({
     setLoading(true);
 
     try {
+      const currentCount = await getDeckCardCount(targetDeckId);
+      if (currentCount >= MAX_CARDS_PER_DECK) {
+        Alert.alert('Limite atteinte', `Cette collection contient déjà le maximum de ${MAX_CARDS_PER_DECK} cartes.`);
+        return;
+      }
+
       const { error } = await supabase
         .from('cards')
         .insert([

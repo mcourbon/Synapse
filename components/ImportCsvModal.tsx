@@ -8,6 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Deck } from '../types/database';
 import { pickAndReadCsvFile } from '../lib/csvFileReader';
 import { parseCsvContent, ParsedCard } from '../utils/csvImport';
+import { getDeckCardCount, MAX_CARDS_PER_IMPORT, MAX_CARDS_PER_DECK } from '../lib/deckLimits';
 import InfoModal from './InfoModal';
 
 interface ImportCsvModalProps {
@@ -36,6 +37,7 @@ export default function ImportCsvModal({ visible, onClose, onImported }: ImportC
   const [fileName, setFileName] = useState('');
   const [parsedCards, setParsedCards] = useState<ParsedCard[]>([]);
   const [skippedRows, setSkippedRows] = useState(0);
+  const [cutForImportLimit, setCutForImportLimit] = useState(0);
 
   const [destination, setDestination] = useState<Destination>('new');
   const [newDeckName, setNewDeckName] = useState('');
@@ -50,6 +52,7 @@ export default function ImportCsvModal({ visible, onClose, onImported }: ImportC
       setFileName('');
       setParsedCards([]);
       setSkippedRows(0);
+      setCutForImportLimit(0);
       setDestination('new');
       setNewDeckName('');
       setSelectedDeckId(null);
@@ -90,9 +93,13 @@ export default function ImportCsvModal({ visible, onClose, onImported }: ImportC
         return;
       }
 
+      const cut = Math.max(0, result.cards.length - MAX_CARDS_PER_IMPORT);
+      const cappedCards = result.cards.slice(0, MAX_CARDS_PER_IMPORT);
+
       setFileName(picked.fileName);
-      setParsedCards(result.cards);
+      setParsedCards(cappedCards);
       setSkippedRows(result.skippedRows);
+      setCutForImportLimit(cut);
       setNewDeckName(picked.fileName.replace(/\.csv$/i, '').slice(0, 50));
       setStep('destination');
     } catch (error: any) {
@@ -132,7 +139,17 @@ export default function ImportCsvModal({ visible, onClose, onImported }: ImportC
 
       if (!deckId) throw new Error('Collection introuvable');
 
-      const rows = parsedCards.map(c => ({
+      const currentCount = destination === 'existing' ? await getDeckCardCount(deckId) : 0;
+      const remainingCapacity = MAX_CARDS_PER_DECK - currentCount;
+
+      if (remainingCapacity <= 0) {
+        Alert.alert('Limite atteinte', `Cette collection contient déjà le maximum de ${MAX_CARDS_PER_DECK} cartes.`);
+        return;
+      }
+
+      const cardsToInsert = parsedCards.slice(0, remainingCapacity);
+
+      const rows = cardsToInsert.map(c => ({
         deck_id: deckId,
         front: c.front,
         back: c.back,
@@ -142,8 +159,15 @@ export default function ImportCsvModal({ visible, onClose, onImported }: ImportC
       const { error: insertError } = await supabase.from('cards').insert(rows);
       if (insertError) throw insertError;
 
-      onImported(deckName, parsedCards.length);
+      onImported(deckName, cardsToInsert.length);
       onClose();
+
+      if (cardsToInsert.length < parsedCards.length) {
+        Alert.alert(
+          'Import partiel',
+          `Seules ${cardsToInsert.length} cartes ont été importées : la collection est limitée à ${MAX_CARDS_PER_DECK} cartes.`
+        );
+      }
     } catch (error: any) {
       Alert.alert('Erreur', error?.message || "Impossible d'importer les cartes");
     } finally {
@@ -326,6 +350,11 @@ export default function ImportCsvModal({ visible, onClose, onImported }: ImportC
           {skippedRows > 0 && (
             <Text style={styles.skippedText}>
               {skippedRows} ligne{skippedRows > 1 ? 's' : ''} ignorée{skippedRows > 1 ? 's' : ''} (recto ou verso manquant)
+            </Text>
+          )}
+          {cutForImportLimit > 0 && (
+            <Text style={styles.skippedText}>
+              {cutForImportLimit} carte{cutForImportLimit > 1 ? 's' : ''} en plus ignorée{cutForImportLimit > 1 ? 's' : ''} (limite de {MAX_CARDS_PER_IMPORT} cartes par import)
             </Text>
           )}
 
