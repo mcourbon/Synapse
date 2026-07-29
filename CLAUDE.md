@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Workflow
+
+- **Never run `git push` without asking first and getting an explicit yes** — every time, no exceptions. Permission to push one change does not carry over to the next change later in the same session, even if the earlier instruction was "commit et push". Local commits without pushing are fine to do proactively.
+
 ## Commands
 
 ```bash

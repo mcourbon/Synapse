@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setGuestMode, isGuestMode } from '../lib/guestMode';
 
 interface AuthContextType {
   user: User | null;
@@ -51,6 +52,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const demoUserStr = await AsyncStorage.getItem('demoUser');
           if (demoUserStr) {
             const demoUser = JSON.parse(demoUserStr);
+            setGuestMode(true);
             setUser(demoUser);
             setSession({ user: demoUser } as any);
             setLoading(false);
@@ -74,11 +76,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     checkDemoMode();
 
-    // Écouter les changements d'auth
+    // Écouter les changements d'auth Supabase — ignorés tant qu'on est en mode démo local,
+    // sinon cet écouteur écrase l'utilisateur démo dès qu'il se déclenche (ex: au reload de la page).
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      
+      if (isGuestMode()) return;
+
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -91,6 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Nettoyer le mode démo lors de la déconnexion
           await AsyncStorage.removeItem('isDemoMode');
           await AsyncStorage.removeItem('demoUser');
+          setGuestMode(false);
           break;
         case 'TOKEN_REFRESHED':
           break;
@@ -163,7 +168,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       await AsyncStorage.setItem('isDemoMode', 'true');
       await AsyncStorage.setItem('demoUser', JSON.stringify(demoUser));
-      
+
+      setGuestMode(true);
       setUser(demoUser);
       setSession({ user: demoUser } as any);
       
@@ -183,6 +189,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Déconnexion du mode démo
         await AsyncStorage.removeItem('isDemoMode');
         await AsyncStorage.removeItem('demoUser');
+        setGuestMode(false);
         setSession(null);
         setUser(null);
         return;

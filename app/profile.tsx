@@ -42,7 +42,11 @@ export default function Profile() {
 const handleChangeAvatar = async () => {
   if (!user) return;
 
-  
+  if ((user as any).isGuest) {
+    Alert.alert('Indisponible en mode invité', 'La photo de profil nécessite un vrai compte. Créez un compte pour en profiter.');
+    return;
+  }
+
   try {
     setUploadingAvatar(true);
     
