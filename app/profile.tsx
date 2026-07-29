@@ -465,17 +465,19 @@ avatarPlaceholder: {
       </View>
     )}
     
-    <Pressable 
-      style={dynamicStyles.avatarEditButton}
-      onPress={handleChangeAvatar}
-      disabled={uploadingAvatar}
-    >
-      {uploadingAvatar ? (
-        <Ionicons name="hourglass" size={16} color="#fff" />
-      ) : (
-        <Ionicons name="camera" size={16} color="#fff" />
-      )}
-    </Pressable>
+    {!(user as any)?.isGuest && (
+      <Pressable
+        style={dynamicStyles.avatarEditButton}
+        onPress={handleChangeAvatar}
+        disabled={uploadingAvatar}
+      >
+        {uploadingAvatar ? (
+          <Ionicons name="hourglass" size={16} color="#fff" />
+        ) : (
+          <Ionicons name="camera" size={16} color="#fff" />
+        )}
+      </Pressable>
+    )}
   </View>
             
             {/* Username avec édition inline */}
