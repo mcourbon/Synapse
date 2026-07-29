@@ -10,95 +10,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useStats } from '../../contexts/StatsContext';
 import { SpacedRepetitionSystem, useSpacedRepetition } from '../../utils/spacedRepetition';
-import Svg, { Circle, LinearGradient, Stop, Defs } from 'react-native-svg';
 import { StatsTracker } from '../../lib/statsTracker';
 import StreakFlame from '../../components/StreakFlame';
-
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
-const ProfessionalProgressCircle = ({ progress, size = 100, theme }: { progress: Animated.Value, size?: number, theme: any }) => {
-  const radius = (size - 12) / 2;
-  const circumference = 2 * Math.PI * radius;
-  
-  return (
-    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-      <Svg width={size} height={size} style={{ position: 'absolute' }}>
-        <Defs>
-          <LinearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={theme.isDark ? "#2a2a2a" : "#f8f9fa"} stopOpacity="1" />
-            <Stop offset="100%" stopColor={theme.isDark ? "#1a1a1a" : "#e9ecef"} stopOpacity="1" />
-          </LinearGradient>
-          
-          <LinearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#4CAF50" stopOpacity="1" />
-            <Stop offset="50%" stopColor="#8BC34A" stopOpacity="1" />
-            <Stop offset="100%" stopColor="#CDDC39" stopOpacity="1" />
-          </LinearGradient>
-        </Defs>
-        
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="url(#backgroundGradient)"
-          strokeWidth="8"
-          fill="none"
-        />
-        
-        <AnimatedCircle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="url(#progressGradient)"
-          strokeWidth="8"
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={progress.interpolate({
-            inputRange: [0, 1],
-            outputRange: [circumference, 0],
-          })}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </Svg>
-    </View>
-  );
-};
-
-const AnimatedSuccessIcon = ({ scale }: { scale: Animated.Value }) => {
-  return (
-    <Animated.View 
-      style={[
-        {
-          position: 'absolute',
-          justifyContent: 'center',
-          alignItems: 'center',
-          width: 100,
-          height: 100,
-        },
-        {
-          transform: [{ scale }],
-        }
-      ]}
-    >
-      <View style={{
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: '#4CAF50',
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#4CAF50',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
-      }}>
-        <Ionicons name="checkmark" size={32} color="#fff" />
-      </View>
-    </Animated.View>
-  );
-};
+import ProfessionalProgressCircle from '../../components/ProfessionalProgressCircle';
+import AnimatedSuccessIcon from '../../components/AnimatedSuccessIcon';
 
 export default function GlobalReview() {
   const [dueCards, setDueCards] = useState<Card[]>([]);
@@ -941,10 +856,12 @@ export default function GlobalReview() {
             {/* Animation de succès */}
             <View style={styles.iconContainer}>
               <View style={styles.progressCircleContainer}>
-                <ProfessionalProgressCircle 
-                  progress={circleProgressAnimation} 
-                  size={100} 
+                <ProfessionalProgressCircle
+                  progress={circleProgressAnimation}
+                  size={100}
                   theme={theme}
+                  showShadow={false}
+                  showInnerRing={false}
                 />
                 <AnimatedSuccessIcon scale={checkScaleAnimation} />
               </View>

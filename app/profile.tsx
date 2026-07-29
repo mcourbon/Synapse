@@ -1,5 +1,5 @@
 // app/profile.tsx
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch, Modal, Linking, TextInput, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch, Linking, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -11,6 +11,9 @@ import { supabase } from '../lib/supabase';
 import { StatsTracker } from '../lib/statsTracker';
 import { AvatarUpload } from '../lib/avatarUpload';
 import { Image } from 'react-native';
+import InfoModal from '../components/InfoModal';
+import StatTile from '../components/StatTile';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function Profile() {
   const { user, signOut } = useAuth();
@@ -26,16 +29,6 @@ export default function Profile() {
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
   const usernameInputRef = useRef<TextInput>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
-  const modalFadeAnim = useRef(new Animated.Value(0)).current;
-  const openModal = (setVisible: (v: boolean) => void) => {
-    setVisible(true);
-    modalFadeAnim.setValue(0);
-    Animated.timing(modalFadeAnim, { toValue: 1, duration: 150, useNativeDriver: true }).start();
-  };
-  const closeModal = (setVisible: (v: boolean) => void) => {
-    Animated.timing(modalFadeAnim, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => setVisible(false));
-  };
 
   // Focus sur l'input quand on commence à éditer
   useEffect(() => {
@@ -82,7 +75,7 @@ const handleChangeAvatar = async () => {
 };
 
 const handleSignOut = () => {
-  openModal(setShowLogoutModal);
+  setShowLogoutModal(true);
 };
 
 const confirmLogout = async () => {
@@ -251,34 +244,6 @@ const updateUsername = async () => {
       color: theme.text,
       marginBottom: 15,
     },
-    statCard: {
-      flex: 1,
-      minWidth: '45%',
-      backgroundColor: theme.surface,
-      padding: 20,
-      borderRadius: 12,
-      alignItems: 'center',
-      shadowColor: theme.shadow,
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.1,
-      shadowRadius: 3.84,
-      elevation: 5,
-    },
-    statNumber: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      color: theme.text,
-      marginTop: 8,
-      marginBottom: 4,
-    },
-    statLabel: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      textAlign: 'center',
-    },
     additionalStatItem: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -340,62 +305,7 @@ const updateUsername = async () => {
       color: theme.error,
       fontWeight: '600',
     },
-modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: theme.surface,
-    borderRadius: 28,
-    padding: 0,
-    width: '100%',
-    maxWidth: 420,
-    maxHeight: '85%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    elevation: 15,
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border + '40',
-  },
-  modalTitle: {
-    flex: 1,
-    fontSize: 22,
-    fontWeight: '700',
-    color: theme.text,
-    textAlign: 'center',
-    letterSpacing: -0.3,
-  },
-  closeButtonCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.border + '30',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.border + '50',
-  },
-  modalIconContainer: {
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 24,
-    paddingHorizontal: 24,
-  },
-  modalSectionTitle: {
+modalSectionTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: theme.text,
@@ -630,34 +540,40 @@ avatarPlaceholder: {
             <Text style={dynamicStyles.sectionTitle}>Vos statistiques</Text>
             <View style={styles.statsGrid}>
               {/* Temps d'étude total */}
-<View style={dynamicStyles.statCard}>
-  <Ionicons name="time-outline" size={20} color={theme.primary} />
-  <Text style={styles.statValueBlue}>
-    {StatsTracker.formatStudyTime(stats.totalStudyTime)}
-  </Text>
-  <Text style={styles.statLabelBlue}>Temps d'étude</Text>
-</View>
+              <StatTile
+                icon="time-outline"
+                iconColor={theme.primary}
+                textColor="#3B82F6"
+                value={StatsTracker.formatStudyTime(stats.totalStudyTime)}
+                label="Temps d'étude"
+              />
 
-{/* Meilleure streak */}
-<View style={dynamicStyles.statCard}>
-  <Ionicons name="trophy-outline" size={20} color={theme.accent} />
-  <Text style={styles.statValueYellow}>{stats.longestStreak}</Text>
-  <Text style={styles.statLabelYellow}>Record de jours</Text>
-</View>
+              {/* Meilleure streak */}
+              <StatTile
+                icon="trophy-outline"
+                iconColor={theme.accent}
+                textColor="#F59E0B"
+                value={stats.longestStreak}
+                label="Record de jours"
+              />
 
-{/* Cartes maîtrisées */}
-<View style={dynamicStyles.statCard}>
-  <Ionicons name="star" size={20} color={theme.success} />
-  <Text style={styles.statValueGreen}>{stats.cardsMastered}</Text>
-  <Text style={styles.statLabelGreen}>Cartes maîtrisées</Text>
-</View>
+              {/* Cartes maîtrisées */}
+              <StatTile
+                icon="star"
+                iconColor={theme.success}
+                textColor="#10B981"
+                value={stats.cardsMastered}
+                label="Cartes maîtrisées"
+              />
 
-{/* Plus longue streak de réussites */}
-<View style={dynamicStyles.statCard}>
-  <Ionicons name="flame" size={20} color="#FF9500" />
-  <Text style={styles.statValueOrange}>{stats.bestAnswerStreak}</Text>
-  <Text style={styles.statLabelOrange}>Plus longue streak</Text>
-</View>
+              {/* Plus longue streak de réussites */}
+              <StatTile
+                icon="flame"
+                iconColor="#FF9500"
+                textColor="#FF9500"
+                value={stats.bestAnswerStreak}
+                label="Plus longue streak"
+              />
 
 {/* Répartition des réponses */}
 <View style={dynamicStyles.fullWidthCard}>
@@ -709,9 +625,9 @@ avatarPlaceholder: {
           <View style={styles.settingsSection}>
             <Text style={dynamicStyles.sectionTitle}>Paramètres</Text>
             
-            <Pressable 
+            <Pressable
               style={dynamicStyles.settingItem}
-              onPress={() => openModal(setShowNotificationsModal)}>
+              onPress={() => setShowNotificationsModal(true)}>
               <View style={styles.settingLeft}>
                 <Ionicons name="notifications-outline" size={24} color={theme.textSecondary} />
                 <Text style={dynamicStyles.settingText}>Notifications</Text>
@@ -738,9 +654,9 @@ avatarPlaceholder: {
               />
             </View>
 
-            <Pressable 
+            <Pressable
               style={dynamicStyles.settingItem}
-              onPress={() => openModal(setShowHelpModal)}>
+              onPress={() => setShowHelpModal(true)}>
               <View style={styles.settingLeft}>
                 <Ionicons name="help-circle-outline" size={24} color={theme.textSecondary} />
                 <Text style={dynamicStyles.settingText}>Aide & Support</Text>
@@ -748,9 +664,9 @@ avatarPlaceholder: {
               <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
             </Pressable>
 
-            <Pressable 
-              style={dynamicStyles.settingItem}  
-              onPress={() => openModal(setShowAboutModal)}>
+            <Pressable
+              style={dynamicStyles.settingItem}
+              onPress={() => setShowAboutModal(true)}>
               <View style={styles.settingLeft}>
                 <Ionicons name="information-circle-outline" size={24} color={theme.textSecondary} />
                 <Text style={dynamicStyles.settingText}>À propos</Text>
@@ -773,199 +689,85 @@ avatarPlaceholder: {
         </ScrollView>
 
           {/* Notifications Modal */}
-        <Modal
-          visible={showNotificationsModal}
-          animationType="none"
-          transparent={true}
-          onRequestClose={() => closeModal(setShowNotificationsModal)}
-        >
-          <Animated.View style={{ flex: 1, opacity: modalFadeAnim }}>
-          <Pressable
-            style={dynamicStyles.modalOverlay}
-            onPress={() => closeModal(setShowNotificationsModal)}
+          <InfoModal
+            visible={showNotificationsModal}
+            onClose={() => setShowNotificationsModal(false)}
+            title="Notifications"
+            icon="notifications-off"
+            iconColor={theme.textSecondary}
           >
-            <Pressable
-              style={dynamicStyles.modalContent}
-              onPress={() => {}}
-            >
-              {/* Header de la modale */}
-              <View style={dynamicStyles.modalHeader}>
-                <View style={{width: 36}} />
-                <Text style={dynamicStyles.modalTitle}>Notifications</Text>
-                <Pressable onPress={() => closeModal(setShowNotificationsModal)} style={dynamicStyles.closeButtonCircle}>
-                  <Ionicons name="close" size={20} color={theme.textSecondary} />
-                </Pressable>
-              </View>
+            <Text style={dynamicStyles.modalSectionTitle}>Fonctionnalité à venir</Text>
 
-              <View style={dynamicStyles.modalIconContainer}>
-                <View style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: 40,
-                  backgroundColor: theme.textSecondary + '15',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginBottom: 8,
-                }}>
-                  <Ionicons name="notifications-off" size={36} color={theme.textSecondary} />
-                </View>
-              </View>
-
-              <Text style={dynamicStyles.modalSectionTitle}>Fonctionnalité à venir</Text>
-              
-              <View style={dynamicStyles.notificationInfoContainer}>
-                <Text style={dynamicStyles.notificationInfoText}>
-                  Les notifications ne sont pas encore disponibles dans cette version de l'application.
-                </Text>
-              </View>
-
-              <Text style={dynamicStyles.modalText}>
-                Cette fonctionnalité est en cours de développement et sera bientôt disponible pour vous rappeler vos sessions de révision et vous aider à maintenir votre routine d'apprentissage.
+            <View style={dynamicStyles.notificationInfoContainer}>
+              <Text style={dynamicStyles.notificationInfoText}>
+                Les notifications ne sont pas encore disponibles dans cette version de l'application.
               </Text>
+            </View>
 
-              <Text style={dynamicStyles.modalText}>
-                En attendant, nous vous encourageons à créer votre propre routine de révision pour maximiser vos résultats !
-              </Text>
-            </Pressable>
-          </Pressable>
-          </Animated.View>
-        </Modal>
+            <Text style={dynamicStyles.modalText}>
+              Cette fonctionnalité est en cours de développement et sera bientôt disponible pour vous rappeler vos sessions de révision et vous aider à maintenir votre routine d'apprentissage.
+            </Text>
+
+            <Text style={dynamicStyles.modalText}>
+              En attendant, nous vous encourageons à créer votre propre routine de révision pour maximiser vos résultats !
+            </Text>
+          </InfoModal>
 
           {/* About Modal */}
-        <Modal
-          visible={showAboutModal}
-          animationType="none"
-          transparent={true}
-          onRequestClose={() => closeModal(setShowAboutModal)}
-        >
-          <Animated.View style={{ flex: 1, opacity: modalFadeAnim }}>
-          <Pressable
-            style={dynamicStyles.modalOverlay}
-            onPress={() => closeModal(setShowAboutModal)}
+          <InfoModal
+            visible={showAboutModal}
+            onClose={() => setShowAboutModal(false)}
+            title="À propos de l'application"
+            icon="code-slash"
+            iconColor={theme.primary}
           >
-            <Pressable
-              style={dynamicStyles.modalContent}
-              onPress={() => {}}
-            >
-              {/* Header de la modale */}
-              <View style={dynamicStyles.modalHeader}>
-                <View style={{width: 36}} />
-                <Text style={dynamicStyles.modalTitle}>À propos de l'application</Text>
-                <Pressable onPress={() => closeModal(setShowAboutModal)} style={dynamicStyles.closeButtonCircle}>
-                  <Ionicons name="close" size={20} color={theme.textSecondary} />
-                </Pressable>
-              </View>
+            <Text style={dynamicStyles.modalSectionTitle}>Une aventure personnelle</Text>
+            <Text style={dynamicStyles.modalText}>
+              Cette application est née d'un besoin simple : trouver un outil de révision par cartes (flashcards) qui soit à la fois simple, efficace et addictif à utiliser. Frustré par les options existantes, j'ai décidé de mettre à profit mes compétences pour créer la solution que j'avais en tête.
+            </Text>
+            <Text style={dynamicStyles.modalText}>
+              Chaque fonctionnalité a été pensée pour optimiser l'apprentissage et la mémorisation, en se basant sur des principes comme la répétition espacée.
+            </Text>
+            <Text style={dynamicStyles.versionText}>Version 1.0.0</Text>
+          </InfoModal>
 
-              <ScrollView style={{flex: 1}} showsVerticalScrollIndicator={false}>
-                <View style={dynamicStyles.modalIconContainer}>
-                  <View style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: 40,
-                    backgroundColor: theme.primary + '15',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginBottom: 8,
-                  }}>
-                    <Ionicons name="code-slash" size={36} color={theme.primary} />
-                  </View>
-                </View>
-
-                <Text style={dynamicStyles.modalSectionTitle}>Une aventure personnelle</Text>
-                <Text style={dynamicStyles.modalText}>
-                  Cette application est née d'un besoin simple : trouver un outil de révision par cartes (flashcards) qui soit à la fois simple, efficace et addictif à utiliser. Frustré par les options existantes, j'ai décidé de mettre à profit mes compétences pour créer la solution que j'avais en tête.
-                </Text>
-                <Text style={dynamicStyles.modalText}>
-                  Chaque fonctionnalité a été pensée pour optimiser l'apprentissage et la mémorisation, en se basant sur des principes comme la répétition espacée.
-                </Text>
-                <Text style={dynamicStyles.versionText}>Version 1.0.0</Text>
-              </ScrollView>
-            </Pressable>
-          </Pressable>
-          </Animated.View>
-        </Modal>
-
-        {/* Help & Support Modal */}
-        <Modal
-          visible={showHelpModal}
-          animationType="none"
-          transparent={true}
-          onRequestClose={() => closeModal(setShowHelpModal)}
-        >
-          <Animated.View style={{ flex: 1, opacity: modalFadeAnim }}>
-          <Pressable
-            style={dynamicStyles.modalOverlay}
-            onPress={() => closeModal(setShowHelpModal)}
+          {/* Help & Support Modal */}
+          <InfoModal
+            visible={showHelpModal}
+            onClose={() => setShowHelpModal(false)}
+            title="Aide & Support"
+            icon="help-circle"
+            iconColor={theme.success}
           >
+            <Text style={dynamicStyles.modalSectionTitle}>Votre avis compte</Text>
+            <Text style={dynamicStyles.modalText}>
+              Ce projet est en constante évolution. Si vous avez des idées, des suggestions ou si vous rencontrez un bug, n'hésitez pas à me contacter. Votre retour est précieux pour améliorer l'application.
+            </Text>
+
             <Pressable
-              style={dynamicStyles.modalContent}
-              onPress={() => {}}
+              style={dynamicStyles.contactButton}
+              onPress={() => {
+                setShowHelpModal(false);
+                Linking.openURL('mailto:votre.email@example.com?subject=Feedback sur l\'application Flashcards');
+              }}
             >
-              <View style={dynamicStyles.modalHeader}>
-                <View style={{width: 36}} />
-                <Text style={dynamicStyles.modalTitle}>Aide & Support</Text>
-                <Pressable onPress={() => closeModal(setShowHelpModal)} style={dynamicStyles.closeButtonCircle}>
-                  <Ionicons name="close" size={20} color={theme.textSecondary} />
-                </Pressable>
-              </View>
-
-              <ScrollView style={{flex: 1}} showsVerticalScrollIndicator={false}>
-                <View style={dynamicStyles.modalIconContainer}>
-                  <View style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: 40,
-                    backgroundColor: theme.success + '15',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginBottom: 8,
-                  }}>
-                    <Ionicons name="help-circle" size={36} color={theme.success} />
-                  </View>
-                </View>
-
-                <Text style={dynamicStyles.modalSectionTitle}>Votre avis compte</Text>
-                <Text style={dynamicStyles.modalText}>
-                  Ce projet est en constante évolution. Si vous avez des idées, des suggestions ou si vous rencontrez un bug, n'hésitez pas à me contacter. Votre retour est précieux pour améliorer l'application.
-                </Text>
-                
-                <Pressable 
-                  style={dynamicStyles.contactButton}
-                  onPress={() => {
-                    setShowHelpModal(false);
-                    Linking.openURL('mailto:votre.email@example.com?subject=Feedback sur l\'application Flashcards');
-                  }}
-                >
-                  <Text style={dynamicStyles.contactButtonText}>Donner mon avis</Text>
-                </Pressable>
-
-                <Text style={dynamicStyles.versionText}>Vous pouvez également nous contacter pour toute autre question.</Text>
-              </ScrollView>
+              <Text style={dynamicStyles.contactButtonText}>Donner mon avis</Text>
             </Pressable>
-          </Pressable>
-          </Animated.View>
-        </Modal>
 
-        {/* Logout Modal */}
-        <Modal
-          visible={showLogoutModal}
-          transparent={true}
-          animationType="none"
-        >
-          <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', opacity: modalFadeAnim }}>
-            <View style={{ backgroundColor: theme.surface, padding: 20, borderRadius: 12, margin: 20 }}>
-              <Text style={{ color: theme.text, marginBottom: 20 }}>Voulez-vous vraiment vous déconnecter ?</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-                <Pressable onPress={() => closeModal(setShowLogoutModal)}>
-                  <Text style={{ color: theme.textSecondary, padding: 10 }}>Annuler</Text>
-                </Pressable>
-                <Pressable onPress={confirmLogout}>
-                  <Text style={{ color: theme.error, padding: 10 }}>Déconnexion</Text>
-                </Pressable>
-              </View>
-            </View>
-          </Animated.View>
-        </Modal>
+            <Text style={dynamicStyles.versionText}>Vous pouvez également nous contacter pour toute autre question.</Text>
+          </InfoModal>
+
+          {/* Logout Modal */}
+          <ConfirmModal
+            visible={showLogoutModal}
+            title="Déconnexion"
+            message="Voulez-vous vraiment vous déconnecter ?"
+            onConfirm={confirmLogout}
+            onCancel={() => setShowLogoutModal(false)}
+            confirmText="Déconnexion"
+            cancelText="Annuler"
+            confirmColor={theme.error}
+          />
       </View>
     </SafeAreaView>
   );
@@ -1029,57 +831,5 @@ const styles = StyleSheet.create({
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  statValueBlue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#3B82F6',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  statValueYellow: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#F59E0B',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  statValueGreen: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#10B981',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  statValueOrange: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF9500',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  statLabelBlue: {
-    fontSize: 12,
-    color: '#3B82F6',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  statLabelYellow: {
-    fontSize: 12,
-    color: '#F59E0B',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  statLabelGreen: {
-    fontSize: 12,
-    color: '#10B981',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  statLabelOrange: {
-    fontSize: 12,
-    color: '#FF9500',
-    textAlign: 'center',
-    fontWeight: '600',
   },
 });

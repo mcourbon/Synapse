@@ -8,9 +8,11 @@ interface ProfessionalProgressCircleProps {
   progress: Animated.Value;
   size?: number;
   theme: any;
+  showShadow?: boolean;
+  showInnerRing?: boolean;
 }
 
-export default function ProfessionalProgressCircle({ progress, size = 100, theme }: ProfessionalProgressCircleProps) {
+export default function ProfessionalProgressCircle({ progress, size = 100, theme, showShadow = true, showInnerRing = true }: ProfessionalProgressCircleProps) {
   const radius = (size - 12) / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -32,22 +34,26 @@ export default function ProfessionalProgressCircle({ progress, size = 100, theme
           </LinearGradient>
 
           {/* Ombre pour la profondeur - adapté au thème */}
-          <LinearGradient id="shadowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={theme.isDark ? "#000000" : "#000000"} stopOpacity={theme.isDark ? 0.3 : 0.1} />
-            <Stop offset="100%" stopColor={theme.isDark ? "#000000" : "#000000"} stopOpacity={theme.isDark ? 0.1 : 0.05} />
-          </LinearGradient>
+          {showShadow && (
+            <LinearGradient id="shadowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor={theme.isDark ? "#000000" : "#000000"} stopOpacity={theme.isDark ? 0.3 : 0.1} />
+              <Stop offset="100%" stopColor={theme.isDark ? "#000000" : "#000000"} stopOpacity={theme.isDark ? 0.1 : 0.05} />
+            </LinearGradient>
+          )}
         </Defs>
 
         {/* Ombre du cercle de fond */}
-        <Circle
-          cx={size / 2 + 1}
-          cy={size / 2 + 1}
-          r={radius}
-          stroke="url(#shadowGradient)"
-          strokeWidth="8"
-          fill="none"
-          opacity={0.3}
-        />
+        {showShadow && (
+          <Circle
+            cx={size / 2 + 1}
+            cy={size / 2 + 1}
+            r={radius}
+            stroke="url(#shadowGradient)"
+            strokeWidth="8"
+            fill="none"
+            opacity={0.3}
+          />
+        )}
 
         {/* Cercle de fond */}
         <Circle
@@ -78,14 +84,16 @@ export default function ProfessionalProgressCircle({ progress, size = 100, theme
         />
 
         {/* Cercle intérieur pour l'effet 3D - adapté au thème */}
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius - 12}
-          stroke={theme.isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.1)"}
-          strokeWidth="1"
-          fill="none"
-        />
+        {showInnerRing && (
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius - 12}
+            stroke={theme.isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.1)"}
+            strokeWidth="1"
+            fill="none"
+          />
+        )}
       </Svg>
     </View>
   );
