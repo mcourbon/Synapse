@@ -14,16 +14,18 @@ import { Image } from 'react-native';
 import InfoModal from '../components/InfoModal';
 import StatTile from '../components/StatTile';
 import ConfirmModal from '../components/ConfirmModal';
+import ImportCsvModal from '../components/ImportCsvModal';
 
 export default function Profile() {
   const { user, signOut } = useAuth();
   const { theme, isDark, toggleTheme } = useTheme();
-  const { stats, userProfile, avatarUrl, setAvatarUrl, setUserProfile } = useStats();
+  const { stats, userProfile, avatarUrl, setAvatarUrl, setUserProfile, refreshStats } = useStats();
   const router = useRouter();
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
@@ -630,7 +632,17 @@ avatarPlaceholder: {
           {/* Settings */}
           <View style={styles.settingsSection}>
             <Text style={dynamicStyles.sectionTitle}>Paramètres</Text>
-            
+
+            <Pressable
+              style={dynamicStyles.settingItem}
+              onPress={() => setShowImportModal(true)}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="cloud-upload-outline" size={24} color={theme.textSecondary} />
+                <Text style={dynamicStyles.settingText}>Importer des cartes (CSV)</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+            </Pressable>
+
             <Pressable
               style={dynamicStyles.settingItem}
               onPress={() => setShowNotificationsModal(true)}>
@@ -773,6 +785,16 @@ avatarPlaceholder: {
             confirmText="Déconnexion"
             cancelText="Annuler"
             confirmColor={theme.error}
+          />
+
+          {/* Import CSV Modal */}
+          <ImportCsvModal
+            visible={showImportModal}
+            onClose={() => setShowImportModal(false)}
+            onImported={(deckName, count) => {
+              refreshStats();
+              Alert.alert('Import réussi', `${count} carte${count > 1 ? 's' : ''} ajoutée${count > 1 ? 's' : ''} à « ${deckName} ».`);
+            }}
           />
       </View>
     </SafeAreaView>

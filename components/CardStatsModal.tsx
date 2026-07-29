@@ -25,6 +25,7 @@ const staticStyles = StyleSheet.create({
 export default function CardStatsModal({ visible, card, onClose }: CardStatsModalProps) {
   const { theme } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const pressStartedOnOverlay = useRef(false);
 
   useEffect(() => {
     if (visible) {
@@ -172,7 +173,17 @@ export default function CardStatsModal({ visible, card, onClose }: CardStatsModa
   return (
     <Modal visible={visible} animationType="none" transparent={true} onRequestClose={handleClose}>
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        <Pressable style={styles.statsOverlay} onPress={handleClose}>
+        <Pressable
+          style={styles.statsOverlay}
+          onPressIn={(e: any) => {
+            // Le pointerdown est fiable pour savoir où le geste a réellement démarré
+            // (contrairement au relâchement, utilisé par une sélection de texte qui dérape).
+            pressStartedOnOverlay.current = e.target === e.currentTarget;
+          }}
+          onPress={() => {
+            if (pressStartedOnOverlay.current) handleClose();
+          }}
+        >
           <Pressable
             style={[styles.statsSheet, card && {
               borderWidth: 2,

@@ -1,6 +1,6 @@
 // app/decks.tsx
 import { View, Text, StyleSheet, FlatList, Pressable, Alert, Modal, TextInput } from 'react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
@@ -29,6 +29,7 @@ export default function Decks() {
   const [editingDeck, setEditingDeck] = useState(false);
   const [deletingDeck, setDeletingDeck] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
+  const editDeckPressStartedOnOverlay = useRef(false);
   
     const styles = StyleSheet.create({
     container: {
@@ -591,9 +592,16 @@ const handleDeleteDeck = async () => {
   animationType="fade"
   onRequestClose={() => setShowEditDeckModal(false)}
 >
-  <Pressable 
+  <Pressable
     style={styles.modalOverlay}
-    onPress={() => setShowEditDeckModal(false)}
+    onPressIn={(e: any) => {
+      // Le pointerdown est fiable pour savoir où le geste a réellement démarré
+      // (contrairement au relâchement, utilisé par une sélection de texte qui dérape).
+      editDeckPressStartedOnOverlay.current = e.target === e.currentTarget;
+    }}
+    onPress={() => {
+      if (editDeckPressStartedOnOverlay.current) setShowEditDeckModal(false);
+    }}
   >
     <Pressable
       style={styles.editDeckContainer}

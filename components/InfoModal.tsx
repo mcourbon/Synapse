@@ -16,6 +16,7 @@ interface InfoModalProps {
 export default function InfoModal({ visible, onClose, title, icon, iconColor, children }: InfoModalProps) {
   const { theme } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const pressStartedOnOverlay = useRef(false);
 
   useEffect(() => {
     if (visible) {
@@ -98,7 +99,17 @@ export default function InfoModal({ visible, onClose, title, icon, iconColor, ch
   return (
     <Modal visible={visible} animationType="none" transparent={true} onRequestClose={handleClose}>
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        <Pressable style={styles.modalOverlay} onPress={handleClose}>
+        <Pressable
+          style={styles.modalOverlay}
+          onPressIn={(e: any) => {
+            // Le pointerdown est fiable pour savoir où le geste a réellement démarré
+            // (contrairement au relâchement, utilisé par une sélection de texte qui dérape).
+            pressStartedOnOverlay.current = e.target === e.currentTarget;
+          }}
+          onPress={() => {
+            if (pressStartedOnOverlay.current) handleClose();
+          }}
+        >
           <Pressable style={styles.modalContent} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <View style={{ width: 36 }} />
