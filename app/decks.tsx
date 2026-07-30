@@ -13,6 +13,30 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 
+// Couleurs hardcodées — module level (iOS safe, jamais dans StyleSheet inside component)
+const staticStyles = StyleSheet.create({
+  addCollectionButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButtonDisabledLight: { backgroundColor: '#ccc' },
+  saveButtonDisabledDark: { backgroundColor: '#404040' },
+  saveButtonTextDisabledLight: { color: '#999' },
+  saveButtonTextDisabledDark: { color: '#888' },
+});
+
 export default function Decks() {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,22 +112,6 @@ export default function Decks() {
       backgroundColor: theme.primary,
       borderRadius: 2,
     },
-    addButton: {
-      backgroundColor: theme.primary,
-      width: 48,
-      height: 48,
-      borderRadius: 12,
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: theme.shadow,
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
-      elevation: 5,
-    },
     loadingText: {
       textAlign: 'center',
       fontSize: 18,
@@ -130,13 +138,6 @@ export default function Decks() {
       shadowRadius: 3.84,
       elevation: 5,
     },
-    deckHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-      minHeight: 24,
-    },
     deckName: {
       fontSize: 18,
       fontWeight: 'bold',
@@ -156,10 +157,6 @@ export default function Decks() {
       color: theme.textSecondary,
       marginBottom: 8,
       lineHeight: 20,
-    },
-    deckDate: {
-      fontSize: 12,
-      color: theme.textSecondary,
     },
     emptyState: {
       flex: 1,
@@ -222,11 +219,6 @@ addCollectionButton: {
   gap: 8,
   alignSelf: 'center',
 },
-addCollectionButtonText: {
-  color: '#fff',
-  fontSize: 15,
-  fontWeight: 'bold',
-},
 deckContent: {
   flex: 1,
 },
@@ -247,12 +239,6 @@ deleteDeckButton: {
   height: 36,
   borderRadius: 18,
   backgroundColor: `${theme.error}20`,
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-modalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0, 0, 0, 0.5)',
   justifyContent: 'center',
   alignItems: 'center',
 },
@@ -298,17 +284,6 @@ saveButton: {
   paddingHorizontal: 16,
   paddingVertical: 8,
   borderRadius: 8,
-},
-saveButtonDisabled: {
-  backgroundColor: isDark ? '#404040' : '#ccc',
-},
-saveButtonText: {
-  color: '#fff',
-  fontSize: 16,
-  fontWeight: '600',
-},
-saveButtonTextDisabled: {
-  color: isDark ? '#888' : '#999',
 },
   });
 
@@ -546,7 +521,7 @@ const handleDeleteDeck = async () => {
       onPress={() => { setEditMode(false); setShowAddModal(true); }}
     >
       <Ionicons name="add" size={24} color="#fff" />
-      <Text style={styles.addCollectionButtonText}>Ajouter une collection</Text>
+      <Text style={staticStyles.addCollectionButtonText}>Ajouter une collection</Text>
     </Pressable>
   </View>
 
@@ -593,7 +568,7 @@ const handleDeleteDeck = async () => {
   onRequestClose={() => setShowEditDeckModal(false)}
 >
   <Pressable
-    style={styles.modalOverlay}
+    style={staticStyles.modalOverlay}
     onPressIn={(e: any) => {
       // Le pointerdown est fiable pour savoir où le geste a réellement démarré
       // (contrairement au relâchement, utilisé par une sélection de texte qui dérape).
@@ -655,12 +630,12 @@ const handleDeleteDeck = async () => {
           }}
           style={[
             styles.saveButton,
-            (editingDeck || !newDeckName.trim() || newDeckName.length > 50) && styles.saveButtonDisabled
+            (editingDeck || !newDeckName.trim() || newDeckName.length > 50) && (isDark ? staticStyles.saveButtonDisabledDark : staticStyles.saveButtonDisabledLight)
           ]}
         >
           <Text style={[
-            styles.saveButtonText,
-            (editingDeck || !newDeckName.trim() || newDeckName.length > 50) && styles.saveButtonTextDisabled
+            staticStyles.saveButtonText,
+            (editingDeck || !newDeckName.trim() || newDeckName.length > 50) && (isDark ? staticStyles.saveButtonTextDisabledDark : staticStyles.saveButtonTextDisabledLight)
           ]}>
             {editingDeck ? 'Modification...' : 'Enregistrer'}
           </Text>
