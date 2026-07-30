@@ -14,6 +14,29 @@ import ProfessionalProgressCircle from '../../components/ProfessionalProgressCir
 import AnimatedSuccessIcon from '../../components/AnimatedSuccessIcon';
 import StreakFlame from '../../components/StreakFlame';
 
+// Couleurs hardcodées — module level (iOS safe, jamais dans StyleSheet inside component)
+const staticStyles = StyleSheet.create({
+  errorText: {
+    textAlign: 'center',
+    fontSize: 18,
+    color: '#FF3B30',
+    marginTop: 50,
+  },
+  endSessionOverlayLight: { backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+  endSessionOverlayDark: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+  continueButtonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  continueButtonSubtext: {
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+});
+
 export default function CardReview() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [card, setCard] = useState<Card | null>(null);
@@ -58,12 +81,6 @@ export default function CardReview() {
       textAlign: 'center',
       fontSize: 18,
       color: theme.textSecondary,
-      marginTop: 50,
-    },
-    errorText: {
-      textAlign: 'center',
-      fontSize: 18,
-      color: '#FF3B30',
       marginTop: 50,
     },
     floatingHeader: {
@@ -237,7 +254,6 @@ export default function CardReview() {
     },
     endSessionOverlay: {
       flex: 1,
-      backgroundColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.6)',
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 20,
@@ -319,17 +335,6 @@ export default function CardReview() {
     buttonIconContainer: {
       marginBottom: 8,
       padding: 4,
-    },
-    continueButtonText: {
-      color: '#fff',
-      fontSize: 17,
-      fontWeight: 'bold',
-      marginBottom: 2,
-    },
-    continueButtonSubtext: {
-      color: 'rgba(255, 255, 255, 0.85)',
-      fontSize: 13,
-      textAlign: 'center',
     },
     stopButtonText: {
       color: theme.textSecondary,
@@ -812,7 +817,7 @@ const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
   if (!card) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.errorText}>Carte introuvable</Text>
+        <Text style={staticStyles.errorText}>Carte introuvable</Text>
       </SafeAreaView>
     );
   }
@@ -991,6 +996,7 @@ const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
         <Animated.View 
           style={[
             styles.endSessionOverlay,
+            isDark ? staticStyles.endSessionOverlayDark : staticStyles.endSessionOverlayLight,
             {
               opacity: modalBackgroundAnimation,
             }
@@ -1049,8 +1055,8 @@ const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
                 <View style={styles.buttonIconContainer}>
                   <Ionicons name="refresh-outline" size={22} color="#fff" />
                 </View>
-                <Text style={styles.continueButtonText}>Continuer</Text>
-                <Text style={styles.continueButtonSubtext}>Remélanger</Text>
+                <Text style={staticStyles.continueButtonText}>Continuer</Text>
+                <Text style={staticStyles.continueButtonSubtext}>Remélanger</Text>
               </Pressable>
             </View>
           </Animated.View>

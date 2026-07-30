@@ -15,6 +15,18 @@ import StreakFlame from '../../components/StreakFlame';
 import ProfessionalProgressCircle from '../../components/ProfessionalProgressCircle';
 import AnimatedSuccessIcon from '../../components/AnimatedSuccessIcon';
 
+// Couleurs hardcodées — module level (iOS safe, jamais dans StyleSheet inside component)
+const staticStyles = StyleSheet.create({
+  endSessionOverlayLight: { backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+  endSessionOverlayDark: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+  endSessionButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+});
+
 export default function GlobalReview() {
   const [dueCards, setDueCards] = useState<Card[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -233,7 +245,6 @@ export default function GlobalReview() {
     },
     endSessionOverlay: {
       flex: 1,
-      backgroundColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.6)',
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 20,
@@ -294,12 +305,6 @@ export default function GlobalReview() {
       shadowOpacity: 0.3,
       shadowRadius: 8,
       elevation: 6,
-    },
-    endSessionButtonText: {
-      color: '#fff',
-      fontSize: 18,
-      fontWeight: 'bold',
-      textAlign: 'center',
     },
   });
 
@@ -837,6 +842,7 @@ export default function GlobalReview() {
         <Animated.View 
           style={[
             styles.endSessionOverlay,
+            isDark ? staticStyles.endSessionOverlayDark : staticStyles.endSessionOverlayLight,
             {
               opacity: modalBackgroundAnimation,
             }
@@ -880,7 +886,7 @@ export default function GlobalReview() {
               style={styles.endSessionButton}
               onPress={handleEndSession}
             >
-              <Text style={styles.endSessionButtonText}>Retour à l'accueil</Text>
+              <Text style={staticStyles.endSessionButtonText}>Retour à l'accueil</Text>
             </Pressable>
           </Animated.View>
         </Animated.View>
