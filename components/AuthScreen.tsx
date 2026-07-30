@@ -210,7 +210,7 @@ export default function AuthScreen() {
             errorMsg = 'Mot de passe trop faible';
           } else if (result.error.message.includes('too many requests') || result.error.message.includes('rate limit')) {
             handleRateLimit();
-            errorMsg = `Trop de tentatives rapides. Veuillez patienter ${countdown} secondes.`;
+            errorMsg = 'Trop de tentatives rapides. Veuillez patienter 30 secondes.';
           }
           
           showError(errorMsg);
@@ -234,7 +234,7 @@ export default function AuthScreen() {
             errorMsg = 'Veuillez confirmer votre email avant de vous connecter';
           } else if (result.error.message.includes('too many requests')) {
             handleRateLimit();
-            errorMsg = `Trop de tentatives. Veuillez patienter ${countdown} secondes.`;
+            errorMsg = 'Trop de tentatives. Veuillez patienter 30 secondes.';
           } else if (result.error.message.includes('User not found') || result.error.message.includes('user not found')) {
             errorMsg = 'Ce compte n\'existe pas. Veuillez vous inscrire d\'abord.';
           } else {
