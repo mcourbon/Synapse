@@ -20,6 +20,13 @@ const staticStyles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
   },
+  confirmOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
 });
 
 export default function ConfirmModal({
@@ -36,13 +43,6 @@ export default function ConfirmModal({
   const { theme } = useTheme();
 
   const styles = StyleSheet.create({
-    confirmOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: 20,
-    },
     confirmModal: {
       backgroundColor: theme.surface,
       borderRadius: 16,
@@ -98,7 +98,7 @@ export default function ConfirmModal({
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onCancel}>
-      <View style={styles.confirmOverlay}>
+      <View style={staticStyles.confirmOverlay}>
         <View style={styles.confirmModal}>
           <Text style={styles.confirmTitle}>{title}</Text>
           <Text style={styles.confirmMessage}>{message}</Text>

@@ -13,6 +13,24 @@ interface InfoModalProps {
   children: React.ReactNode;
 }
 
+// Couleurs hardcodées — module level (iOS safe, jamais dans StyleSheet inside component)
+const staticStyles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContentShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+});
+
 export default function InfoModal({ visible, onClose, title, icon, iconColor, children }: InfoModalProps) {
   const { theme } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -30,13 +48,6 @@ export default function InfoModal({ visible, onClose, title, icon, iconColor, ch
   };
 
   const styles = StyleSheet.create({
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.75)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 20,
-    },
     modalContent: {
       backgroundColor: theme.surface,
       borderRadius: 28,
@@ -44,11 +55,6 @@ export default function InfoModal({ visible, onClose, title, icon, iconColor, ch
       width: '100%',
       maxWidth: 420,
       maxHeight: '85%',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.35,
-      shadowRadius: 20,
-      elevation: 15,
       overflow: 'hidden',
     },
     modalHeader: {
@@ -100,7 +106,7 @@ export default function InfoModal({ visible, onClose, title, icon, iconColor, ch
     <Modal visible={visible} animationType="none" transparent={true} onRequestClose={handleClose}>
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         <Pressable
-          style={styles.modalOverlay}
+          style={staticStyles.modalOverlay}
           onPressIn={(e: any) => {
             // Le pointerdown est fiable pour savoir où le geste a réellement démarré
             // (contrairement au relâchement, utilisé par une sélection de texte qui dérape).
@@ -110,7 +116,7 @@ export default function InfoModal({ visible, onClose, title, icon, iconColor, ch
             if (pressStartedOnOverlay.current) handleClose();
           }}
         >
-          <Pressable style={styles.modalContent} onPress={() => {}}>
+          <Pressable style={[styles.modalContent, staticStyles.modalContentShadow]} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <View style={{ width: 36 }} />
               <Text style={styles.modalTitle}>{title}</Text>
