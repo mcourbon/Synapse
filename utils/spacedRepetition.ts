@@ -165,11 +165,6 @@ export class SpacedRepetitionSystem {
     return reviewDateOnly <= todayDateOnly;
   }
 
-  // Calcule le nombre de cartes dues
-  static getDueCount(cards: Array<{ next_review: string | null }>): number {
-    return cards.filter(card => this.isDue(card.next_review)).length;
-  }
-
   // Messages d'encouragement optimisés selon la phase d'apprentissage
   static getResponseMessage(response: ReviewResponse, interval: number, repetitions: number = 0): string {
     switch (response) {
@@ -205,32 +200,6 @@ export class SpacedRepetitionSystem {
     return 'révision';
   }
 
-  // Vérifie si une carte est en mode "hard" (révision immédiate)
-  static isImmediateReview(interval: number): boolean {
-    return interval === 0;
-  }
-
-  // Obtient les cartes en révision immédiate
-  static getImmediateReviewCards(cards: Array<{ interval?: number; next_review: string | null }>): Array<any> {
-    return cards.filter(card => {
-      const interval = card.interval || 1;
-      return this.isImmediateReview(interval) && this.isDue(card.next_review);
-    });
-  }
-
-  // Getter pour la limite maximale (utile pour l'affichage)
-  static getMaxInterval(): number {
-    return this.MAX_INTERVAL;
-  }
-
-  // Nouveau : Statistiques de difficulté d'une carte
-  static getCardDifficulty(lapses: number, easeFactor: number): 'facile' | 'moyen' | 'difficile' | 'très difficile' {
-    if (lapses === 0 && easeFactor >= 2.5) return 'facile';
-    if (lapses <= 1 && easeFactor >= 2.2) return 'moyen';
-    if (lapses <= 2 && easeFactor >= 1.8) return 'difficile';
-    return 'très difficile';
-  }
-
   // Formatage d'intervalle amélioré
   private static formatInterval(days: number): string {
     if (days === 0) return 'quelques minutes';
@@ -242,32 +211,6 @@ export class SpacedRepetitionSystem {
     if (days < 180) return `${Math.round(days / 30)} mois`;
     return `6 mois`;
   }
-}
-
-// Fonction utilitaire pour formater les intervalles (version publique)
-export function formatInterval(days: number): string {
-  if (days === 0) return 'Maintenant';
-  if (days === 1) return '1 jour';
-  if (days < 30) return `${days} jours`;
-  if (days < 365) {
-    const months = Math.round(days / 30);
-    return months === 1 ? '1 mois' : `${months} mois`;
-  }
-  const years = Math.round(days / 365);
-  return years === 1 ? '1 an' : `${years} ans`;
-}
-
-// Types pour TypeScript
-export interface EnhancedCard {
-  id: string;
-  front: string;
-  back: string;
-  interval?: number;
-  repetitions?: number;
-  ease_factor?: number;
-  last_reviewed?: string;
-  next_review?: string;
-  lapses?: number; // Nouveau champ
 }
 
 // Hook personnalisé pour la gestion des révisions
