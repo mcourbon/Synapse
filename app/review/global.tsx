@@ -9,7 +9,7 @@ import { Card } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useStats } from '../../contexts/StatsContext';
-import { SpacedRepetitionSystem, useSpacedRepetition } from '../../utils/spacedRepetition';
+import { SpacedRepetitionSystem, useSpacedRepetition, CardStats } from '../../utils/spacedRepetition';
 import { StatsTracker } from '../../lib/statsTracker';
 import StreakFlame from '../../components/StreakFlame';
 import ProfessionalProgressCircle from '../../components/ProfessionalProgressCircle';
@@ -489,15 +489,15 @@ export default function GlobalReview() {
       nextReview: card.next_review ? new Date(card.next_review) : undefined,
     };
 
-    const updateCard = async (cardId: string, stats: any) => {
+    const updateCard = async (cardId: string, stats: CardStats) => {
       const { error } = await supabase
         .from('cards')
         .update({
           interval: stats.interval,
           repetitions: stats.repetitions,
           ease_factor: stats.easeFactor,
-          last_reviewed: stats.lastReviewed.toISOString(),
-          next_review: stats.nextReview.toISOString(),
+          last_reviewed: stats.lastReviewed!.toISOString(),
+          next_review: stats.nextReview!.toISOString(),
           lapses: stats.lapses || 0,
         })
         .eq('id', cardId);
@@ -676,7 +676,6 @@ export default function GlobalReview() {
   const currentCard = dueCards[currentCardIndex];
 
   return (
-    <>
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.floatingHeader}>
@@ -887,6 +886,5 @@ export default function GlobalReview() {
         </Animated.View>
       </Modal>
     </SafeAreaView>
-    </>
   );
 }

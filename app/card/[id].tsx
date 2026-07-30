@@ -678,11 +678,8 @@ useFocusEffect(
   // ANIMATION DE COULEUR POUR TOUS LES BOUTONS
   borderColorAnimation.setValue(1);
 
-  // Animation additionnelle selon la difficulté
-  if (difficulty === 'hard') {
-    // Pour "hard", pas d'animation supplémentaire (juste la couleur)
-  } else {
-    // Animation de feedback rapide sur la carte pour "medium" et "easy"
+  // Animation de feedback rapide sur la carte pour "medium" et "easy" (pas pour "hard")
+  if (difficulty !== 'hard') {
     Animated.sequence([
       Animated.timing(scaleAnimation, {
         toValue: 0.95,
