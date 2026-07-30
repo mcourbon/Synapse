@@ -18,6 +18,19 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 
+// Couleurs hardcodées — module level (iOS safe, jamais dans StyleSheet inside component)
+const staticStyles = StyleSheet.create({
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButtonDisabledLight: { backgroundColor: '#ccc' },
+  saveButtonDisabledDark: { backgroundColor: '#404040' },
+  saveButtonTextDisabledLight: { color: '#999' },
+  saveButtonTextDisabledDark: { color: '#888' },
+});
+
 interface AddDeckModalProps {
   visible: boolean;
   onClose: () => void;
@@ -84,17 +97,6 @@ export default function AddDeckModal({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-  },
-  saveButtonDisabled: {
-    backgroundColor: isDark ? '#404040' : '#ccc',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButtonTextDisabled: {
-    color: isDark ? '#888' : '#999',
   },
   scrollView: {
     flex: 1,
@@ -332,13 +334,13 @@ export default function AddDeckModal({
               onPress={handleAddDeck}
               disabled={loading || !name.trim() || name.length > 50 || description.length > 500}
               style={[
-                styles.saveButton, 
-                (loading || !name.trim()) && styles.saveButtonDisabled
+                styles.saveButton,
+                (loading || !name.trim()) && (isDark ? staticStyles.saveButtonDisabledDark : staticStyles.saveButtonDisabledLight)
               ]}
             >
               <Text style={[
-                styles.saveButtonText, 
-                (loading || !name.trim()) && styles.saveButtonTextDisabled
+                staticStyles.saveButtonText,
+                (loading || !name.trim()) && (isDark ? staticStyles.saveButtonTextDisabledDark : staticStyles.saveButtonTextDisabledLight)
               ]}>
                 {loading ? 'Création...' : 'Créer'}
               </Text>

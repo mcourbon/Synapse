@@ -19,6 +19,27 @@ import { useTheme } from '../contexts/ThemeContext';
 import AddDeckModal from './AddDeckModal';
 import { getDeckCardCount, MAX_CARDS_PER_DECK } from '../lib/deckLimits';
 
+// Couleurs hardcodées — module level (iOS safe, jamais dans StyleSheet inside component)
+const staticStyles = StyleSheet.create({
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButtonDisabledLight: { backgroundColor: '#666666' },
+  saveButtonDisabledDark: { backgroundColor: '#404040' },
+  saveButtonTextDisabledLight: { color: '#f5f5f5' },
+  saveButtonTextDisabledDark: { color: '#888888' },
+  createDeckButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deckOptionTextSelected: {
+    color: '#fff',
+  },
+});
+
 interface AddCardModalProps {
   visible: boolean;
   onClose: () => void;
@@ -90,17 +111,6 @@ export default function AddCardModal({
       paddingVertical: 8,
       borderRadius: 8,
     },
-    saveButtonDisabled: {
-      backgroundColor: isDark ? '#404040' : theme.textSecondary,
-    },
-    saveButtonText: {
-      color: '#fff',
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    saveButtonTextDisabled: {
-      color: isDark ? '#888888' : theme.background,
-    },
     modalContent: {
       flex: 1,
       padding: 20,
@@ -149,11 +159,6 @@ export default function AddCardModal({
       borderRadius: 10,
       gap: 8,
     },
-    createDeckButtonText: {
-      color: '#fff',
-      fontSize: 16,
-      fontWeight: '600',
-    },
     deckSelector: {
       marginBottom: 10,
     },
@@ -174,9 +179,6 @@ export default function AddCardModal({
       fontSize: 14,
       fontWeight: '500',
       color: theme.text,
-    },
-    deckOptionTextSelected: {
-      color: '#fff',
     },
     switchButton: {
       flexDirection: 'row',
@@ -530,9 +532,9 @@ export default function AddCardModal({
             <Pressable
               onPress={handleAddCard}
               disabled={loading || !front.trim() || !back.trim()}
-              style={[styles.saveButton, (loading || !front.trim() || !back.trim()) && styles.saveButtonDisabled]}
+              style={[styles.saveButton, (loading || !front.trim() || !back.trim()) && (isDark ? staticStyles.saveButtonDisabledDark : staticStyles.saveButtonDisabledLight)]}
             >
-              <Text style={[styles.saveButtonText, (loading || !front.trim() || !back.trim()) && styles.saveButtonTextDisabled]}>
+              <Text style={[staticStyles.saveButtonText, (loading || !front.trim() || !back.trim()) && (isDark ? staticStyles.saveButtonTextDisabledDark : staticStyles.saveButtonTextDisabledLight)]}>
                 {loading ? 'Ajout...' : 'Ajouter'}
               </Text>
             </Pressable>
@@ -554,7 +556,7 @@ export default function AddCardModal({
                       onPress={() => setShowAddDeckModal(true)}
                     >
                       <Ionicons name="add" size={20} color="#fff" />
-                      <Text style={styles.createDeckButtonText}>Créer ma première collection</Text>
+                      <Text style={staticStyles.createDeckButtonText}>Créer ma première collection</Text>
                     </Pressable>
                   </View>
                 ) : (
@@ -571,7 +573,7 @@ export default function AddCardModal({
                         >
                           <Text style={[
                             styles.deckOptionText,
-                            selectedDeckId === deck.id && styles.deckOptionTextSelected
+                            selectedDeckId === deck.id && staticStyles.deckOptionTextSelected
                           ]}>
                             {deck.name}
                           </Text>
