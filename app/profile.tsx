@@ -165,15 +165,6 @@ const updateUsername = async () => {
       backgroundColor: theme.primary,
       borderRadius: 2,
     },
-    avatar: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: theme.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 15,
-    },
     invisibleIcon: {
       marginRight: 8,
       padding: 6,
@@ -340,12 +331,6 @@ modalSectionTitle: {
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
-  },
-  contactButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.2,
   },
   versionText: {
     textAlign: 'center',
@@ -769,7 +754,7 @@ avatarPlaceholder: {
                 Linking.openURL('mailto:votre.email@example.com?subject=Feedback sur l\'application Flashcards');
               }}
             >
-              <Text style={dynamicStyles.contactButtonText}>Donner mon avis</Text>
+              <Text style={styles.contactButtonText}>Donner mon avis</Text>
             </Pressable>
 
             <Text style={dynamicStyles.versionText}>Vous pouvez également nous contacter pour toute autre question.</Text>
@@ -859,5 +844,11 @@ const styles = StyleSheet.create({
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  contactButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
 });
