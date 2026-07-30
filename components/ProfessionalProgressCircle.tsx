@@ -7,12 +7,12 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 interface ProfessionalProgressCircleProps {
   progress: Animated.Value;
   size?: number;
-  theme: any;
+  isDark: boolean;
   showShadow?: boolean;
   showInnerRing?: boolean;
 }
 
-export default function ProfessionalProgressCircle({ progress, size = 100, theme, showShadow = true, showInnerRing = true }: ProfessionalProgressCircleProps) {
+export default function ProfessionalProgressCircle({ progress, size = 100, isDark, showShadow = true, showInnerRing = true }: ProfessionalProgressCircleProps) {
   const radius = (size - 12) / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -22,8 +22,8 @@ export default function ProfessionalProgressCircle({ progress, size = 100, theme
         <Defs>
           {/* Gradient pour le fond - adapté au thème */}
           <LinearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={theme.isDark ? "#2a2a2a" : "#f8f9fa"} stopOpacity="1" />
-            <Stop offset="100%" stopColor={theme.isDark ? "#1a1a1a" : "#e9ecef"} stopOpacity="1" />
+            <Stop offset="0%" stopColor={isDark ? "#2a2a2a" : "#f8f9fa"} stopOpacity="1" />
+            <Stop offset="100%" stopColor={isDark ? "#1a1a1a" : "#e9ecef"} stopOpacity="1" />
           </LinearGradient>
 
           {/* Gradient pour la progression */}
@@ -36,8 +36,8 @@ export default function ProfessionalProgressCircle({ progress, size = 100, theme
           {/* Ombre pour la profondeur - adapté au thème */}
           {showShadow && (
             <LinearGradient id="shadowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <Stop offset="0%" stopColor={theme.isDark ? "#000000" : "#000000"} stopOpacity={theme.isDark ? 0.3 : 0.1} />
-              <Stop offset="100%" stopColor={theme.isDark ? "#000000" : "#000000"} stopOpacity={theme.isDark ? 0.1 : 0.05} />
+              <Stop offset="0%" stopColor="#000000" stopOpacity={isDark ? 0.3 : 0.1} />
+              <Stop offset="100%" stopColor="#000000" stopOpacity={isDark ? 0.1 : 0.05} />
             </LinearGradient>
           )}
         </Defs>
@@ -83,13 +83,13 @@ export default function ProfessionalProgressCircle({ progress, size = 100, theme
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
 
-        {/* Cercle intérieur pour l'effet 3D - adapté au thème */}
+        {/* Cercle intérieur pour l'effet 3D */}
         {showInnerRing && (
           <Circle
             cx={size / 2}
             cy={size / 2}
             r={radius - 12}
-            stroke={theme.isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.1)"}
+            stroke="rgba(255, 255, 255, 0.1)"
             strokeWidth="1"
             fill="none"
           />

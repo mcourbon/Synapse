@@ -27,7 +27,7 @@ export class SpacedRepetitionSystem {
     currentStats: Partial<CardStats>,
     response: ReviewResponse
   ): CardStats {
-    const stats: CardStats = {
+    const stats = {
       interval: currentStats.interval || 0,
       repetitions: currentStats.repetitions || 0,
       easeFactor: currentStats.easeFactor || this.INITIAL_EASE_FACTOR,

@@ -1,6 +1,5 @@
 // lib/statsTracker.ts
 import { supabase } from './supabase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface ReviewStats {
   userId: string;

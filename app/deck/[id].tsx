@@ -35,7 +35,6 @@ export default function DeckDetail() {
   const [back, setBack] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
   const [currentCategoryInput, setCurrentCategoryInput] = useState(''); // Remplace newCategory
-  const [addingCard, setAddingCard] = useState(false);
   const [editingCard, setEditingCard] = useState(false);
   const [deletingCard, setDeletingCard] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -723,50 +722,6 @@ addCategoryButtonInactive: {
     
     const randomCard = cards[Math.floor(Math.random() * cards.length)];
     router.push(`/card/${randomCard.id}`);
-  };
-
-  const handleAddCard = async () => {
-    if (!front.trim() || !back.trim()) {
-      showError('Veuillez remplir le recto et le verso');
-      return;
-    }
-
-    if (!id || !user) {
-      showError('Impossible d\'ajouter la carte');
-      return;
-    }
-
-    setAddingCard(true);
-
-    try {
-      const { error } = await supabase
-        .from('cards')
-        .insert([
-          {
-            deck_id: id,
-            front: front.trim(),
-            back: back.trim(),
-            categories: categories.length > 0 ? categories : null,
-          }
-        ]);
-
-      if (error) {
-        throw error;
-      }
-
-      setFront('');
-      setBack('');
-      setCategories([]);
-      setCurrentCategoryInput('');
-      setShowAddModal(false);
-      
-      showToast('Carte ajoutée avec succès !', 'success');
-      fetchDeckAndCards();
-    } catch (error: any) {
-      showError(error.message || 'Impossible d\'ajouter la carte');
-    } finally {
-      setAddingCard(false);
-    }
   };
 
   const handleEditCard = async () => {

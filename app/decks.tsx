@@ -466,7 +466,7 @@ const handleDeleteDeck = async () => {
     <View style={[styles.deckActions, { opacity: editMode ? 1 : 0 }]}>
       <Pressable 
         style={styles.editDeckButton}
-        onPress={(e) => {
+        onPress={() => {
           if (editMode) {
             setSelectedDeck(item);
             setNewDeckName(item.name);
@@ -480,7 +480,7 @@ const handleDeleteDeck = async () => {
       </Pressable>
       <Pressable 
         style={styles.deleteDeckButton}
-        onPress={(e) => {
+        onPress={() => {
           if (editMode) {
             setSelectedDeck(item);
             setShowDeleteConfirm(true);

@@ -1,15 +1,15 @@
 // app/card/[id].tsx
-import { View, Text, StyleSheet, Pressable, Animated, Modal, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Modal } from 'react-native';
 import React from 'react';
 import { useEffect, useState, useRef } from 'react';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { SpacedRepetitionSystem, useSpacedRepetition } from '../../utils/spacedRepetition';
+import { SpacedRepetitionSystem } from '../../utils/spacedRepetition';
 import ProfessionalProgressCircle from '../../components/ProfessionalProgressCircle';
 import AnimatedSuccessIcon from '../../components/AnimatedSuccessIcon';
 import StreakFlame from '../../components/StreakFlame';
@@ -45,9 +45,6 @@ export default function CardReview() {
   const checkScaleAnimation = useRef(new Animated.Value(0)).current;
   const modalBackgroundAnimation = useRef(new Animated.Value(0)).current;
   const modalScaleAnimation = useRef(new Animated.Value(0.8)).current;
-
-  // Hook pour la répétition espacée
-  const { processReview, isProcessing } = useSpacedRepetition();
 
   // StyleSheet utilisant le thème complet
   const styles = StyleSheet.create({
@@ -356,31 +353,31 @@ export default function CardReview() {
   // Gestion des raccourcis clavier
 useFocusEffect(
   React.useCallback(() => {
-    const handleKeyPress = (event) => {
+    const handleKeyPress = (event: KeyboardEvent) => {
       // Ignorer si on est dans le modal de fin de session
       if (showEndSessionModal) return;
-      
+
       switch (event.key) {
         case ' ': // Espace pour révéler/masquer la réponse
           event.preventDefault();
           handleToggleAnswer();
           break;
         case '1': // Chiffre 1 pour difficile
-          if (showAnswer && !isProcessing) {
+          if (showAnswer) {
             event.preventDefault();
             animateButton('hard');
             handleDifficultyResponse('hard');
           }
           break;
         case '2': // Chiffre 2 pour moyen
-          if (showAnswer && !isProcessing) {
+          if (showAnswer) {
             event.preventDefault();
             animateButton('medium');
             handleDifficultyResponse('medium');
           }
           break;
         case '3': // Chiffre 3 pour facile
-          if (showAnswer && !isProcessing) {
+          if (showAnswer) {
             event.preventDefault();
             animateButton('easy');
             handleDifficultyResponse('easy');
@@ -392,13 +389,13 @@ useFocusEffect(
     // Ajouter l'event listener
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', handleKeyPress);
-      
+
       // Cleanup
       return () => {
         window.removeEventListener('keydown', handleKeyPress);
       };
     }
-  }, [showAnswer, showEndSessionModal, isProcessing])
+  }, [showAnswer, showEndSessionModal])
 );
 
   async function fetchCardAndDeck() {
@@ -665,10 +662,8 @@ useFocusEffect(
   };
 
   const handleDifficultyResponse = async (difficulty: 'hard' | 'medium' | 'easy') => {
-  if (answeringRef.current || isProcessing || !card) return;
+  if (answeringRef.current || !card) return;
   answeringRef.current = true;
-
-  console.log('Bouton cliqué:', difficulty);
 
   // Changer la couleur du texte immédiatement
   setSelectedDifficulty(difficulty);
@@ -703,7 +698,6 @@ useFocusEffect(
   }
 
   // MODE ENTRAÎNEMENT - Pas de modification des stats réelles
-  console.log('✅ Mode entraînement - Stats non modifiées');
 
   // Gestion différente selon la difficulté
   if (difficulty === 'hard') {
@@ -845,10 +839,9 @@ const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
       </View>
 
       {/* Container principal - Zone cliquable */}
-      <Pressable 
-        style={styles.mainContent} 
+      <Pressable
+        style={styles.mainContent}
         onPress={handleToggleAnswer}
-        activeOpacity={1}
       >
         {/* Carte principale - toujours centrée */}
         <View style={styles.cardContainer}>
@@ -908,7 +901,6 @@ const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
                     animateButton('hard');
                     handleDifficultyResponse('hard');
                   }}
-                  disabled={isProcessing}
                 >
                   <Ionicons 
                     name="close-circle" 
@@ -934,7 +926,6 @@ const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
                     animateButton('medium');
                     handleDifficultyResponse('medium');
                   }}
-                  disabled={isProcessing}
                 >
                   <Ionicons 
                     name="help-circle" 
@@ -960,7 +951,6 @@ const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
                     animateButton('easy');
                     handleDifficultyResponse('easy');
                   }}
-                  disabled={isProcessing}
                 >
                   <Ionicons 
                     name="checkmark-circle" 
@@ -1020,10 +1010,10 @@ const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
             {/* Animation professionnelle avec cercle et icône */}
             <View style={styles.iconContainer}>
               <View style={styles.progressCircleContainer}>
-                <ProfessionalProgressCircle 
-                  progress={circleProgressAnimation} 
-                  size={100} 
-                  theme={theme}
+                <ProfessionalProgressCircle
+                  progress={circleProgressAnimation}
+                  size={100}
+                  isDark={isDark}
                 />
                 <AnimatedSuccessIcon scale={checkScaleAnimation} />
               </View>

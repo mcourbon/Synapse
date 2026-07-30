@@ -29,7 +29,6 @@ export default function GlobalReview() {
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
   const { refreshStats } = useStats();
-  const [sessionStartTime] = useState(new Date());
   const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
 
   // Animations
@@ -234,7 +233,7 @@ export default function GlobalReview() {
     },
     endSessionOverlay: {
       flex: 1,
-      backgroundColor: theme.isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.6)',
+      backgroundColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.6)',
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 20,
@@ -694,10 +693,9 @@ export default function GlobalReview() {
       </View>
 
       {/* Zone cliquable principale */}
-      <Pressable 
-        style={styles.mainContent} 
+      <Pressable
+        style={styles.mainContent}
         onPress={handleToggleAnswer}
-        activeOpacity={1}
       >
         <View style={styles.cardContainer}>
           <Animated.View 
@@ -859,7 +857,7 @@ export default function GlobalReview() {
                 <ProfessionalProgressCircle
                   progress={circleProgressAnimation}
                   size={100}
-                  theme={theme}
+                  isDark={isDark}
                   showShadow={false}
                   showInnerRing={false}
                 />

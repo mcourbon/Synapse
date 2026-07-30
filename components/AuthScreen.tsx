@@ -86,9 +86,6 @@ export default function AuthScreen() {
   const [rateLimited, setRateLimited] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [registrationStep, setRegistrationStep] = useState<'form' | 'confirmation'>('form');
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
-  const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [errorType, setErrorType] = useState<'error' | 'warning' | 'info'>('error');
 
@@ -365,8 +362,6 @@ export default function AuthScreen() {
                     style={[styles.textInput, { outlineWidth: 0 }]}
                     value={email}
                     onChangeText={setEmail}
-                    onFocus={() => setEmailFocused(true)}
-                    onBlur={() => setEmailFocused(false)}
                     placeholder="votre@email.com"
                     placeholderTextColor="#999"
                     keyboardType="email-address"
@@ -393,8 +388,6 @@ export default function AuthScreen() {
                     style={[styles.textInput, { outlineWidth: 0 }]}
                     value={password}
                     onChangeText={setPassword}
-                    onFocus={() => setPasswordFocused(true)}
-                    onBlur={() => setPasswordFocused(false)}
                     placeholder="Entrez votre mot de passe"
                     placeholderTextColor="#999"
                     secureTextEntry={!showPassword}
@@ -460,8 +453,6 @@ export default function AuthScreen() {
                       style={[styles.textInput, { outlineWidth: 0 }]}
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
-                      onFocus={() => setConfirmPasswordFocused(true)}
-                      onBlur={() => setConfirmPasswordFocused(false)}
                       placeholder="Confirmez votre mot de passe"
                       placeholderTextColor="#999"
                       secureTextEntry={!showConfirmPassword}
