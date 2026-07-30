@@ -20,6 +20,20 @@ const staticStyles = StyleSheet.create({
   statValRed: { color: '#EF4444', fontSize: 24, fontWeight: '700' },
   statValBlue: { color: '#3B82F6', fontSize: 24, fontWeight: '700' },
   statValGray: { color: '#8E8E93', fontSize: 24, fontWeight: '700' },
+  statsOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  statsSheetShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 15,
+  },
 });
 
 export default function CardStatsModal({ visible, card, onClose }: CardStatsModalProps) {
@@ -39,24 +53,12 @@ export default function CardStatsModal({ visible, card, onClose }: CardStatsModa
   };
 
   const styles = StyleSheet.create({
-    statsOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.75)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 20,
-    },
     statsSheet: {
       backgroundColor: theme.surface,
       borderRadius: 28,
       width: '100%',
       maxWidth: 420,
       maxHeight: '85%',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.35,
-      shadowRadius: 20,
-      elevation: 15,
       overflow: 'hidden',
     },
     statsModalHeader: {
@@ -174,7 +176,7 @@ export default function CardStatsModal({ visible, card, onClose }: CardStatsModa
     <Modal visible={visible} animationType="none" transparent={true} onRequestClose={handleClose}>
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         <Pressable
-          style={styles.statsOverlay}
+          style={staticStyles.statsOverlay}
           onPressIn={(e: any) => {
             // Le pointerdown est fiable pour savoir où le geste a réellement démarré
             // (contrairement au relâchement, utilisé par une sélection de texte qui dérape).
@@ -185,7 +187,7 @@ export default function CardStatsModal({ visible, card, onClose }: CardStatsModa
           }}
         >
           <Pressable
-            style={[styles.statsSheet, card && {
+            style={[styles.statsSheet, staticStyles.statsSheetShadow, card && {
               borderWidth: 2,
               borderColor: (MASTERY_COLORS[SpacedRepetitionSystem.getCardMastery(
                 card.repetitions || 0,
