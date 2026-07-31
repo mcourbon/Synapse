@@ -203,16 +203,6 @@ export class StatsTracker {
   }
 
   /**
-   * Calcule le taux de réussite
-   */
-  static calculateSuccessRate(stats: any): number {
-    if (!stats || !stats.total_reviews || stats.total_reviews === 0) {
-      return 0;
-    }
-    return Math.round((stats.correct_reviews / stats.total_reviews) * 100);
-  }
-
-  /**
    * Récupère les stats "live" (nombre de cartes, decks, etc.)
    */
   static async getLiveStats(userId: string): Promise<{

@@ -127,10 +127,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { data: null, error };
       }
 
-      
-      if (data.user && !data.user.email_confirmed_at) {
-      }
-
       return { data, error: null };
     } catch (err) {
       const error = err as AuthError;

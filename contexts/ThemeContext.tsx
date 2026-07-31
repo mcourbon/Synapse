@@ -9,37 +9,23 @@ export const lightTheme = {
   background: '#f5f5f5',
   surface: '#ffffff',
   primary: '#007AFF',
-  secondary: '#34C759',
   accent: '#FF9500',
-  
+
   // Textes
   text: '#333333',
   textSecondary: '#666666',
   textMuted: '#999999',
-  
+
   // États
   error: '#FF3B30',
   success: '#34C759',
   warning: '#FF9500',
-  
+
   // Bordures et séparateurs
   border: '#e9ecef',
-  separator: '#eeeeee',
-  
+
   // Ombres
   shadow: '#000000',
-  
-  // Spécifique aux cartes
-  cardBackground: '#ffffff',
-  cardBorder: '#007AFF',
-  
-  // Boutons de difficulté
-  hardBackground: '#FFF5F5',
-  hardBorder: '#FF3B30',
-  mediumBackground: '#FFFBF0',
-  mediumBorder: '#FF9500',
-  easyBackground: '#F0FFF4',
-  easyBorder: '#34C759',
 };
 
 export const darkTheme = {
@@ -47,37 +33,23 @@ export const darkTheme = {
   background: '#1a1a1a',
   surface: '#2d2d30',
   primary: '#0A84FF',
-  secondary: '#30D158',
   accent: '#FF9F0A',
-  
+
   // Textes
   text: '#ffffff',
   textSecondary: '#e1e1e1',
   textMuted: '#a1a1a6',
-  
+
   // États
   error: '#FF453A',
   success: '#30D158',
   warning: '#FF9F0A',
-  
+
   // Bordures et séparateurs
   border: '#484848',
-  separator: '#3a3a3c',
-  
+
   // Ombres
   shadow: '#000000',
-  
-  // Spécifique aux cartes
-  cardBackground: '#2d2d30',
-  cardBorder: '#0A84FF',
-  
-  // Boutons de difficulté
-  hardBackground: '#2d1b1b',
-  hardBorder: '#FF453A',
-  mediumBackground: '#2d2619',
-  mediumBorder: '#FF9F0A',
-  easyBackground: '#1b2d1f',
-  easyBorder: '#30D158',
 };
 
 export type Theme = typeof lightTheme;
@@ -86,7 +58,6 @@ interface ThemeContextType {
   theme: Theme;
   isDark: boolean;
   toggleTheme: () => void;
-  setTheme: (isDark: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -136,11 +107,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     saveTheme(newIsDark);
   };
 
-  const setTheme = (darkMode: boolean) => {
-    setIsDark(darkMode);
-    saveTheme(darkMode);
-  };
-
   const theme = isDark ? darkTheme : lightTheme;
 
   if (isLoading) {
@@ -148,7 +114,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, isDark, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, isDark, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

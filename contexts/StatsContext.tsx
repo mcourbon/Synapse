@@ -8,17 +8,12 @@ export interface UserStats {
   totalCards: number;
   totalDecks: number;
   cardsReviewed: number;
-  currentStreak: number;
   longestStreak: number;
-  totalReviews: number;
-  successRate: number;
   hardReviews: number;
   mediumReviews: number;
   easyReviews: number;
   totalStudyTime: number;
   cardsMastered: number;
-  cardsDifficult: number;
-  studyDays: string[];
   bestAnswerStreak: number;
 }
 
@@ -43,17 +38,12 @@ const defaultStats: UserStats = {
   totalCards: 0,
   totalDecks: 0,
   cardsReviewed: 0,
-  currentStreak: 0,
   longestStreak: 0,
-  totalReviews: 0,
-  successRate: 0,
   hardReviews: 0,
   mediumReviews: 0,
   easyReviews: 0,
   totalStudyTime: 0,
   cardsMastered: 0,
-  cardsDifficult: 0,
-  studyDays: [],
   bestAnswerStreak: 0,
 };
 
@@ -97,17 +87,12 @@ export function StatsProvider({ children }: { children: React.ReactNode }) {
         totalCards: liveStats.totalCards,
         totalDecks: liveStats.totalDecks,
         cardsReviewed: liveStats.cardsReviewed,
-        currentStreak: userStats?.current_streak || 0,
-        successRate: StatsTracker.calculateSuccessRate(userStats),
         longestStreak: userStats?.longest_streak || 0,
-        totalReviews: userStats?.total_reviews || 0,
         hardReviews: userStats?.hard_reviews || 0,
         mediumReviews: userStats?.medium_reviews || 0,
         easyReviews: userStats?.easy_reviews || 0,
         totalStudyTime: userStats?.total_study_time || 0,
         cardsMastered: userStats?.cards_mastered || 0,
-        cardsDifficult: userStats?.cards_difficult || 0,
-        studyDays: userStats?.study_days || [],
         bestAnswerStreak: userStats?.best_answer_streak || 0,
       });
     } catch {
