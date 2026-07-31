@@ -280,35 +280,4 @@ export class StatsTracker {
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${hours}h${minutes > 0 ? ` ${minutes}min` : ''}`;
   }
-
-  /**
-   * Génère les données pour la heatmap (style GitHub)
-   */
-  static generateHeatmapData(studyDays: string[], daysToShow: number = 90): Array<{
-    date: string;
-    count: number;
-  }> {
-    const today = new Date();
-    const heatmapData: Array<{ date: string; count: number }> = [];
-
-    // Créer un compteur de reviews par jour
-    const daysCounts: { [key: string]: number } = {};
-    studyDays.forEach(day => {
-      daysCounts[day] = (daysCounts[day] || 0) + 1;
-    });
-
-    // Générer les derniers X jours
-    for (let i = daysToShow - 1; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-
-      heatmapData.push({
-        date: dateStr,
-        count: daysCounts[dateStr] || 0,
-      });
-    }
-
-    return heatmapData;
-  }
 }

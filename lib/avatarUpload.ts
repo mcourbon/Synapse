@@ -214,21 +214,4 @@ export class AvatarUpload {
 
     return avatarUrl;
   }
-
-  /**
-   * Récupère l'URL de l'avatar de l'utilisateur
-   */
-  static async getUserAvatar(userId: string): Promise<string | null> {
-    const { data, error } = await supabase
-      .from('user_stats')
-      .select('avatar_url')
-      .eq('user_id', userId)
-      .single();
-
-    if (error || !data) {
-      return null;
-    }
-
-    return data.avatar_url;
-  }
 }

@@ -11,7 +11,6 @@ export interface ParsedCard {
 export interface CsvParseResult {
   cards: ParsedCard[];
   skippedRows: number;
-  totalDataRows: number;
 }
 
 const FRONT_HEADERS = ['recto', 'front', 'question'];
@@ -92,7 +91,7 @@ function parseCsvRows(text: string): string[][] {
 export function parseCsvContent(text: string): CsvParseResult {
   const rows = parseCsvRows(text);
   if (rows.length === 0) {
-    return { cards: [], skippedRows: 0, totalDataRows: 0 };
+    return { cards: [], skippedRows: 0 };
   }
 
   const headerCandidate = rows[0].map(normalizeHeader);
@@ -138,5 +137,5 @@ export function parseCsvContent(text: string): CsvParseResult {
     });
   }
 
-  return { cards, skippedRows, totalDataRows: dataRows.length };
+  return { cards, skippedRows };
 }
