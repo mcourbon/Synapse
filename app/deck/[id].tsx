@@ -18,6 +18,25 @@ import { MASTERY_COLORS, MASTERY_LABELS, formatNextReview } from '../../utils/ca
 const staticStyles = StyleSheet.create({
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   badgeText: { fontSize: 11, fontWeight: '600', color: '#fff' },
+  reviewButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButtonDisabledLight: { backgroundColor: '#666666' },
+  saveButtonDisabledDark: { backgroundColor: '#404040' },
+  saveButtonTextDisabledLight: { color: '#f5f5f5' },
+  saveButtonTextDisabledDark: { color: '#888888' },
 });
 
 export default function DeckDetail() {
@@ -129,30 +148,6 @@ titleUnderline: {
   backgroundColor: theme.primary,
   borderRadius: 2,
 },
-  editModeIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: `${theme.primary}20`,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginHorizontal: 20,
-    marginBottom: 10,
-    borderRadius: 8,
-    gap: 8,
-  },
-  editModeText: {
-    fontSize: 14,
-    color: theme.primary,
-    fontWeight: '500',
-    flex: 1,
-    textAlign: 'center',
-  },
-  editModeCancel: {
-    fontSize: 14,
-    color: theme.primary,
-    fontWeight: '600',
-  },
   deckInfo: {
     paddingHorizontal: 20,
     paddingVertical: 0,
@@ -187,11 +182,6 @@ titleUnderline: {
     borderRadius: 12,
     gap: 8,
   },
-  reviewButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
   addButton: {
     flex: 1,
     flexDirection: 'row',
@@ -202,11 +192,6 @@ titleUnderline: {
     paddingHorizontal: 24,
     borderRadius: 12,
     gap: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   listContainer: {
     padding: 20,
@@ -296,45 +281,6 @@ titleUnderline: {
     textAlign: 'center',
     lineHeight: 22,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  optionsMenu: {
-    backgroundColor: theme.surface,
-    borderRadius: 12,
-    paddingVertical: 8,
-    minWidth: 200,
-    shadowColor: theme.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  optionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    gap: 12,
-  },
-  optionText: {
-    fontSize: 16,
-    color: theme.primary,
-    fontWeight: '500',
-  },
-  deleteOptionText: {
-    fontSize: 16,
-    color: theme.error,
-    fontWeight: '500',
-  },
-  optionSeparator: {
-    height: 1,
-    backgroundColor: theme.border,
-    marginHorizontal: 20,
-  },
   modalContainer: {
     flex: 1,
     backgroundColor: theme.background,
@@ -366,17 +312,6 @@ titleUnderline: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-  },
-  saveButtonDisabled: {
-    backgroundColor: isDark ? '#404040' : theme.textSecondary,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButtonTextDisabled: {
-    color: isDark ? '#888888' : theme.background,
   },
   modalContent: {
     flex: 1,
@@ -956,12 +891,12 @@ addCategoryButtonInactive: {
         {cards.length > 0 && (
           <Pressable style={styles.reviewButton} onPress={() => { setEditMode(false); handleStartReview(); }}>
             <Ionicons name="play" size={24} color="#fff" />
-            <Text style={styles.reviewButtonText}>S'entraîner</Text>
+            <Text style={staticStyles.reviewButtonText}>S'entraîner</Text>
           </Pressable>
         )}
         <Pressable style={styles.addButton} onPress={() => { setEditMode(false); setShowAddModal(true); }}>
           <Ionicons name="add" size={24} color="#fff" />
-          <Text style={styles.addButtonText}>Ajouter</Text>
+          <Text style={staticStyles.addButtonText}>Ajouter</Text>
         </Pressable>
       </View>
 
@@ -1060,9 +995,9 @@ addCategoryButtonInactive: {
             if (editingCard || !front.trim() || !back.trim()) return;
             handleEditCard();
           }}
-          style={[styles.saveButton, (editingCard || !front.trim() || !back.trim()) && styles.saveButtonDisabled]}
+          style={[styles.saveButton, (editingCard || !front.trim() || !back.trim()) && (isDark ? staticStyles.saveButtonDisabledDark : staticStyles.saveButtonDisabledLight)]}
         >
-          <Text style={[styles.saveButtonText, (editingCard || !front.trim() || !back.trim()) && styles.saveButtonTextDisabled]}>
+          <Text style={[staticStyles.saveButtonText, (editingCard || !front.trim() || !back.trim()) && (isDark ? staticStyles.saveButtonTextDisabledDark : staticStyles.saveButtonTextDisabledLight)]}>
             {editingCard ? 'Modification...' : 'Modifier'}
           </Text>
         </Pressable>
