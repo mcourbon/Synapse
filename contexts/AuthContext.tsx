@@ -4,6 +4,7 @@ import { Session, User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setGuestMode, isGuestMode } from '../lib/guestMode';
+import { resetLocalData } from '../lib/localDb';
 
 interface AuthContextType {
   user: User | null;
@@ -189,6 +190,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Déconnexion du mode démo
         await AsyncStorage.removeItem('isDemoMode');
         await AsyncStorage.removeItem('demoUser');
+        await resetLocalData();
         setGuestMode(false);
         setSession(null);
         setUser(null);
