@@ -1,10 +1,13 @@
 // app/_layout.tsx
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { StatsProvider } from '../contexts/StatsContext';
 import AuthScreen from '../components/AuthScreen';
 import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
+
+// Routes accessibles sans connexion (ex: page publique exigée par le Play Store)
+const PUBLIC_ROUTES = ['/politique-de-confidentialite'];
 
 // Supprime l'outline natif du navigateur sur les inputs (web uniquement)
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -16,6 +19,8 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 function RootLayoutNav() {
   const { user, loading } = useAuth();
   const { theme } = useTheme();
+  const pathname = usePathname();
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
   // Créer les styles avec le thème dynamique
   const dynamicStyles = StyleSheet.create({
@@ -27,16 +32,18 @@ function RootLayoutNav() {
     },
   });
 
-  if (loading) {
-    return (
-      <View style={dynamicStyles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
-  }
+  if (!isPublicRoute) {
+    if (loading) {
+      return (
+        <View style={dynamicStyles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      );
+    }
 
-  if (!user) {
-    return <AuthScreen />;
+    if (!user) {
+      return <AuthScreen />;
+    }
   }
 
   return (
@@ -46,13 +53,17 @@ function RootLayoutNav() {
       <Stack.Screen name="profile" options={{ headerShown: false }} />
       <Stack.Screen name="deck/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="card/[id]" options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="review/global" 
-        options={{ 
+      <Stack.Screen
+        name="politique-de-confidentialite"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="review/global"
+        options={{
           headerShown: false,
           presentation: 'modal',
           animation: 'slide_from_bottom'
-        }} 
+        }}
       />
     </Stack>
   );

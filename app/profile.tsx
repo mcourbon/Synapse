@@ -731,6 +731,16 @@ avatarPlaceholder: {
             <Text style={dynamicStyles.modalText}>
               Chaque fonctionnalité a été pensée pour optimiser l'apprentissage et la mémorisation, en se basant sur des principes comme la répétition espacée.
             </Text>
+            <Pressable
+              onPress={() => {
+                setShowAboutModal(false);
+                router.push('/politique-de-confidentialite');
+              }}
+            >
+              <Text style={[dynamicStyles.modalText, { color: theme.primary, fontWeight: '600' }]}>
+                Politique de confidentialité
+              </Text>
+            </Pressable>
             <Text style={dynamicStyles.versionText}>Version 1.0.0</Text>
           </InfoModal>
 
@@ -751,7 +761,7 @@ avatarPlaceholder: {
               style={dynamicStyles.contactButton}
               onPress={() => {
                 setShowHelpModal(false);
-                Linking.openURL('mailto:votre.email@example.com?subject=Feedback sur l\'application Flashcards');
+                Linking.openURL('mailto:synapse.contact.app@gmail.com?subject=Feedback sur Synapse');
               }}
             >
               <Text style={styles.contactButtonText}>Donner mon avis</Text>
