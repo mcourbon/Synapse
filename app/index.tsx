@@ -10,7 +10,7 @@ import AddCardModal from '../components/AddCardModal';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import React from 'react';
-import { SpacedRepetitionSystem } from '../utils/spacedRepetition';
+import { isDue } from '../utils/fsrs';
 
 export default function Home() {
   const router = useRouter();
@@ -197,9 +197,9 @@ export default function Home() {
 
       if (!allCards) return [];
 
-      // Filtrer les cartes dues avec SpacedRepetitionSystem
+      // Filtrer les cartes dues
       const dueCards = allCards.filter(card => {
-        return SpacedRepetitionSystem.isDue(card.next_review);
+        return isDue(card.next_review);
       });
 
       return dueCards;

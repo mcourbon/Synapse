@@ -9,7 +9,7 @@ import { supabase } from '../../lib/supabase';
 import { Card } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { SpacedRepetitionSystem } from '../../utils/spacedRepetition';
+import { getCardMastery, difficultyToEasePercent } from '../../utils/fsrs';
 import ProfessionalProgressCircle from '../../components/ProfessionalProgressCircle';
 import AnimatedSuccessIcon from '../../components/AnimatedSuccessIcon';
 import StreakFlame from '../../components/StreakFlame';
@@ -973,11 +973,12 @@ const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
             {card && (
               <View style={styles.cardStatsContainer}>
                 <Text style={styles.cardStatsText}>
-                  Win Streak: {card.repetitions || 0} • 
-                  Facilité: {((card.ease_factor || 2.5) * 100 - 250).toFixed(0)}% •
-                  Statut: {SpacedRepetitionSystem.getCardMastery(
-                    card.repetitions || 0, 
-                    card.ease_factor || 2.5
+                  Win Streak: {card.repetitions || 0} •
+                  Facilité: {difficultyToEasePercent(card.difficulty) ?? '—'}% •
+                  Statut: {getCardMastery(
+                    card.stability,
+                    card.difficulty,
+                    card.lapses || 0
                   )}
                 </Text>
               </View>

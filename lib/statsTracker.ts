@@ -153,12 +153,13 @@ export class StatsTracker {
       const deckIds = decks.map(d => d.id);
 
       // ✅ 2. Compter les cartes maîtrisées avec .in()
+      // Seuils alignés sur utils/fsrs.ts getCardMastery() : "maîtrisé" = stabilité >= 21j et difficulté <= 6.
       const { count: masteredCount } = await supabase
         .from('cards')
         .select('id', { count: 'exact', head: true })
         .in('deck_id', deckIds)
-        .gte('repetitions', 6)
-        .gte('ease_factor', 2.3);
+        .gte('stability', 21)
+        .lte('difficulty', 6);
 
       // ✅ 3. Compter les cartes difficiles avec .in()
       const { count: difficultCount } = await supabase

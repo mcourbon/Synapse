@@ -8,7 +8,7 @@ import * as TaskManager from 'expo-task-manager';
 import * as BackgroundTask from 'expo-background-task';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
-import { SpacedRepetitionSystem } from '../utils/spacedRepetition';
+import { isDue } from '../utils/fsrs';
 
 export const NOTIFICATIONS_ENABLED_KEY = 'reviewRemindersEnabled';
 const BACKGROUND_TASK_NAME = 'synapse-due-cards-check';
@@ -36,7 +36,7 @@ async function getDueCardsCount(): Promise<number> {
 
   if (error || !cards) return 0;
 
-  return cards.filter(card => SpacedRepetitionSystem.isDue(card.next_review)).length;
+  return cards.filter(card => isDue(card.next_review)).length;
 }
 
 // Doit être défini au niveau module (pas dans un composant) pour que l'OS puisse

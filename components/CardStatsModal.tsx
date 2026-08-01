@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { Card } from '../types/database';
-import { SpacedRepetitionSystem } from '../utils/spacedRepetition';
+import { getCardMastery, difficultyToEasePercent } from '../utils/fsrs';
 import { MASTERY_COLORS, MASTERY_LABELS, formatNextReview } from '../utils/cardMastery';
 
 interface CardStatsModalProps {
@@ -189,25 +189,25 @@ export default function CardStatsModal({ visible, card, onClose }: CardStatsModa
           <Pressable
             style={[styles.statsSheet, staticStyles.statsSheetShadow, card && {
               borderWidth: 2,
-              borderColor: (MASTERY_COLORS[SpacedRepetitionSystem.getCardMastery(
-                card.repetitions || 0,
-                card.ease_factor || 2.5,
+              borderColor: (MASTERY_COLORS[getCardMastery(
+                card.stability,
+                card.difficulty,
                 card.lapses || 0
               )] ?? '#8E8E93') + '70',
             }]}
             onPress={e => e.stopPropagation()}
           >
             {card && (() => {
-              const mastery = SpacedRepetitionSystem.getCardMastery(
-                card.repetitions || 0,
-                card.ease_factor || 2.5,
+              const mastery = getCardMastery(
+                card.stability,
+                card.difficulty,
                 card.lapses || 0
               );
               const masteryColor = MASTERY_COLORS[mastery] ?? '#8E8E93';
               const streak = card.repetitions || 0;
               const lapses = card.lapses || 0;
-              const ease = Math.round(((card.ease_factor || 2.5) - 2.5) * 100);
-              const easeLabel = ease >= 0 ? `+${ease}%` : `${ease}%`;
+              const ease = difficultyToEasePercent(card.difficulty);
+              const easeLabel = ease == null ? '—' : `${ease}%`;
               const nextReviewLabel = formatNextReview(card.next_review);
               const interval = card.interval || 0;
               const neverReviewed = !card.repetitions && !card.last_reviewed;
@@ -255,7 +255,7 @@ export default function CardStatsModal({ visible, card, onClose }: CardStatsModa
                       <View style={styles.statsDividerH} />
                       <View style={styles.statsRow}>
                         <View style={styles.statsCell}>
-                          <Text style={ease >= 0 ? staticStyles.statValBlue : staticStyles.statValRed}>{easeLabel}</Text>
+                          <Text style={ease == null ? staticStyles.statValGray : ease >= 50 ? staticStyles.statValBlue : staticStyles.statValRed}>{easeLabel}</Text>
                           <Text style={styles.statsCellLabel}>Facilité</Text>
                         </View>
                         <View style={styles.statsDividerV} />

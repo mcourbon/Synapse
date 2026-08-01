@@ -9,7 +9,7 @@ import { Card } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useStats } from '../../contexts/StatsContext';
-import { SpacedRepetitionSystem, useSpacedRepetition, CardStats } from '../../utils/spacedRepetition';
+import { scheduleNext, isDue, getCardMastery, difficultyToEasePercent } from '../../utils/fsrs';
 import { StatsTracker } from '../../lib/statsTracker';
 import StreakFlame from '../../components/StreakFlame';
 import ProfessionalProgressCircle from '../../components/ProfessionalProgressCircle';
@@ -59,7 +59,7 @@ export default function GlobalReview() {
   const modalBackgroundAnimation = useRef(new Animated.Value(0)).current;
   const modalScaleAnimation = useRef(new Animated.Value(0.8)).current;
 
-  const { processReview, isProcessing } = useSpacedRepetition();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const styles = StyleSheet.create({
     container: {
@@ -337,7 +337,7 @@ export default function GlobalReview() {
 
       // Filtrer les cartes dues (incluant les nouvelles cartes)
       const dueCardsList = allCards.filter(card => {
-        return SpacedRepetitionSystem.isDue(card.next_review);
+        return isDue(card.next_review);
       });
 
       if (dueCardsList.length === 0) {
@@ -485,108 +485,107 @@ export default function GlobalReview() {
       ]).start();
     }
 
-    const currentStats = {
-      interval: card.interval || 1,
-      repetitions: card.repetitions || 0,
-      easeFactor: card.ease_factor || 2.5,
-      lapses: card.lapses || 0,
-      lastReviewed: card.last_reviewed ? new Date(card.last_reviewed) : undefined,
-      nextReview: card.next_review ? new Date(card.next_review) : undefined,
-    };
+    const newRepetitions = difficulty === 'hard' ? 0 : (card.repetitions || 0) + 1;
 
-    const updateCard = async (cardId: string, stats: CardStats) => {
+    setIsProcessing(true);
+    try {
+      const result = scheduleNext(
+        {
+          stability: card.stability ?? null,
+          difficulty: card.difficulty ?? null,
+          lastReviewed: card.last_reviewed,
+          lapses: card.lapses || 0,
+        },
+        difficulty
+      );
+
       const { error } = await supabase
         .from('cards')
         .update({
-          interval: stats.interval,
-          repetitions: stats.repetitions,
-          ease_factor: stats.easeFactor,
-          last_reviewed: stats.lastReviewed!.toISOString(),
-          next_review: stats.nextReview!.toISOString(),
-          lapses: stats.lapses || 0,
+          stability: result.stability,
+          difficulty: result.difficulty,
+          interval: result.interval,
+          repetitions: newRepetitions,
+          last_reviewed: result.lastReviewed.toISOString(),
+          next_review: result.nextReview.toISOString(),
+          lapses: result.lapses,
         })
-        .eq('id', cardId);
+        .eq('id', card.id);
 
       if (error) {
         throw new Error('Erreur lors de la mise à jour');
       }
-    };
 
-    try {
-      const result = await processReview(card.id, difficulty, currentStats, updateCard);
+      // Tracker les stats utilisateur
+      const studyTime = Math.floor((new Date().getTime() - cardStartTime.getTime()) / 1000);
 
-      if (result?.success) {
-        // Tracker les stats utilisateur
-        const studyTime = Math.floor((new Date().getTime() - cardStartTime.getTime()) / 1000);
-        
-        await StatsTracker.trackReview({
-          userId: user!.id,
-          response: difficulty,
-          cardId: card.id,
-          deckId: card.deck_id,
-          studyTime: studyTime,
-        });
+      await StatsTracker.trackReview({
+        userId: user!.id,
+        response: difficulty,
+        cardId: card.id,
+        deckId: card.deck_id,
+        studyTime: studyTime,
+      });
 
-        setDueCards(prevCards => 
-            prevCards.map((c, index) => 
-                index === currentCardIndex 
-                ? {
-                    ...c,
-                    interval: result.stats?.interval ?? c.interval,
-                    repetitions: result.stats?.repetitions ?? c.repetitions,
-                    ease_factor: result.stats?.easeFactor ?? c.ease_factor,
-                    last_reviewed: result.stats?.lastReviewed?.toISOString() ?? c.last_reviewed,
-                    next_review: result.stats?.nextReview?.toISOString() ?? c.next_review,
-                    lapses: result.stats?.lapses ?? c.lapses ?? 0,
-                    }
-                : c
-            )
-        );
+      setDueCards(prevCards =>
+          prevCards.map((c, index) =>
+              index === currentCardIndex
+              ? {
+                  ...c,
+                  stability: result.stability,
+                  difficulty: result.difficulty,
+                  interval: result.interval,
+                  repetitions: newRepetitions,
+                  last_reviewed: result.lastReviewed.toISOString(),
+                  next_review: result.nextReview.toISOString(),
+                  lapses: result.lapses,
+                  }
+              : c
+          )
+      );
 
-        setTotalCardsReviewed(prev => prev + 1);
-        
-        if (difficulty === 'hard') {
-          // Pour "hard", rester sur la même carte
-          setTimeout(() => {
-            setShowAnswer(false);
-            setSelectedDifficulty(null);
-            fadeAnimation.setValue(0);
-            setCardStartTime(new Date());
-            
-            Animated.timing(borderColorAnimation, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: false,
-            }).start();
-            answeringRef.current = false;
-          }, 1000);
-        } else {
-          // Pour "medium" et "easy", passer à la suivante
-          setTimeout(() => {
-            Animated.timing(borderColorAnimation, {
-              toValue: 0,
-              duration: 150,
-              useNativeDriver: false,
-            }).start();
+      setTotalCardsReviewed(prev => prev + 1);
 
-            Animated.timing(scaleAnimation, {
-              toValue: 0,
-              duration: 200,
-              useNativeDriver: true,
-            }).start(() => {
-              setCardStartTime(new Date());
-              goToNextCard();
-              answeringRef.current = false;
-            });
-          }, 500);
-        }
+      if (difficulty === 'hard') {
+        // Pour "hard", rester sur la même carte
+        setTimeout(() => {
+          setShowAnswer(false);
+          setSelectedDifficulty(null);
+          fadeAnimation.setValue(0);
+          setCardStartTime(new Date());
+
+          Animated.timing(borderColorAnimation, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: false,
+          }).start();
+          answeringRef.current = false;
+        }, 1000);
       } else {
-        goToNextCard();
-        answeringRef.current = false;
+        // Pour "medium" et "easy", passer à la suivante
+        setTimeout(() => {
+          Animated.timing(borderColorAnimation, {
+            toValue: 0,
+            duration: 150,
+            useNativeDriver: false,
+          }).start();
+
+          Animated.timing(scaleAnimation, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            setCardStartTime(new Date());
+            goToNextCard();
+            answeringRef.current = false;
+          });
+        }, 500);
       }
     } catch (error) {
       goToNextCard();
       answeringRef.current = false;
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -818,13 +817,13 @@ export default function GlobalReview() {
             {/* Stats de la carte */}
             <View style={styles.cardStatsContainer}>
              <Text style={styles.cardStatsText}>
-                Win Streak: {currentCard.repetitions || 0} • 
-                Lapses: {currentCard.lapses || 0} • 
-                Facilité: {((currentCard.ease_factor || 2.5) * 100 - 250).toFixed(0)}% •
-                Statut: {SpacedRepetitionSystem.getCardMastery(
-                  currentCard.repetitions || 0, 
-                  currentCard.ease_factor || 2.5,
-                  currentCard.lapses || 0  // ⭐ PASSER LAPSES
+                Win Streak: {currentCard.repetitions || 0} •
+                Lapses: {currentCard.lapses || 0} •
+                Facilité: {difficultyToEasePercent(currentCard.difficulty) ?? '—'}% •
+                Statut: {getCardMastery(
+                  currentCard.stability,
+                  currentCard.difficulty,
+                  currentCard.lapses || 0
                 )}
               </Text>
             </View>

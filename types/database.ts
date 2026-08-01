@@ -18,13 +18,13 @@ export interface Card {
   updated_at?: string;
   // Propriétés optionnelles pour la spaced repetition
   next_review?: string;
-  difficulty?: number;
-  review_count?: number;
   interval?: number;
   repetitions?: number;
-  ease_factor?: number;
   last_reviewed?: string;
-  lapses?: number; // ⭐ AJOUT
+  lapses?: number;
+  // FSRS
+  stability?: number | null;
+  difficulty?: number | null;
   // Relation avec le deck
   decks?: Deck;
   categories?: string[];

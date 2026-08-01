@@ -11,7 +11,7 @@ import AddCardModal from '../../components/AddCardModal';
 import ConfirmModal from '../../components/ConfirmModal';
 import Toast from '../../components/Toast';
 import CardStatsModal from '../../components/CardStatsModal';
-import { SpacedRepetitionSystem } from '../../utils/spacedRepetition';
+import { getCardMastery } from '../../utils/fsrs';
 import { MASTERY_COLORS, MASTERY_LABELS, formatNextReview } from '../../utils/cardMastery';
 
 // Couleurs de statut — module level (iOS safe, jamais dans StyleSheet inside component)
@@ -760,9 +760,9 @@ addCategoryButtonInactive: {
   };
 
   const renderCard = ({ item }: { item: Card }) => {
-    const mastery = SpacedRepetitionSystem.getCardMastery(
-      item.repetitions || 0,
-      item.ease_factor || 2.5,
+    const mastery = getCardMastery(
+      item.stability,
+      item.difficulty,
       item.lapses || 0
     );
     const masteryColor = MASTERY_COLORS[mastery] ?? '#8E8E93';

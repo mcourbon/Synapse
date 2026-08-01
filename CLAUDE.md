@@ -60,15 +60,17 @@ All screens use `headerShown: false`. Auth is enforced at the root layout level 
 
 Single client export. Tables: `decks`, `cards`, `user_stats`. Storage bucket: `avatars` (path pattern: `{userId}/avatar-{timestamp}.{ext}`).
 
-### Spaced Repetition (`utils/spacedRepetition.ts`)
+### Spaced Repetition (`utils/fsrs.ts`)
 
-SM-2 variant. Three responses: `hard` / `medium` / `easy`. Cards have two phases: **learning** (short intervals) and **mature** (interval ≥ 21 days). Hard responses on mature cards increment `lapses` and halve the interval. Includes ±5% fuzz factor to prevent review clustering.
+FSRS (Free Spaced Repetition Scheduler), FSRS-4.5 default weights. Three responses: `hard` / `medium` / `easy`, mapped to FSRS grades Again(1)/Good(3)/Easy(4). Models memory via `stability` (days until recall probability decays to 90%) and `difficulty` (1–10). `hard` doesn't apply the computed long-term interval — it re-queues the card ~5 minutes later, same UX as the old system. Includes ±5% fuzz factor to prevent review clustering.
 
-Key card fields: `repetitions`, `ease_factor` (1.3–3.0, init 2.5), `interval` (days), `lapses`, `next_review`.
+Key card fields: `stability`, `difficulty` (both nullable — new/unreviewed cards), `interval` (days), `lapses`, `next_review`. `repetitions` is a UI-only "win streak" counter (increments on success, resets on `hard`), not consumed by the scheduling algorithm itself.
+
+Migrated from a prior SM-2 implementation (`utils/spacedRepetition.ts`, deleted); existing cards were **not** migrated/approximated — they start fresh under FSRS (`stability`/`difficulty` null) at their next review.
 
 ### Stats (`lib/statsTracker.ts`)
 
-Tracks per-user: streaks, `study_days` (JSONB array of ISO dates for heatmap), hard/medium/easy review counts, total study time (seconds), `cards_mastered` (≥6 reps, ease_factor ≥ 2.3), `cards_difficult` (≥3 lapses). All written to `user_stats` table.
+Tracks per-user: streaks, `study_days` (JSONB array of ISO dates for heatmap), hard/medium/easy review counts, total study time (seconds), `cards_mastered` (stability ≥ 21 days and difficulty ≤ 6), `cards_difficult` (≥3 lapses). All written to `user_stats` table.
 
 ### Avatar Upload (`lib/avatarUpload.ts`)
 
