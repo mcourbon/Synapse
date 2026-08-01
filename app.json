@@ -33,7 +33,15 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-background-task",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/adaptive-icon.png",
+          "color": "#007AFF"
+        }
+      ]
     ],
     "scheme": "synapse",
     "platforms": [

@@ -15,6 +15,7 @@ import InfoModal from '../components/InfoModal';
 import StatTile from '../components/StatTile';
 import ConfirmModal from '../components/ConfirmModal';
 import ImportCsvModal from '../components/ImportCsvModal';
+import { enableReviewReminders, disableReviewReminders, areReviewRemindersEnabled } from '../lib/notifications';
 
 export default function Profile() {
   const { user, signOut } = useAuth();
@@ -23,16 +24,21 @@ export default function Profile() {
   const router = useRouter();
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [updatingNotifications, setUpdatingNotifications] = useState(false);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
   const usernameInputRef = useRef<TextInput>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  useEffect(() => {
+    areReviewRemindersEnabled().then(setNotificationsEnabled);
+  }, []);
 
   // Focus sur l'input quand on commence à éditer
   useEffect(() => {
@@ -109,6 +115,31 @@ const confirmDeleteAccount = async () => {
     Alert.alert('Erreur', error.message || 'Impossible de supprimer le compte. Réessayez plus tard.');
   } finally {
     setDeletingAccount(false);
+  }
+};
+
+const handleToggleNotifications = async (value: boolean) => {
+  setUpdatingNotifications(true);
+  try {
+    if (value) {
+      const granted = await enableReviewReminders();
+      if (!granted) {
+        Alert.alert(
+          'Permission refusée',
+          'Autorisez les notifications dans les paramètres de votre téléphone pour activer les rappels.'
+        );
+        setNotificationsEnabled(false);
+        return;
+      }
+      setNotificationsEnabled(true);
+    } else {
+      await disableReviewReminders();
+      setNotificationsEnabled(false);
+    }
+  } catch {
+    Alert.alert('Erreur', 'Impossible de mettre à jour les rappels de révision.');
+  } finally {
+    setUpdatingNotifications(false);
   }
 };
 
@@ -369,27 +400,6 @@ modalSectionTitle: {
     opacity: 0.6,
     paddingHorizontal: 24,
     paddingBottom: 24,
-  },
-  notificationInfoContainer: {
-    backgroundColor: theme.warning + '15',
-    marginHorizontal: 24,
-    padding: 20,
-    borderRadius: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: theme.warning,
-    marginBottom: 20,
-    shadowColor: theme.warning,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  notificationInfoText: {
-    fontSize: 15,
-    color: theme.text,
-    lineHeight: 22,
-    fontWeight: '500',
-    textAlign: 'center',
   },
     fullWidthCard: {
     backgroundColor: theme.surface,
@@ -658,15 +668,22 @@ avatarPlaceholder: {
               <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
             </Pressable>
 
-            <Pressable
-              style={dynamicStyles.settingItem}
-              onPress={() => setShowNotificationsModal(true)}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="notifications-outline" size={24} color={theme.textSecondary} />
-                <Text style={dynamicStyles.settingText}>Notifications</Text>
+            {!(user as any)?.isGuest && (
+              <View style={dynamicStyles.settingItem}>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="notifications-outline" size={24} color={theme.textSecondary} />
+                  <Text style={dynamicStyles.settingText}>Rappels de révision</Text>
+                </View>
+                <Switch
+                  value={notificationsEnabled}
+                  onValueChange={handleToggleNotifications}
+                  disabled={updatingNotifications}
+                  trackColor={{ false: theme.border, true: theme.primary }}
+                  thumbColor={notificationsEnabled ? '#fff' : '#f4f3f4'}
+                  ios_backgroundColor={theme.border}
+                />
               </View>
-              <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-            </Pressable>
+            )}
 
             {/* Dark Mode Setting avec Switch */}
             <View style={dynamicStyles.settingItem}>
@@ -726,31 +743,6 @@ avatarPlaceholder: {
             </Pressable>
           )}
         </ScrollView>
-
-          {/* Notifications Modal */}
-          <InfoModal
-            visible={showNotificationsModal}
-            onClose={() => setShowNotificationsModal(false)}
-            title="Notifications"
-            icon="notifications-off"
-            iconColor={theme.textSecondary}
-          >
-            <Text style={dynamicStyles.modalSectionTitle}>Fonctionnalité à venir</Text>
-
-            <View style={dynamicStyles.notificationInfoContainer}>
-              <Text style={dynamicStyles.notificationInfoText}>
-                Les notifications ne sont pas encore disponibles dans cette version de l'application.
-              </Text>
-            </View>
-
-            <Text style={dynamicStyles.modalText}>
-              Cette fonctionnalité est en cours de développement et sera bientôt disponible pour vous rappeler vos sessions de révision et vous aider à maintenir votre routine d'apprentissage.
-            </Text>
-
-            <Text style={dynamicStyles.modalText}>
-              En attendant, nous vous encourageons à créer votre propre routine de révision pour maximiser vos résultats !
-            </Text>
-          </InfoModal>
 
           {/* About Modal */}
           <InfoModal

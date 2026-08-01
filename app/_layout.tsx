@@ -5,6 +5,9 @@ import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { StatsProvider } from '../contexts/StatsContext';
 import AuthScreen from '../components/AuthScreen';
 import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
+// Import pour effet de bord : enregistre la tâche de fond des rappels de révision
+// (doit être chargé dès le démarrage pour que l'OS puisse la retrouver en arrière-plan).
+import '../lib/notifications';
 
 // Routes accessibles sans connexion (ex: page publique exigée par le Play Store)
 const PUBLIC_ROUTES = ['/politique-de-confidentialite'];
