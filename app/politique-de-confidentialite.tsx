@@ -111,8 +111,8 @@ export default function PolitiqueConfidentialite() {
           <Text style={styles.updatedText}>Dernière mise à jour : {LAST_UPDATED}</Text>
 
           <Text style={styles.p}>
-            Synapse est une application de révision par cartes (flashcards) avec répétition espacée, développée et éditée par
-            Marc-Antoine Courbon. Cette page explique quelles données sont collectées, pourquoi, et comment les contrôler.
+            Synapse est une application de révision par cartes (flashcards) avec répétition espacée. Cette page explique
+            quelles données sont collectées, pourquoi, et comment les contrôler.
           </Text>
 
           <Text style={styles.h2}>Données collectées</Text>
