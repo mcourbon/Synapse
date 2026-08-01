@@ -26,6 +26,8 @@ export default function Profile() {
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
@@ -89,6 +91,24 @@ const confirmLogout = async () => {
   try {
     await signOut();
   } catch {
+  }
+};
+
+const handleDeleteAccount = () => {
+  setShowDeleteAccountModal(true);
+};
+
+const confirmDeleteAccount = async () => {
+  setDeletingAccount(true);
+  try {
+    const { error } = await supabase.functions.invoke('delete-account');
+    if (error) throw error;
+    setShowDeleteAccountModal(false);
+    await signOut();
+  } catch (error: any) {
+    Alert.alert('Erreur', error.message || 'Impossible de supprimer le compte. Réessayez plus tard.');
+  } finally {
+    setDeletingAccount(false);
   }
 };
 
@@ -301,6 +321,16 @@ const updateUsername = async () => {
       fontSize: 16,
       color: theme.error,
       fontWeight: '600',
+    },
+    deleteAccountButton: {
+      alignItems: 'center',
+      marginTop: 16,
+      marginHorizontal: 20,
+    },
+    deleteAccountText: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      textDecorationLine: 'underline',
     },
 modalSectionTitle: {
     fontSize: 20,
@@ -689,6 +719,12 @@ avatarPlaceholder: {
             <Ionicons name="log-out-outline" size={24} color={theme.error} />
             <Text style={dynamicStyles.logoutText}>Se déconnecter</Text>
           </Pressable>
+
+          {!(user as any)?.isGuest && (
+            <Pressable style={dynamicStyles.deleteAccountButton} onPress={handleDeleteAccount}>
+              <Text style={dynamicStyles.deleteAccountText}>Supprimer mon compte</Text>
+            </Pressable>
+          )}
         </ScrollView>
 
           {/* Notifications Modal */}
@@ -780,6 +816,19 @@ avatarPlaceholder: {
             confirmText="Déconnexion"
             cancelText="Annuler"
             confirmColor={theme.error}
+          />
+
+          {/* Delete Account Modal */}
+          <ConfirmModal
+            visible={showDeleteAccountModal}
+            title="Supprimer le compte"
+            message="Cette action est irréversible : votre compte, vos collections, vos cartes et vos statistiques seront définitivement supprimés."
+            onConfirm={confirmDeleteAccount}
+            onCancel={() => setShowDeleteAccountModal(false)}
+            confirmText="Supprimer définitivement"
+            cancelText="Annuler"
+            confirmColor={theme.error}
+            isLoading={deletingAccount}
           />
 
           {/* Import CSV Modal */}

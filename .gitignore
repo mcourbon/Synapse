@@ -40,3 +40,6 @@ yarn-error.*
 
 # Claude Code
 .claude/
+
+# Supabase CLI local cache
+supabase/.temp/
