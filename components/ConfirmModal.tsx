@@ -79,6 +79,7 @@ export default function ConfirmModal({
       paddingHorizontal: 20,
       borderRadius: 8,
       alignItems: 'center',
+      justifyContent: 'center',
     },
     cancelConfirmButton: {
       backgroundColor: theme.border,
