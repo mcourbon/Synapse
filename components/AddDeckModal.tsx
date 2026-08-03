@@ -360,8 +360,9 @@ export default function AddDeckModal({
                       name.length > 50 && { borderColor: '#E53E3E' }
                     ]}
                   value={name}
-                  onChangeText={setName} 
+                  onChangeText={setName}
                   placeholder="Ex: Vocabulaire anglais, Histoire..."
+                  placeholderTextColor={theme.textMuted}
                   autoFocus
                   editable={!loading}
                   maxLength={100}
@@ -395,6 +396,7 @@ export default function AddDeckModal({
                   value={description}
                   onChangeText={setDescription}
                   placeholder="Décrivez brièvement le contenu de cette collection..."
+                  placeholderTextColor={theme.textMuted}
                   multiline
                   numberOfLines={4}
                   textAlignVertical="top"

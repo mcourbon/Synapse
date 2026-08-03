@@ -390,6 +390,7 @@ export default function ImportCsvModal({ visible, onClose, onImported }: ImportC
                 value={newDeckName}
                 onChangeText={setNewDeckName}
                 placeholder="Nom de la collection"
+                placeholderTextColor={theme.textMuted}
                 maxLength={50}
                 selectionColor="#007AFF"
                 underlineColorAndroid="transparent"

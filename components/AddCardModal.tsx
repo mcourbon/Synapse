@@ -602,6 +602,7 @@ export default function AddCardModal({
                     value={front}
                     onChangeText={setFront}
                     placeholder="Tapez votre question..."
+                    placeholderTextColor={theme.textMuted}
                     multiline
                     numberOfLines={4}
                     textAlignVertical="top"
@@ -619,6 +620,7 @@ export default function AddCardModal({
                     value={back}
                     onChangeText={setBack}
                     placeholder="Tapez votre réponse..."
+                    placeholderTextColor={theme.textMuted}
                     multiline
                     numberOfLines={4}
                     textAlignVertical="top"
@@ -656,6 +658,7 @@ export default function AddCardModal({
                         value={currentCategoryInput}
                         onChangeText={handleCategoryInputChange}
                         placeholder="Ajouter une catégorie..."
+                        placeholderTextColor={theme.textMuted}
                         returnKeyType="done"
                         autoCapitalize="words"
                         onSubmitEditing={handleCategoryInputSubmit}

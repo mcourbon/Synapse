@@ -590,6 +590,7 @@ const handleDeleteDeck = async () => {
         autoFocus
         maxLength={100}
         placeholder="Nom de la collection"
+        placeholderTextColor={theme.textMuted}
         selectionColor="#007AFF"
         underlineColorAndroid="transparent"
       />
@@ -609,6 +610,7 @@ const handleDeleteDeck = async () => {
         value={newDeckDescription}
         onChangeText={setNewDeckDescription}
         placeholder="Description de la collection"
+        placeholderTextColor={theme.textMuted}
         selectionColor="#007AFF"
         underlineColorAndroid="transparent"
         multiline

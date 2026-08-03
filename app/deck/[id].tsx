@@ -1012,6 +1012,7 @@ addCategoryButtonInactive: {
             value={front}
             onChangeText={setFront}
             placeholder="Tapez votre question..."
+            placeholderTextColor={theme.textMuted}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
@@ -1029,6 +1030,7 @@ addCategoryButtonInactive: {
             value={back}
             onChangeText={setBack}
             placeholder="Tapez votre réponse..."
+            placeholderTextColor={theme.textMuted}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
@@ -1066,6 +1068,7 @@ addCategoryButtonInactive: {
                 value={currentCategoryInput}
                 onChangeText={handleCategoryInputChange}
                 placeholder="Ajouter une catégorie..."
+                placeholderTextColor={theme.textMuted}
                 returnKeyType="done"
                 autoCapitalize="words"
                 onSubmitEditing={handleCategoryInputSubmit}
