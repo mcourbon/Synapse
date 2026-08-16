@@ -26,7 +26,7 @@
       "package": "com.tchitchipa.synapse",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#007AFF"
       },
       "runtimeVersion": {
         "policy": "appVersion"

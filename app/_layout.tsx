@@ -50,7 +50,10 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack>
+    // Android dessine en edge-to-edge (SDK 53) : sans contentStyle, la zone sous la
+    // barre de statut / l'encoche caméra reste peinte en blanc (fond de fenêtre natif
+    // par défaut) au lieu du fond du thème — visible en haut d'écran sur Pixel.
+    <Stack screenOptions={{ contentStyle: { backgroundColor: theme.background } }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="decks" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={{ headerShown: false }} />
