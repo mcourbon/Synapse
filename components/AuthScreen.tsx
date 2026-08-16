@@ -14,7 +14,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 
 // Validation du mot de passe
@@ -289,7 +289,10 @@ export default function AuthScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.logo}>🧠</Text>
+            {/* Icône vectorielle plutôt qu'un emoji brut : chaque OS a sa propre police
+                d'emoji (Apple Color Emoji sur Mac/web, Noto Color Emoji sur Android) donc
+                le rendu diffère fortement d'une plateforme à l'autre. */}
+            <MaterialCommunityIcons name="brain" size={64} color="#007AFF" style={styles.logo} />
             <Text style={styles.title}>Synapse</Text>
             <Text style={styles.subtitle}>
               {registrationStep === 'confirmation' 
@@ -585,7 +588,6 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logo: {
-    fontSize: 64,
     marginBottom: 10,
   },
   title: {
