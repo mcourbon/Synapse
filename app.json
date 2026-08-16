@@ -45,6 +45,14 @@
           "icon": "./assets/adaptive-icon.png",
           "color": "#007AFF"
         }
+      ],
+      [
+        "react-native-edge-to-edge",
+        {
+          "android": {
+            "parentTheme": "Light"
+          }
+        }
       ]
     ],
     "scheme": "synapse",

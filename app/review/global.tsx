@@ -854,6 +854,8 @@ export default function GlobalReview() {
         animationType="none"
         transparent={true}
         onRequestClose={() => setShowEndSessionModal(false)}
+        statusBarTranslucent
+        navigationBarTranslucent
       >
         <Animated.View 
           style={[

@@ -68,7 +68,7 @@ function RootLayoutNav() {
         options={{
           headerShown: false,
           presentation: 'modal',
-          animation: 'slide_from_bottom'
+          animation: 'fade'
         }}
       />
     </Stack>
