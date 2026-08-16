@@ -701,37 +701,41 @@ export default function GlobalReview() {
         onPress={handleToggleAnswer}
       >
         <View style={styles.cardContainer}>
-          <Animated.View 
-            style={[
-              styles.card,
-              {
-                transform: [{ scale: scaleAnimation }],
-                borderBottomColor: getAnimatedBorderColor(),
-              }
-            ]}
-          >
-            <View style={styles.cardContent}>
-              <View style={styles.questionSection}>
-                <Text style={[styles.cardText, { color: getTextColor() }]}>
-                  {currentCard.front}
-                </Text>
-              </View>
-
-              {showAnswer && <View style={styles.separator} />}
-              
-              {showAnswer && (
-                <Animated.View 
-                  style={[
-                    styles.answerSection,
-                    { opacity: fadeAnimation }
-                  ]}
-                >
+          {/* Transform (scale) et borderBottomColor animent chacun sur leur propre
+              Animated.View : les mélanger sur le même noeud fait planter Android/Hermes
+              ("Attempting to run JS driven animation on animated node that has been
+              moved to native") dès qu'on relance l'animation de couleur après un scale
+              natif — cf. bug écran gris au clic sur Facile/Moyen. */}
+          <Animated.View style={{ transform: [{ scale: scaleAnimation }] }}>
+            <Animated.View
+              style={[
+                styles.card,
+                { borderBottomColor: getAnimatedBorderColor() }
+              ]}
+            >
+              <View style={styles.cardContent}>
+                <View style={styles.questionSection}>
                   <Text style={[styles.cardText, { color: getTextColor() }]}>
-                    {currentCard.back}
+                    {currentCard.front}
                   </Text>
-                </Animated.View>
-              )}
-            </View>
+                </View>
+
+                {showAnswer && <View style={styles.separator} />}
+
+                {showAnswer && (
+                  <Animated.View
+                    style={[
+                      styles.answerSection,
+                      { opacity: fadeAnimation }
+                    ]}
+                  >
+                    <Text style={[styles.cardText, { color: getTextColor() }]}>
+                      {currentCard.back}
+                    </Text>
+                  </Animated.View>
+                )}
+              </View>
+            </Animated.View>
           </Animated.View>
         </View>
 
