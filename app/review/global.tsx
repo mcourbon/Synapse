@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Animated, Modal, Alert } from 'react
 import { useEffect, useState, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
@@ -38,6 +38,7 @@ export default function GlobalReview() {
   const [streak, setStreak] = useState(0);
   const answeringRef = useRef(false);
   const router = useRouter();
+  const { firstCardId } = useLocalSearchParams<{ firstCardId?: string }>();
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
   const { refreshStats } = useStats();
@@ -356,6 +357,16 @@ export default function GlobalReview() {
       for (let i = shuffledCards.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffledCards[i], shuffledCards[j]] = [shuffledCards[j], shuffledCards[i]];
+      }
+
+      // Si on arrive depuis la carte affichée sur la home, elle doit être la première
+      // de la session plutôt que de rester à sa place aléatoire post-shuffle.
+      if (firstCardId) {
+        const firstCardIndex = shuffledCards.findIndex(c => c.id === firstCardId);
+        if (firstCardIndex > 0) {
+          const [firstCard] = shuffledCards.splice(firstCardIndex, 1);
+          shuffledCards.unshift(firstCard);
+        }
       }
 
       setDueCards(shuffledCards);

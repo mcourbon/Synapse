@@ -297,8 +297,9 @@ export default function Home() {
                 Alert.alert('Aucune carte due', 'Toutes vos cartes sont à jour ! Revenez plus tard.');
                 return;
               }
-              // Naviguer vers la révision globale
-              router.push('/review/global');
+              // On envoie l'id de la carte affichée ici pour qu'elle soit la première
+              // de la session de révision, plutôt qu'un autre tirage aléatoire côté review/global.
+              router.push({ pathname: '/review/global', params: { firstCardId: card?.id ?? '' } });
             }}
           >
             <Text style={styles.tinycardText}>
