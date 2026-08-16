@@ -153,12 +153,16 @@ export default function GlobalReview() {
       alignItems: 'center',
       paddingHorizontal: 20,
     },
+    cardScaleWrapper: {
+      width: '100%',
+      maxWidth: 380,
+    },
     card: {
       backgroundColor: theme.surface,
       borderRadius: 20,
       width: '100%',
-      maxWidth: 380,
       minHeight: 250,
+      justifyContent: 'center',
       shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.2,
@@ -168,9 +172,7 @@ export default function GlobalReview() {
       borderBottomColor: theme.primary,
     },
     cardContent: {
-      flex: 1,
       padding: 24,
-      justifyContent: 'center',
     },
     questionSection: {
       alignItems: 'center',
@@ -706,7 +708,7 @@ export default function GlobalReview() {
               ("Attempting to run JS driven animation on animated node that has been
               moved to native") dès qu'on relance l'animation de couleur après un scale
               natif — cf. bug écran gris au clic sur Facile/Moyen. */}
-          <Animated.View style={{ transform: [{ scale: scaleAnimation }] }}>
+          <Animated.View style={[styles.cardScaleWrapper, { transform: [{ scale: scaleAnimation }] }]}>
             <Animated.View
               style={[
                 styles.card,
