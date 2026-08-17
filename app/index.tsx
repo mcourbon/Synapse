@@ -116,6 +116,11 @@ export default function Home() {
       justifyContent: 'center',
       alignItems: 'center',
     },
+    headerCenter: {
+      flex: 1,
+      alignItems: 'center',
+      marginHorizontal: 12,
+    },
     cardZone: {
       position: 'absolute',
       left: 0,
@@ -174,19 +179,6 @@ export default function Home() {
       right: 20,
       alignItems: 'center',
     },
-    welcomeOverlayInner: {
-      minHeight: 70,
-      width: '100%',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    welcomeOverlayLayer: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      alignItems: 'center',
-    },
     welcomeText: {
       fontSize: 20,
       fontWeight: 'bold',
@@ -203,9 +195,6 @@ export default function Home() {
       elevation: 3,
       marginHorizontal: 20,
       overflow: 'hidden',
-    },
-    reviewTitleBadge: {
-      alignItems: 'center',
     },
     reviewTitleText: {
       fontSize: 16,
@@ -917,6 +906,18 @@ export default function Home() {
             </Animated.View>
           </Pressable>
 
+          {/* Titre "Révision globale" + compteur, aligné avec les boutons de la
+              topBar (comme dans l'ancien header de review/global.tsx) — pas dans le
+              bandeau plus bas, qui ne sert qu'au message motivant de l'accueil. */}
+          <Animated.View style={[styles.headerCenter, { opacity: reviewLayerOpacity }]} pointerEvents="none">
+            <Text style={styles.reviewTitleText}>Révision globale</Text>
+            {isReviewReady && (
+              <Text style={styles.reviewCounterText}>
+                {currentCardIndex + 1} / {dueCards.length}
+              </Text>
+            )}
+          </Animated.View>
+
           {/* Conteneur neutre (sans fond propre) : chaque calque porte son propre
               habillage — le bouton profil reprend iconButton, StreakFlame garde son
               chip déjà stylé, pas d'empilement de deux fonds l'un dans l'autre. */}
@@ -938,23 +939,11 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Bandeau du haut : message motivant <-> titre "Révision globale" + compteur */}
+        {/* Bandeau du haut : message motivant de l'accueil, fondu au noir en révision */}
         <View style={styles.welcomeOverlay}>
-          <View style={styles.welcomeOverlayInner}>
-            <Animated.View style={[styles.welcomeOverlayLayer, { opacity: homeLayerOpacity }]} pointerEvents="none">
-              <Text style={styles.welcomeText}>{getWelcomeMessage()}</Text>
-            </Animated.View>
-            <Animated.View style={[styles.welcomeOverlayLayer, { opacity: reviewLayerOpacity }]} pointerEvents="none">
-              <View style={styles.reviewTitleBadge}>
-                <Text style={styles.reviewTitleText}>Révision globale</Text>
-                {isReviewReady && (
-                  <Text style={styles.reviewCounterText}>
-                    {currentCardIndex + 1} / {dueCards.length}
-                  </Text>
-                )}
-              </View>
-            </Animated.View>
-          </View>
+          <Animated.View style={{ opacity: homeLayerOpacity }} pointerEvents="none">
+            <Text style={styles.welcomeText}>{getWelcomeMessage()}</Text>
+          </Animated.View>
         </View>
 
         {/* Zone de la carte : remonte un peu et se resserre en passant en révision,
@@ -994,17 +983,6 @@ export default function Home() {
                       <Animated.View style={{ opacity: fadeAnimation }}>
                         <Text style={[styles.cardText, { color: getTextColor() }]}>{currentCard?.back}</Text>
                       </Animated.View>
-                    )}
-
-                    {mode === 'review' && showAnswer && currentCard && (
-                      <View style={styles.cardStatsContainer}>
-                        <Text style={styles.cardStatsText}>
-                          Win Streak: {currentCard.repetitions || 0} •
-                          Lapses: {currentCard.lapses || 0} •
-                          Facilité: {difficultyToEasePercent(currentCard.difficulty) ?? '—'}% •
-                          Statut: {getCardMastery(currentCard.stability, currentCard.difficulty, currentCard.lapses || 0)}
-                        </Text>
-                      </View>
                     )}
                   </View>
                 </Animated.View>
@@ -1079,12 +1057,36 @@ export default function Home() {
                 </Pressable>
               </Animated.View>
             </View>
+
+            {/* Stats de la carte : seulement une fois qu'on a répondu (pas dès que
+                la réponse est révélée), affichées sous les boutons comme avant. */}
+            {selectedDifficulty && currentCard && (
+              <View style={styles.cardStatsContainer}>
+                <Text style={styles.cardStatsText}>
+                  Win Streak: {currentCard.repetitions || 0} •
+                  Lapses: {currentCard.lapses || 0} •
+                  Facilité: {difficultyToEasePercent(currentCard.difficulty) ?? '—'}% •
+                  Statut: {getCardMastery(currentCard.stability, currentCard.difficulty, currentCard.lapses || 0)}
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
-        {/* Bouton flottant d'ajout rapide — masqué pendant la révision */}
-        <Animated.View style={{ opacity: homeLayerOpacity }} pointerEvents={mode === 'home' ? 'auto' : 'none'}>
-          <Pressable style={styles.fab} onPress={openQuickAdd}>
+        {/* Bouton flottant d'ajout rapide — masqué pendant la révision. L'opacité
+            animée doit être portée par la vue positionnée en absolute elle-même
+            (styles.fab), pas par un wrapper neutre : sinon ce wrapper (seul enfant
+            en flux normal de mainContent, tout le reste étant en absolute) se fait
+            placer en haut par le flex du parent, et le bouton se retrouve collé au
+            top au lieu de bas-droite. */}
+        <Animated.View
+          style={[styles.fab, { opacity: homeLayerOpacity }]}
+          pointerEvents={mode === 'home' ? 'auto' : 'none'}
+        >
+          <Pressable
+            style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }}
+            onPress={openQuickAdd}
+          >
             <Ionicons name="add" size={28} color="#fff" />
           </Pressable>
         </Animated.View>
