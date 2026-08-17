@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Appearance } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SystemUI from 'expo-system-ui';
 
 // Définir les couleurs pour chaque thème
 export const lightTheme = {
@@ -108,6 +109,16 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   };
 
   const theme = isDark ? darkTheme : lightTheme;
+
+  // Le thème natif Android (fond de fenêtre derrière l'app, visible pendant les
+  // transitions d'écran maintenant que le rendu est edge-to-edge) est statique et
+  // clair par défaut — indépendant de ce toggle JS. Sans ça, changer/rester en
+  // thème sombre laisse apparaître un flash/liseré blanc pendant les animations.
+  useEffect(() => {
+    if (!isLoading) {
+      SystemUI.setBackgroundColorAsync(theme.background);
+    }
+  }, [theme.background, isLoading]);
 
   if (isLoading) {
     return null; // Ou un écran de chargement
