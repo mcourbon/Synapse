@@ -318,6 +318,8 @@ export default function AddDeckModal({
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView 

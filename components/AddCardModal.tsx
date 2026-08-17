@@ -518,6 +518,8 @@ export default function AddCardModal({
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={closeModal}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <SafeAreaView style={styles.container}>
         <View style={styles.mainContent}>

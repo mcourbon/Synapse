@@ -993,6 +993,8 @@ const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
         animationType="none"
         transparent={true}
         onRequestClose={() => setShowEndSessionModal(false)}
+        statusBarTranslucent
+        navigationBarTranslucent
       >
         <Animated.View 
           style={[

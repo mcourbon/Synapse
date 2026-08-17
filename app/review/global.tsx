@@ -1,7 +1,7 @@
 // app/review/global.tsx
 import { View, Text, StyleSheet, Pressable, Animated, Modal, Alert } from 'react-native';
 import { useEffect, useState, useRef } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -42,6 +42,11 @@ export default function GlobalReview() {
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
   const { refreshStats } = useStats();
+  // Calculé à la main plutôt que délégué à SafeAreaView : cet écran est présenté en
+  // presentation:'modal' (react-native-screens), et dans ce contexte-là sur Android,
+  // SafeAreaView ne récupère pas l'inset du haut une fois l'edge-to-edge natif actif —
+  // le header flottant se retrouvait sous l'encoche caméra / la barre de statut.
+  const insets = useSafeAreaInsets();
   const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
 
   // Animations
@@ -77,7 +82,7 @@ export default function GlobalReview() {
     },
     floatingHeader: {
       position: 'absolute',
-      top: 0,
+      top: insets.top,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
@@ -693,7 +698,10 @@ export default function GlobalReview() {
   const currentCard = dueCards[currentCardIndex];
 
   return (
-    <SafeAreaView style={styles.container}>
+    // edges exclut 'top' : le padding du haut est géré à la main via insets.top sur
+    // floatingHeader (voir plus haut) plutôt que par SafeAreaView, pour ne pas
+    // appliquer l'offset deux fois sur les plateformes où SafeAreaView le gère bien.
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       {/* Header */}
       <View style={styles.floatingHeader}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>

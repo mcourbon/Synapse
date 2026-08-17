@@ -981,6 +981,8 @@ addCategoryButtonInactive: {
   animationType="slide"
   presentationStyle="pageSheet"
   onRequestClose={closeModal}
+  statusBarTranslucent
+  navigationBarTranslucent
 >
   <SafeAreaView style={styles.modalContainer}>
     <View style={styles.mainContent}>

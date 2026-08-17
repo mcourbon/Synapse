@@ -98,7 +98,7 @@ export default function ConfirmModal({
   });
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onCancel}>
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={onCancel} statusBarTranslucent navigationBarTranslucent>
       <View style={staticStyles.confirmOverlay}>
         <View style={styles.confirmModal}>
           <Text style={styles.confirmTitle}>{title}</Text>

@@ -173,7 +173,7 @@ export default function CardStatsModal({ visible, card, onClose }: CardStatsModa
   });
 
   return (
-    <Modal visible={visible} animationType="none" transparent={true} onRequestClose={handleClose}>
+    <Modal visible={visible} animationType="none" transparent={true} onRequestClose={handleClose} statusBarTranslucent navigationBarTranslucent>
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         <Pressable
           style={staticStyles.statsOverlay}

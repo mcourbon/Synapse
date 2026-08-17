@@ -566,6 +566,8 @@ const handleDeleteDeck = async () => {
   transparent
   animationType="fade"
   onRequestClose={() => setShowEditDeckModal(false)}
+  statusBarTranslucent
+  navigationBarTranslucent
 >
   <Pressable
     style={staticStyles.modalOverlay}

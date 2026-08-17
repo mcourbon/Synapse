@@ -103,7 +103,7 @@ export default function InfoModal({ visible, onClose, title, icon, iconColor, ch
   });
 
   return (
-    <Modal visible={visible} animationType="none" transparent={true} onRequestClose={handleClose}>
+    <Modal visible={visible} animationType="none" transparent={true} onRequestClose={handleClose} statusBarTranslucent navigationBarTranslucent>
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         <Pressable
           style={staticStyles.modalOverlay}
