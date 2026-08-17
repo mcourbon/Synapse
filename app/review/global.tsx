@@ -50,6 +50,9 @@ export default function GlobalReview() {
   const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
 
   // Animations
+  // Fondu d'entrée du contenu une fois chargé, pour éviter que le vrai
+  // contenu apparaisse d'un coup (saccade) pendant la transition d'écran.
+  const contentEntranceAnimation = useRef(new Animated.Value(0)).current;
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(1)).current;
   const borderColorAnimation = useRef(new Animated.Value(0)).current;
@@ -321,6 +324,17 @@ export default function GlobalReview() {
       fetchDueCards();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!loading && dueCards.length > 0) {
+      contentEntranceAnimation.setValue(0);
+      Animated.timing(contentEntranceAnimation, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [loading, dueCards.length]);
 
   async function fetchDueCards() {
     if (!user) return;
@@ -702,6 +716,7 @@ export default function GlobalReview() {
     // floatingHeader (voir plus haut) plutôt que par SafeAreaView, pour ne pas
     // appliquer l'offset deux fois sur les plateformes où SafeAreaView le gère bien.
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      <Animated.View style={{ flex: 1, opacity: contentEntranceAnimation }}>
       {/* Header */}
       <View style={styles.floatingHeader}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
@@ -917,6 +932,7 @@ export default function GlobalReview() {
           </Animated.View>
         </Animated.View>
       </Modal>
+      </Animated.View>
     </SafeAreaView>
   );
 }

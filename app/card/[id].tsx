@@ -54,6 +54,9 @@ export default function CardReview() {
   const answeringRef = useRef(false);
 
   // Animations
+  // Fondu d'entrée du contenu une fois chargé, pour éviter que le vrai
+  // contenu apparaisse d'un coup (saccade) pendant la transition d'écran.
+  const contentEntranceAnimation = useRef(new Animated.Value(0)).current;
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(1)).current;
   const borderColorAnimation = useRef(new Animated.Value(0)).current;
@@ -354,6 +357,17 @@ export default function CardReview() {
       fetchCardAndDeck();
     }
   }, [id, user]);
+
+  useEffect(() => {
+    if (!loading && card) {
+      contentEntranceAnimation.setValue(0);
+      Animated.timing(contentEntranceAnimation, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [loading, card]);
 
   // Gestion des raccourcis clavier
 useFocusEffect(
@@ -824,6 +838,7 @@ const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Animated.View style={{ flex: 1, opacity: contentEntranceAnimation }}>
       {/* Header flottant */}
       <View style={styles.floatingHeader}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
@@ -1065,7 +1080,7 @@ const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
           </Animated.View>
         </Animated.View>
       </Modal>
-
+      </Animated.View>
     </SafeAreaView>
   );
 }

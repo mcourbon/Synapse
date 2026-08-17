@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView } from 'react-native';
-import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView, Animated } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -44,6 +44,9 @@ export default function DeckDetail() {
   const [deck, setDeck] = useState<Deck | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
+  // Fondu d'entrée du contenu une fois chargé, pour éviter que le vrai
+  // contenu apparaisse d'un coup (saccade) pendant la transition d'écran.
+  const contentEntranceAnimation = useRef(new Animated.Value(0)).current;
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteCardConfirm, setShowDeleteCardConfirm] = useState(false);
   const [showEditCardModal, setShowEditCardModal] = useState(false);
@@ -610,6 +613,17 @@ addCategoryButtonInactive: {
     }
   }, [id, user]);
 
+  useEffect(() => {
+    if (!loading && deck) {
+      contentEntranceAnimation.setValue(0);
+      Animated.timing(contentEntranceAnimation, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [loading, deck]);
+
   async function fetchDeckAndCards() {
     if (!id || !user) return;
 
@@ -851,6 +865,7 @@ addCategoryButtonInactive: {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Animated.View style={{ flex: 1, opacity: contentEntranceAnimation }}>
       <View style={styles.mainContent}>
         {/* Header */}
         <View style={styles.headerSection}>
@@ -1148,6 +1163,7 @@ addCategoryButtonInactive: {
     </View>
   </SafeAreaView>
 </Modal>
+      </Animated.View>
     </SafeAreaView>
   );
 }

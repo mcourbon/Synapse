@@ -1,5 +1,5 @@
 // app/decks.tsx
-import { View, Text, StyleSheet, FlatList, Pressable, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, Alert, Modal, TextInput, Animated } from 'react-native';
 import { useEffect, useState, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,6 +40,9 @@ const staticStyles = StyleSheet.create({
 export default function Decks() {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
+  // Fondu d'entrée du contenu une fois chargé, pour éviter que le vrai
+  // contenu apparaisse d'un coup (saccade) pendant la transition d'écran.
+  const contentEntranceAnimation = useRef(new Animated.Value(0)).current;
   const [showAddModal, setShowAddModal] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
@@ -301,6 +304,17 @@ saveButton: {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!loading) {
+      contentEntranceAnimation.setValue(0);
+      Animated.timing(contentEntranceAnimation, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [loading]);
+
   async function fetchDecks() {
     if (!user) return;
 
@@ -481,6 +495,7 @@ const handleDeleteDeck = async () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Animated.View style={{ flex: 1, opacity: contentEntranceAnimation }}>
       <View style={styles.mainContent}>
         <View style={styles.content}>
           {/* Header avec bouton retour intégré */}
@@ -661,6 +676,7 @@ const handleDeleteDeck = async () => {
   confirmColor="#FF3B30"
   isLoading={deletingDeck}
 />
+      </Animated.View>
     </SafeAreaView>
   );
 }
