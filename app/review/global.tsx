@@ -50,12 +50,11 @@ export default function GlobalReview() {
   const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
 
   // Animations
-  // Entrée de la toute première carte au chargement : glisse (translateY) + fond
-  // en fondu, une seule fois (déclenché quand isReady passe à true, cf. useEffect
-  // plus bas), distinct de scaleAnimation qui gère le zoom entre cartes suivantes.
-  // Appliqué sur le même noeud que cardScaleWrapper plutôt que dans un wrapper à
-  // part, pour ne pas revivre le bug de collapse (voir historique de ce fichier).
-  const entranceAnimation = useRef(new Animated.Value(0)).current;
+  // Fondu du compteur "X / Y" dans le header, une seule fois au chargement initial
+  // (cf. useEffect plus bas). La carte, elle, reste volontairement statique/visible
+  // immédiatement — seul ce badge (qui n'existe pas tant que les cartes ne sont pas
+  // prêtes) doit apparaître en douceur plutôt que de "popper".
+  const progressFadeAnimation = useRef(new Animated.Value(0)).current;
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(1)).current;
   const borderColorAnimation = useRef(new Animated.Value(0)).current;
@@ -330,9 +329,9 @@ export default function GlobalReview() {
 
   useEffect(() => {
     if (!loading && dueCards.length > 0) {
-      Animated.timing(entranceAnimation, {
+      Animated.timing(progressFadeAnimation, {
         toValue: 1,
-        duration: 350,
+        duration: 250,
         useNativeDriver: true,
       }).start();
     }
@@ -710,7 +709,10 @@ export default function GlobalReview() {
     // avant, un écran "Chargement..." entièrement séparé (sans header, texte centré)
     // était démonté puis remplacé d'un coup par l'écran complet une fois les cartes
     // prêtes — ce swap d'arbre pendant la transition modale donnait l'effet saccadé.
-    // Seul le contenu interne (spinner <-> carte) varie désormais, en fondu léger.
+    // Seul le contenu interne (spinner <-> carte) varie désormais, sans animation :
+    // la carte doit rester visible immédiatement (jamais de fondu/glissé dessus),
+    // seul le badge de progression du header (qui n'existe pas encore avant que les
+    // cartes soient prêtes) fait un léger fondu à son apparition.
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       {/* Header */}
       <View style={styles.floatingHeader}>
@@ -720,9 +722,9 @@ export default function GlobalReview() {
         <View style={styles.headerCenter}>
           <Text style={styles.deckName}>Révision globale</Text>
           {isReady && (
-            <Text style={styles.cardProgress}>
+            <Animated.Text style={[styles.cardProgress, { opacity: progressFadeAnimation }]}>
               {currentCardIndex + 1} / {dueCards.length}
-            </Text>
+            </Animated.Text>
           )}
         </View>
         <StreakFlame streak={streak} />
@@ -749,26 +751,11 @@ export default function GlobalReview() {
               Animated.View : les mélanger sur le même noeud fait planter Android/Hermes
               ("Attempting to run JS driven animation on animated node that has been
               moved to native") dès qu'on relance l'animation de couleur après un scale
-              natif — cf. bug écran gris au clic sur Facile/Moyen. entranceAnimation
-              (slide + fade natifs, opacity/transform uniquement) est safe à ajouter
-              sur ce même noeud : elle ne mélange pas de propriété JS-driven. */}
-          <Animated.View
-            style={[
-              styles.cardScaleWrapper,
-              {
-                opacity: entranceAnimation,
-                transform: [
-                  { scale: scaleAnimation },
-                  {
-                    translateY: entranceAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [28, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
+              natif — cf. bug écran gris au clic sur Facile/Moyen.
+              Volontairement PAS d'entrée en fondu/glissée ici : la carte doit rester
+              visible immédiatement, sans jamais disparaître ni "popper" — seul le
+              chrome autour (compteur de progression) fait un fondu, voir header. */}
+          <Animated.View style={[styles.cardScaleWrapper, { transform: [{ scale: scaleAnimation }] }]}>
             <Animated.View
               style={[
                 styles.card,
