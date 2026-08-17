@@ -48,7 +48,7 @@ All screens use `headerShown: false`. Auth is enforced at the root layout level 
 | `/` | Home dashboard — due card count, motivational UI |
 | `/decks` | Collections list — CRUD on decks |
 | `/deck/[id]` | Deck detail — card list with category system |
-| `/review/global` | Review session — modal, slides from bottom |
+| `/review/global` | Review session — standard push transition (was modal/slide-from-bottom, then fade; both caused Android issues — see git history) |
 | `/profile` | Profile, stats, settings |
 
 ### Auth & Theme (contexts/)

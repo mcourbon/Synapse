@@ -67,8 +67,6 @@ function RootLayoutNav() {
         name="review/global"
         options={{
           headerShown: false,
-          presentation: 'modal',
-          animation: 'fade'
         }}
       />
     </Stack>

@@ -1,5 +1,5 @@
 // components/InfoModal.tsx
-import { View, Text, Modal, Pressable, ScrollView, Animated, StyleSheet } from 'react-native';
+import { View, Text, Modal, Pressable, ScrollView, Animated, StyleSheet, useWindowDimensions } from 'react-native';
 import { useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -33,6 +33,7 @@ const staticStyles = StyleSheet.create({
 
 export default function InfoModal({ visible, onClose, title, icon, iconColor, children }: InfoModalProps) {
   const { theme } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pressStartedOnOverlay = useRef(false);
 
@@ -54,7 +55,10 @@ export default function InfoModal({ visible, onClose, title, icon, iconColor, ch
       padding: 0,
       width: '100%',
       maxWidth: 420,
-      maxHeight: '85%',
+      // % se résolvait contre une hauteur de référence erronée du Modal une fois
+      // statusBarTranslucent activé (bug connu RN Android) — écrasait le contenu
+      // à quasi rien, ne laissant que le header visible. Calcul en pixels à la place.
+      maxHeight: windowHeight * 0.85,
       overflow: 'hidden',
     },
     modalHeader: {

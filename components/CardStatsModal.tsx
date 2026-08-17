@@ -1,5 +1,5 @@
 // components/CardStatsModal.tsx
-import { View, Text, Modal, Pressable, ScrollView, Animated, Platform, StyleSheet } from 'react-native';
+import { View, Text, Modal, Pressable, ScrollView, Animated, Platform, StyleSheet, useWindowDimensions } from 'react-native';
 import { useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -38,6 +38,7 @@ const staticStyles = StyleSheet.create({
 
 export default function CardStatsModal({ visible, card, onClose }: CardStatsModalProps) {
   const { theme } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pressStartedOnOverlay = useRef(false);
 
@@ -58,7 +59,9 @@ export default function CardStatsModal({ visible, card, onClose }: CardStatsModa
       borderRadius: 28,
       width: '100%',
       maxWidth: 420,
-      maxHeight: '85%',
+      // % se résolvait contre une hauteur de référence erronée du Modal une fois
+      // statusBarTranslucent activé (bug connu RN Android) — cf. InfoModal.tsx.
+      maxHeight: windowHeight * 0.85,
       overflow: 'hidden',
     },
     statsModalHeader: {
