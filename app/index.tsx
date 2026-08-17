@@ -121,8 +121,19 @@ export default function Home() {
       alignItems: 'center',
       marginHorizontal: 12,
     },
+    tapZone: {
+      // Toute cette zone (sous la topBar, jusqu'en bas) retourne la carte au tap —
+      // pas seulement la carte elle-même : le centre, les côtés, le dessous, tout
+      // déclenche la même action, en accueil comme en révision.
+      position: 'absolute',
+      top: 100,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
     cardZone: {
       position: 'absolute',
+      top: 0,
       left: 0,
       right: 0,
       justifyContent: 'center',
@@ -946,22 +957,25 @@ export default function Home() {
           </Animated.View>
         </View>
 
-        {/* Zone de la carte : remonte un peu et se resserre en passant en révision,
-            pour laisser la place aux boutons de difficulté en bas. */}
-        <Animated.View
-          style={[
-            styles.cardZone,
-            {
-              top: transitionAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 80] }),
-              bottom: transitionAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 220] }),
-            },
-          ]}
+        {/* Zone cliquable : n'importe où sous le bandeau du haut (pas seulement la
+            carte) retourne la carte à l'accueil, ou révèle la réponse en révision.
+            La carte elle-même n'a plus son propre Pressable — purement visuelle,
+            pointerEvents 'none' pour laisser passer le tap jusqu'ici. */}
+        <Pressable
+          style={styles.tapZone}
+          onPress={mode === 'home' ? handleHomeCardPress : handleToggleAnswer}
         >
-          {mode === 'review' && !currentCard ? (
-            <ActivityIndicator size="large" color={theme.primary} />
-          ) : (
-            <Animated.View style={[styles.cardScaleWrapper, { transform: [{ scale: scaleAnimation }] }]}>
-              <Pressable onPress={mode === 'home' ? handleHomeCardPress : handleToggleAnswer}>
+          <Animated.View
+            style={[
+              styles.cardZone,
+              { bottom: transitionAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 220] }) },
+            ]}
+            pointerEvents="none"
+          >
+            {mode === 'review' && !currentCard ? (
+              <ActivityIndicator size="large" color={theme.primary} />
+            ) : (
+              <Animated.View style={[styles.cardScaleWrapper, { transform: [{ scale: scaleAnimation }] }]}>
                 <Animated.View
                   style={[
                     styles.card,
@@ -986,10 +1000,10 @@ export default function Home() {
                     )}
                   </View>
                 </Animated.View>
-              </Pressable>
-            </Animated.View>
-          )}
-        </Animated.View>
+              </Animated.View>
+            )}
+          </Animated.View>
+        </Pressable>
 
         {/* Boutons de difficulté, uniquement en révision une fois la réponse révélée */}
         {mode === 'review' && showAnswer && (
