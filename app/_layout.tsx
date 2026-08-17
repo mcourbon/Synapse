@@ -68,7 +68,12 @@ function RootLayoutNav() {
         options={{
           headerShown: false,
           presentation: 'modal',
-          animation: 'fade'
+          // slide plutôt que fade : un fade part forcément d'opacité 0, donc tout
+          // l'écran (carte comprise) est invisible un instant avant de fondre en
+          // visible — perçu comme la carte qui "disparaît". Un slide reste opaque
+          // tout du long, le contenu glisse juste depuis le bas ("on entre" dans
+          // le mode révision) sans jamais passer par un état transparent.
+          animation: 'slide_from_bottom'
         }}
       />
     </Stack>

@@ -48,7 +48,7 @@ All screens use `headerShown: false`. Auth is enforced at the root layout level 
 | `/` | Home dashboard — due card count, motivational UI |
 | `/decks` | Collections list — CRUD on decks |
 | `/deck/[id]` | Deck detail — card list with category system |
-| `/review/global` | Review session — modal, fades in (native root background now synced to theme via expo-system-ui in ThemeContext, which fixed the white-flash issue that had forced a temporary revert to a plain push — see git history) |
+| `/review/global` | Review session — modal, slides up from bottom (switched from `animation: 'fade'`: a fade starts at opacity 0, so the whole screen incl. the card is briefly invisible before fading in, read as the card "disappearing"; slide stays opaque throughout. Native root background synced to theme via expo-system-ui in ThemeContext, which fixed the white-flash issue that originally forced a temporary revert to a plain push — see git history) |
 | `/profile` | Profile, stats, settings |
 
 ### Auth & Theme (contexts/)
