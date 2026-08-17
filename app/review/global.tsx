@@ -50,10 +50,15 @@ export default function GlobalReview() {
   const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
 
   // Animations
-  // Fondu du compteur "X / Y" dans le header, une seule fois au chargement initial
-  // (cf. useEffect plus bas). La carte, elle, reste volontairement statique/visible
-  // immédiatement — seul ce badge (qui n'existe pas tant que les cartes ne sont pas
-  // prêtes) doit apparaître en douceur plutôt que de "popper".
+  // Fondu du header (flèche retour, pastille titre, badge progression, streak) au
+  // montage de l'écran — en plus du slide natif de tout l'écran (cf. _layout.tsx).
+  // La carte, elle, reste volontairement statique/opaque, jamais de fondu dessus :
+  // elle est déjà "portée" par le slide natif, ce sont les autres éléments qui
+  // doivent en plus fondre pour donner l'impression d'entrer dans un nouveau décor.
+  const headerFadeAnimation = useRef(new Animated.Value(0)).current;
+  // Fondu du compteur "X / Y" à l'intérieur du header, indépendant du header lui-
+  // même car ce badge n'existe pas tant que les cartes ne sont pas prêtes (peut
+  // arriver après la fin du fondu du header si le fetch est lent).
   const progressFadeAnimation = useRef(new Animated.Value(0)).current;
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(1)).current;
@@ -326,6 +331,16 @@ export default function GlobalReview() {
       fetchDueCards();
     }
   }, [user]);
+
+  // Une seule fois au montage, en parallèle du slide natif de l'écran — pas besoin
+  // d'attendre le fetch, le header (hors badge progression) est déjà tout prêt.
+  useEffect(() => {
+    Animated.timing(headerFadeAnimation, {
+      toValue: 1,
+      duration: 350,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   useEffect(() => {
     if (!loading && dueCards.length > 0) {
@@ -711,11 +726,13 @@ export default function GlobalReview() {
     // prêtes — ce swap d'arbre pendant la transition modale donnait l'effet saccadé.
     // Seul le contenu interne (spinner <-> carte) varie désormais, sans animation :
     // la carte doit rester visible immédiatement (jamais de fondu/glissé dessus),
-    // seul le badge de progression du header (qui n'existe pas encore avant que les
-    // cartes soient prêtes) fait un léger fondu à son apparition.
+    // elle est déjà portée par le slide natif de l'écran (voir _layout.tsx). Le
+    // header, lui, fait un fondu propre (headerFadeAnimation ci-dessous) — opacity
+    // ajoutée directement sur son style existant plutôt que via un wrapper séparé,
+    // pour ne pas revivre le bug de collapse (largeur/hauteur à 0) déjà rencontré.
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       {/* Header */}
-      <View style={styles.floatingHeader}>
+      <Animated.View style={[styles.floatingHeader, { opacity: headerFadeAnimation }]}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color={theme.primary} />
         </Pressable>
@@ -728,7 +745,7 @@ export default function GlobalReview() {
           )}
         </View>
         <StreakFlame streak={streak} />
-      </View>
+      </Animated.View>
 
       {!isReady ? (
         <View style={styles.mainContent}>
