@@ -737,7 +737,10 @@ export default function GlobalReview() {
         </View>
       ) : (
       /* Zone cliquable principale */
-      <Animated.View style={{ flex: 1, opacity: contentFadeAnimation }}>
+      // width: '100%' explicite ici — le SafeAreaView parent a alignItems:'center'
+      // (pas stretch), donc ce wrapper sans largeur propre s'effondrait à taille
+      // zéro (carte invisible/non tapable, cf. régression signalée après coup).
+      <Animated.View style={{ flex: 1, width: '100%', maxWidth: 500, opacity: contentFadeAnimation }}>
       <Pressable
         style={styles.mainContent}
         onPress={handleToggleAnswer}
