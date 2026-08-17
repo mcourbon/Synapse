@@ -45,11 +45,28 @@ All screens use `headerShown: false`. Auth is enforced at the root layout level 
 
 | Route | Purpose |
 |---|---|
-| `/` | Home dashboard — due card count, motivational UI |
+| `/` | Home dashboard **and** review session, same screen/component (see below) |
 | `/decks` | Collections list — CRUD on decks |
 | `/deck/[id]` | Deck detail — card list with category system |
-| `/review/global` | Review session — modal, `animation: 'none'` (native transition disabled; both `fade` and `slide_from_bottom` were tried and reverted — each animates the whole screen as one block, no way to exempt just the card). Entrance is handled entirely in JS instead: the header fades in on mount, the card stays permanently static/opaque. Native root background synced to theme via expo-system-ui in ThemeContext, which fixed the white-flash issue that had forced a temporary revert to a plain push — see git history. |
 | `/profile` | Profile, stats, settings |
+
+There is no `/review/global` route (deleted). Every route-based transition tried for
+it — `presentation: 'modal'`, plain push, `animation` set to `fade`/`slide_from_bottom`/`none`
+— caused a black flash and/or a stray native slide no combination of props could
+suppress (a modal presentation animates itself independently of `animation`; even a
+plain push showed the same symptom). The fix was to stop navigating there at all:
+review now lives inside `app/index.tsx` as a second visual mode of the home screen
+(`mode: 'home' | 'review'` state, no route change). Tapping the home tinycard fetches
+due cards, shuffles them (keeping the already-shown card first), and morphs the
+screen in place via a single `transitionAnim` Animated.Value driving crossfades
+(topBar decks↔back and profile↔streak icons, welcome message↔"Révision globale"
+title+counter) and the card's position/shape (top/bottom insets, border width) —
+since the tapped card's `front` text is already on screen, the card's own text never
+needs to fade. Difficulty buttons render conditionally once the answer is revealed.
+Android hardware back returns to home mode instead of exiting (`BackHandler`, only
+active while `mode === 'review'`). Native root background is synced to theme via
+expo-system-ui in ThemeContext, fixing an earlier, separate white-flash issue on
+screen transitions elsewhere in the app — see git history.
 
 ### Auth & Theme (contexts/)
 

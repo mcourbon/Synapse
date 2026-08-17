@@ -63,19 +63,13 @@ function RootLayoutNav() {
         name="politique-de-confidentialite"
         options={{ headerShown: false }}
       />
-      <Stack.Screen
-        name="review/global"
-        options={{
-          headerShown: false,
-          presentation: 'modal',
-          // Transition native désactivée : elle anime tout l'écran comme un seul
-          // bloc opaque (slide_from_bottom) ou un seul fondu (fade), impossible
-          // d'exempter la carte de ça. L'entrée est gérée entièrement en JS dans
-          // review/global.tsx à la place (fiable, personnalisable élément par
-          // élément — la carte reste statique, le header fait son propre fondu).
-          animation: 'none'
-        }}
-      />
+      {/* Pas de route review/global : la révision se fait désormais directement sur
+          l'écran d'accueil (app/index.tsx, mode 'home' <-> 'review'), sans jamais
+          naviguer — voir le commentaire en tête de ce fichier-là. Toute route ici
+          (modal ou push, `animation` quelle qu'elle soit) déclenche sa propre
+          transition native qu'aucune combinaison de props n'a réussi à faire
+          coïncider avec l'animation JS voulue (coupure noire + glissement
+          parasite au tap sur la tinycard) — cf. git history sur ce fichier. */}
     </Stack>
   );
 }
