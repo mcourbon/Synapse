@@ -50,6 +50,12 @@ export default function GlobalReview() {
   const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
 
   // Animations
+  // Entrée de la toute première carte au chargement : glisse (translateY) + fond
+  // en fondu, une seule fois (déclenché quand isReady passe à true, cf. useEffect
+  // plus bas), distinct de scaleAnimation qui gère le zoom entre cartes suivantes.
+  // Appliqué sur le même noeud que cardScaleWrapper plutôt que dans un wrapper à
+  // part, pour ne pas revivre le bug de collapse (voir historique de ce fichier).
+  const entranceAnimation = useRef(new Animated.Value(0)).current;
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(1)).current;
   const borderColorAnimation = useRef(new Animated.Value(0)).current;
@@ -322,6 +328,18 @@ export default function GlobalReview() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!loading && dueCards.length > 0) {
+      Animated.timing(entranceAnimation, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }).start();
+    }
+    // dueCards.length ne change plus après le chargement initial (les cartes sont
+    // mises à jour en place, pas retirées du tableau) — cet effet ne se déclenche
+    // donc bien qu'une fois, pas à chaque changement de carte.
+  }, [loading, dueCards.length]);
 
   async function fetchDueCards() {
     if (!user) return;
@@ -731,8 +749,26 @@ export default function GlobalReview() {
               Animated.View : les mélanger sur le même noeud fait planter Android/Hermes
               ("Attempting to run JS driven animation on animated node that has been
               moved to native") dès qu'on relance l'animation de couleur après un scale
-              natif — cf. bug écran gris au clic sur Facile/Moyen. */}
-          <Animated.View style={[styles.cardScaleWrapper, { transform: [{ scale: scaleAnimation }] }]}>
+              natif — cf. bug écran gris au clic sur Facile/Moyen. entranceAnimation
+              (slide + fade natifs, opacity/transform uniquement) est safe à ajouter
+              sur ce même noeud : elle ne mélange pas de propriété JS-driven. */}
+          <Animated.View
+            style={[
+              styles.cardScaleWrapper,
+              {
+                opacity: entranceAnimation,
+                transform: [
+                  { scale: scaleAnimation },
+                  {
+                    translateY: entranceAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [28, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
             <Animated.View
               style={[
                 styles.card,
