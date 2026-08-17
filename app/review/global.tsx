@@ -50,11 +50,6 @@ export default function GlobalReview() {
   const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
 
   // Animations
-  // Fondu du contenu principal une fois les cartes chargées (spinner -> carte).
-  // Ne touche jamais au SafeAreaView/header, qui restent montés en permanence —
-  // c'est le démontage/remontage de tout l'écran (ancien écran "Chargement..."
-  // séparé) qui causait le pop-in saccadé pendant la transition modale.
-  const contentFadeAnimation = useRef(new Animated.Value(0)).current;
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(1)).current;
   const borderColorAnimation = useRef(new Animated.Value(0)).current;
@@ -327,16 +322,6 @@ export default function GlobalReview() {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (!loading && dueCards.length > 0) {
-      contentFadeAnimation.setValue(0);
-      Animated.timing(contentFadeAnimation, {
-        toValue: 1,
-        duration: 180,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [loading, dueCards.length]);
 
   async function fetchDueCards() {
     if (!user) return;
@@ -737,10 +722,6 @@ export default function GlobalReview() {
         </View>
       ) : (
       /* Zone cliquable principale */
-      // width: '100%' explicite ici — le SafeAreaView parent a alignItems:'center'
-      // (pas stretch), donc ce wrapper sans largeur propre s'effondrait à taille
-      // zéro (carte invisible/non tapable, cf. régression signalée après coup).
-      <Animated.View style={{ flex: 1, width: '100%', maxWidth: 500, opacity: contentFadeAnimation }}>
       <Pressable
         style={styles.mainContent}
         onPress={handleToggleAnswer}
@@ -879,7 +860,6 @@ export default function GlobalReview() {
           </Pressable>
         )}
       </Pressable>
-      </Animated.View>
       )}
 
       {/* Modal de fin de session */}
