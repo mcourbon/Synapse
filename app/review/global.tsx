@@ -50,11 +50,11 @@ export default function GlobalReview() {
   const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
 
   // Animations
-  // Fondu du header (flèche retour, pastille titre, badge progression, streak) au
-  // montage de l'écran — en plus du slide natif de tout l'écran (cf. _layout.tsx).
-  // La carte, elle, reste volontairement statique/opaque, jamais de fondu dessus :
-  // elle est déjà "portée" par le slide natif, ce sont les autres éléments qui
-  // doivent en plus fondre pour donner l'impression d'entrer dans un nouveau décor.
+  // Transition d'entrée de l'écran entièrement gérée ici (animation native
+  // désactivée, cf. _layout.tsx : 'fade'/'slide_from_bottom' animent tout l'écran
+  // comme un seul bloc, impossible d'exempter la carte). Fondu du header (flèche
+  // retour, pastille titre, badge progression, streak) au montage — la carte, elle,
+  // reste volontairement statique/opaque en permanence, jamais de fondu dessus.
   const headerFadeAnimation = useRef(new Animated.Value(0)).current;
   // Fondu du compteur "X / Y" à l'intérieur du header, indépendant du header lui-
   // même car ce badge n'existe pas tant que les cartes ne sont pas prêtes (peut

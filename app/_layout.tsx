@@ -68,10 +68,12 @@ function RootLayoutNav() {
         options={{
           headerShown: false,
           presentation: 'modal',
-          // slide_from_bottom testé et abandonné : c'est une transition native qui
-          // déplace tout l'écran comme un seul bloc (header compris), pas moyen de
-          // ne faire glisser que la carte pendant que le reste fond — retour au fade.
-          animation: 'fade'
+          // Transition native désactivée : elle anime tout l'écran comme un seul
+          // bloc opaque (slide_from_bottom) ou un seul fondu (fade), impossible
+          // d'exempter la carte de ça. L'entrée est gérée entièrement en JS dans
+          // review/global.tsx à la place (fiable, personnalisable élément par
+          // élément — la carte reste statique, le header fait son propre fondu).
+          animation: 'none'
         }}
       />
     </Stack>
