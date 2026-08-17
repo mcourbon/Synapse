@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { Card } from '../types/database';
@@ -19,6 +19,10 @@ export default function Home() {
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [totalCardsCount, setTotalCardsCount] = useState<number>(0);
   const { theme } = useTheme();
+  // Position/taille écran de la tinycard au moment du tap, transmises à
+  // review/global pour qu'elle fasse "grossir" sa propre carte depuis cette
+  // forme de départ plutôt que d'apparaître directement à sa taille finale.
+  const tinycardRef = useRef<View>(null);
 
   // Dans le composant, après const { theme } = useTheme();
   const styles = StyleSheet.create({
@@ -290,6 +294,7 @@ export default function Home() {
         {/* Flashcard en fond façon Tinycards */}
         <View style={styles.tinycardWrapper}>
           <Pressable
+            ref={tinycardRef}
             style={styles.tinycard}
             onPress={async () => {
               const dueCards = await fetchAllDueCards();
@@ -299,7 +304,21 @@ export default function Home() {
               }
               // On envoie l'id de la carte affichée ici pour qu'elle soit la première
               // de la session de révision, plutôt qu'un autre tirage aléatoire côté review/global.
-              router.push({ pathname: '/review/global', params: { firstCardId: card?.id ?? '' } });
+              // measureInWindow donne la position/taille écran (coords absolues) de la
+              // tinycard juste avant de naviguer, pour que review/global puisse faire
+              // "grossir" sa propre carte depuis exactement cette forme de départ.
+              tinycardRef.current?.measureInWindow((x, y, width, height) => {
+                router.push({
+                  pathname: '/review/global',
+                  params: {
+                    firstCardId: card?.id ?? '',
+                    heroX: String(x),
+                    heroY: String(y),
+                    heroWidth: String(width),
+                    heroHeight: String(height),
+                  },
+                });
+              });
             }}
           >
             <Text style={styles.tinycardText}>

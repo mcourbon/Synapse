@@ -1,5 +1,5 @@
 // app/review/global.tsx
-import { View, Text, StyleSheet, Pressable, Animated, Modal, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Modal, Alert, ActivityIndicator, Easing } from 'react-native';
 import { useEffect, useState, useRef } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,7 +38,21 @@ export default function GlobalReview() {
   const [streak, setStreak] = useState(0);
   const answeringRef = useRef(false);
   const router = useRouter();
-  const { firstCardId } = useLocalSearchParams<{ firstCardId?: string }>();
+  const { firstCardId, heroX, heroY, heroWidth, heroHeight } = useLocalSearchParams<{
+    firstCardId?: string;
+    heroX?: string;
+    heroY?: string;
+    heroWidth?: string;
+    heroHeight?: string;
+  }>();
+  // Rect écran (coords absolues) de la tinycard de l'accueil au moment du tap,
+  // transmis par router.push — sert de point de départ au "grossissement" de la
+  // carte de révision. Absent (ex: si jamais un autre écran menait ici un jour)
+  // -> pas d'animation hero, la carte apparaît directement à sa taille finale.
+  const heroSource =
+    heroX && heroY && heroWidth && heroHeight
+      ? { x: Number(heroX), y: Number(heroY), width: Number(heroWidth), height: Number(heroHeight) }
+      : null;
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
   const { refreshStats } = useStats();
@@ -49,12 +63,22 @@ export default function GlobalReview() {
   const insets = useSafeAreaInsets();
   const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
 
+  // Hero transition (carte accueil -> carte révision, cf. plus bas)
+  const cardHeroRef = useRef<View>(null);
+  const heroStartedRef = useRef(false);
+  const [heroTransform, setHeroTransform] = useState<{
+    tx: number; ty: number; sx: number; sy: number;
+  } | null>(null);
+
   // Animations
   // Transition d'entrée de l'écran entièrement gérée ici (animation native
   // désactivée, cf. _layout.tsx : 'fade'/'slide_from_bottom' animent tout l'écran
   // comme un seul bloc, impossible d'exempter la carte). Fondu du header (flèche
-  // retour, pastille titre, badge progression, streak) au montage — la carte, elle,
-  // reste volontairement statique/opaque en permanence, jamais de fondu dessus.
+  // retour, pastille titre, badge progression, streak) au montage. La carte, elle,
+  // ne fait jamais de fondu — si heroSource est présent, elle "grossit" (FLIP :
+  // translate+scale natifs) depuis la forme de la tinycard de l'accueil jusqu'à sa
+  // taille finale ; sinon elle apparaît directement statique, comme avant.
+  const heroAnimation = useRef(new Animated.Value(0)).current;
   const headerFadeAnimation = useRef(new Animated.Value(0)).current;
   // Fondu du compteur "X / Y" à l'intérieur du header, indépendant du header lui-
   // même car ce badge n'existe pas tant que les cartes ne sont pas prêtes (peut
@@ -332,8 +356,8 @@ export default function GlobalReview() {
     }
   }, [user]);
 
-  // Une seule fois au montage, en parallèle du slide natif de l'écran — pas besoin
-  // d'attendre le fetch, le header (hors badge progression) est déjà tout prêt.
+  // Une seule fois au montage — pas besoin d'attendre le fetch, le header (hors
+  // badge progression) est déjà tout prêt.
   useEffect(() => {
     Animated.timing(headerFadeAnimation, {
       toValue: 1,
@@ -341,6 +365,55 @@ export default function GlobalReview() {
       useNativeDriver: true,
     }).start();
   }, []);
+
+  // Déclenché une fois que handleCardHeroLayout (plus bas) a mesuré la position
+  // finale de la carte et calculé le delta avec heroSource (position de départ).
+  useEffect(() => {
+    if (heroTransform) {
+      Animated.timing(heroAnimation, {
+        toValue: 1,
+        duration: 420,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [heroTransform]);
+
+  // Filet de sécurité : si measureInWindow ne se déclenche jamais (edge case),
+  // on révèle quand même la carte plutôt que de la laisser invisible pour de bon.
+  useEffect(() => {
+    if (!heroSource) return;
+    const timeout = setTimeout(() => {
+      if (!heroStartedRef.current) {
+        heroStartedRef.current = true;
+        setHeroTransform({ tx: 0, ty: 0, sx: 1, sy: 1 });
+      }
+    }, 500);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // measureInWindow ne peut donner la position finale de la carte qu'une fois
+  // qu'elle a été posée (onLayout) ; on calcule alors le delta transform+scale par
+  // rapport à heroSource (forme de départ envoyée par l'accueil). Ne se déclenche
+  // qu'une fois (heroStartedRef) — pas de heroSource -> jamais appelé/pas d'anim.
+  const handleCardHeroLayout = () => {
+    if (heroStartedRef.current || !heroSource) return;
+    cardHeroRef.current?.measureInWindow((x, y, width, height) => {
+      if (heroStartedRef.current || width === 0 || height === 0) return;
+      heroStartedRef.current = true;
+      const sourceCenterX = heroSource.x + heroSource.width / 2;
+      const sourceCenterY = heroSource.y + heroSource.height / 2;
+      const targetCenterX = x + width / 2;
+      const targetCenterY = y + height / 2;
+      setHeroTransform({
+        tx: sourceCenterX - targetCenterX,
+        ty: sourceCenterY - targetCenterY,
+        sx: heroSource.width / width,
+        sy: heroSource.height / height,
+      });
+    });
+  };
 
   useEffect(() => {
     if (!loading && dueCards.length > 0) {
@@ -769,10 +842,53 @@ export default function GlobalReview() {
               ("Attempting to run JS driven animation on animated node that has been
               moved to native") dès qu'on relance l'animation de couleur après un scale
               natif — cf. bug écran gris au clic sur Facile/Moyen.
-              Volontairement PAS d'entrée en fondu/glissée ici : la carte doit rester
-              visible immédiatement, sans jamais disparaître ni "popper" — seul le
-              chrome autour (compteur de progression) fait un fondu, voir header. */}
-          <Animated.View style={[styles.cardScaleWrapper, { transform: [{ scale: scaleAnimation }] }]}>
+              Volontairement JAMAIS de fondu sur la carte — seul le chrome autour
+              (header) en fait un, voir plus haut. Si heroSource est présent (tap
+              venant de la tinycard de l'accueil), la carte "grossit" depuis cette
+              forme de départ via translateX/Y + scaleX/Y (FLIP), combinés au scale
+              uniforme déjà utilisé pour les transitions entre cartes suivantes —
+              tous natifs (transform/opacity uniquement), safe à combiner. Cachée
+              (opacity 0) le temps très bref de la toute première mesure pour éviter
+              un flash à sa taille finale avant que le hero parte de la bonne forme. */}
+          <Animated.View
+            ref={cardHeroRef}
+            onLayout={handleCardHeroLayout}
+            style={[
+              styles.cardScaleWrapper,
+              {
+                opacity: heroSource && !heroTransform ? 0 : 1,
+                transform: heroTransform
+                  ? [
+                      {
+                        translateX: heroAnimation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [heroTransform.tx, 0],
+                        }),
+                      },
+                      {
+                        translateY: heroAnimation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [heroTransform.ty, 0],
+                        }),
+                      },
+                      {
+                        scaleX: heroAnimation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [heroTransform.sx, 1],
+                        }),
+                      },
+                      {
+                        scaleY: heroAnimation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [heroTransform.sy, 1],
+                        }),
+                      },
+                      { scale: scaleAnimation },
+                    ]
+                  : [{ scale: scaleAnimation }],
+              },
+            ]}
+          >
             <Animated.View
               style={[
                 styles.card,
