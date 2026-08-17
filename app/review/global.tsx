@@ -1,5 +1,5 @@
 // app/review/global.tsx
-import { View, Text, StyleSheet, Pressable, Animated, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Modal, Alert, ActivityIndicator } from 'react-native';
 import { useEffect, useState, useRef } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,6 +50,11 @@ export default function GlobalReview() {
   const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
 
   // Animations
+  // Fondu du contenu principal une fois les cartes chargées (spinner -> carte).
+  // Ne touche jamais au SafeAreaView/header, qui restent montés en permanence —
+  // c'est le démontage/remontage de tout l'écran (ancien écran "Chargement..."
+  // séparé) qui causait le pop-in saccadé pendant la transition modale.
+  const contentFadeAnimation = useRef(new Animated.Value(0)).current;
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(1)).current;
   const borderColorAnimation = useRef(new Animated.Value(0)).current;
@@ -321,6 +326,17 @@ export default function GlobalReview() {
       fetchDueCards();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!loading && dueCards.length > 0) {
+      contentFadeAnimation.setValue(0);
+      Animated.timing(contentFadeAnimation, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [loading, dueCards.length]);
 
   async function fetchDueCards() {
     if (!user) return;
@@ -679,28 +695,19 @@ export default function GlobalReview() {
     return isDark ? '#fff' : '#333';
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.loadingText}>Chargement des cartes à réviser...</Text>
-      </SafeAreaView>
-    );
-  }
-
-  if (dueCards.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.loadingText}>Aucune carte à réviser</Text>
-      </SafeAreaView>
-    );
-  }
-
   const currentCard = dueCards[currentCardIndex];
+  const isReady = !loading && !!currentCard;
 
   return (
     // edges exclut 'top' : le padding du haut est géré à la main via insets.top sur
     // floatingHeader (voir plus haut) plutôt que par SafeAreaView, pour ne pas
     // appliquer l'offset deux fois sur les plateformes où SafeAreaView le gère bien.
+    //
+    // Le header et ce SafeAreaView restent montés en permanence, chargement inclus :
+    // avant, un écran "Chargement..." entièrement séparé (sans header, texte centré)
+    // était démonté puis remplacé d'un coup par l'écran complet une fois les cartes
+    // prêtes — ce swap d'arbre pendant la transition modale donnait l'effet saccadé.
+    // Seul le contenu interne (spinner <-> carte) varie désormais, en fondu léger.
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       {/* Header */}
       <View style={styles.floatingHeader}>
@@ -709,14 +716,28 @@ export default function GlobalReview() {
         </Pressable>
         <View style={styles.headerCenter}>
           <Text style={styles.deckName}>Révision globale</Text>
-          <Text style={styles.cardProgress}>
-            {currentCardIndex + 1} / {dueCards.length}
-          </Text>
+          {isReady && (
+            <Text style={styles.cardProgress}>
+              {currentCardIndex + 1} / {dueCards.length}
+            </Text>
+          )}
         </View>
         <StreakFlame streak={streak} />
       </View>
 
-      {/* Zone cliquable principale */}
+      {!isReady ? (
+        <View style={styles.mainContent}>
+          <View style={[styles.cardContainer, { bottom: 0 }]}>
+            {loading ? (
+              <ActivityIndicator size="large" color={theme.primary} />
+            ) : (
+              <Text style={styles.loadingText}>Aucune carte à réviser</Text>
+            )}
+          </View>
+        </View>
+      ) : (
+      /* Zone cliquable principale */
+      <Animated.View style={{ flex: 1, opacity: contentFadeAnimation }}>
       <Pressable
         style={styles.mainContent}
         onPress={handleToggleAnswer}
@@ -762,15 +783,15 @@ export default function GlobalReview() {
 
         {/* Boutons de difficulté */}
         {showAnswer && (
-          <Pressable 
+          <Pressable
             style={styles.difficultyContainer}
             onPress={(e) => e.stopPropagation()}
           >
             <Text style={styles.difficultyTitle}>Comment avez-vous trouvé cette carte ?</Text>
-            
+
             <View style={styles.difficultyButtons}>
               <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.hard }] }]}>
-                <Pressable 
+                <Pressable
                   style={[styles.difficultyButton, getButtonStyle('hard')]}
                   onPress={() => {
                     animateButton('hard');
@@ -778,9 +799,9 @@ export default function GlobalReview() {
                   }}
                   disabled={isProcessing}
                 >
-                  <Ionicons 
-                    name="close-circle" 
-                    size={24} 
+                  <Ionicons
+                    name="close-circle"
+                    size={24}
                     color={selectedDifficulty === 'hard' ? "#fff" : "#FF3B30"}
                   />
                   <Text style={[
@@ -793,7 +814,7 @@ export default function GlobalReview() {
               </Animated.View>
 
               <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.medium }] }]}>
-                <Pressable 
+                <Pressable
                   style={[styles.difficultyButton, getButtonStyle('medium')]}
                   onPress={() => {
                     animateButton('medium');
@@ -801,9 +822,9 @@ export default function GlobalReview() {
                   }}
                   disabled={isProcessing}
                 >
-                  <Ionicons 
-                    name="help-circle" 
-                    size={24} 
+                  <Ionicons
+                    name="help-circle"
+                    size={24}
                     color={selectedDifficulty === 'medium' ? "#fff" : "#FF9500"}
                   />
                   <Text style={[
@@ -816,7 +837,7 @@ export default function GlobalReview() {
               </Animated.View>
 
               <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.easy }] }]}>
-                <Pressable 
+                <Pressable
                   style={[styles.difficultyButton, getButtonStyle('easy')]}
                   onPress={() => {
                     animateButton('easy');
@@ -824,9 +845,9 @@ export default function GlobalReview() {
                   }}
                   disabled={isProcessing}
                 >
-                  <Ionicons 
-                    name="checkmark-circle" 
-                    size={24} 
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={24}
                     color={selectedDifficulty === 'easy' ? "#fff" : "#34C759"}
                   />
                   <Text style={[
@@ -855,6 +876,8 @@ export default function GlobalReview() {
           </Pressable>
         )}
       </Pressable>
+      </Animated.View>
+      )}
 
       {/* Modal de fin de session */}
       <Modal
