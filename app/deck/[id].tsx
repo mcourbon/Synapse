@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView, Animated, BackHandler, Platform } from 'react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -117,6 +117,12 @@ export default function DeckDetail() {
   const router = useRouter();
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
+  // Calculé à la main plutôt que délégué à un marginTop fixe : ce header flottant
+  // (mode entraînement) est sur un écran poussé dans la pile (pas l'écran racine
+  // comme index.tsx), et dans ce contexte SafeAreaView ne rend pas le même inset
+  // du haut sur Android edge-to-edge — d'où le décalage constaté par rapport au
+  // header de l'écran de révision. insets.top donne la vraie valeur, fiable.
+  const insets = useSafeAreaInsets();
 
   const styles = StyleSheet.create({
   container: {
@@ -532,14 +538,12 @@ addCategoryButtonInactive: {
 
   // ---- Mode entraînement (ex app/card/[id].tsx) ----
   floatingHeader: {
-    // marginTop: 20 comme le topBar de l'écran de révision (index.tsx) — sans ça
-    // ce header (repris tel quel de l'ancien card/[id].tsx, qui compensait via un
-    // marginTop individuel sur chaque enfant) se retrouvait collé tout en haut,
-    // sous l'encoche/la barre de statut sur Android edge-to-edge : bouton retour
-    // invisible/pas cliquable.
+    // top: insets.top plutôt qu'un marginTop fixe deviné — cet écran est poussé
+    // dans la pile (pas l'écran racine), et SafeAreaView n'y rend pas le même
+    // inset du haut sur Android edge-to-edge ; un chiffre en dur calé pour matcher
+    // index.tsx ne matchait pas réellement. insets.top est la vraie valeur.
     position: 'absolute',
-    top: 0,
-    marginTop: 20,
+    top: insets.top,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
