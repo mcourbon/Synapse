@@ -24,7 +24,6 @@ export default function StreakFlame({ streak }: StreakFlameProps) {
   const styles = StyleSheet.create({
     placeholder: {
       width: 48,
-      marginTop: 15,
     },
     badge: {
       minWidth: 48,
@@ -36,7 +35,6 @@ export default function StreakFlame({ streak }: StreakFlameProps) {
       alignItems: 'center',
       justifyContent: 'center',
       gap: 4,
-      marginTop: 15,
       shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,

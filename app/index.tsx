@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, Alert, Animated, Modal, ActivityIndicator, Easing, BackHandler, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, Animated, Modal, ActivityIndicator, Easing, BackHandler, useWindowDimensions, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -89,6 +89,17 @@ export default function Home() {
   const topOffset = Math.round(Math.min(120, Math.max(80, screenHeight * 0.115)));
   const difficultyReserve = Math.round(Math.min(260, Math.max(190, screenHeight * 0.26)));
 
+  // Hauteur max de la carte, même logique bornée (min/max dérivés de l'écran) que
+  // topOffset/difficultyReserve ci-dessus — au-delà, le texte recto/verso défile en
+  // interne (ScrollView) plutôt que de pousser la carte plus haut que l'espace
+  // disponible (ce qui la faisait déborder par-dessus le header ou les boutons de
+  // difficulté sur les cartes à texte long, ~300 caractères).
+  const cardMaxHeight = Math.round(Math.min(420, Math.max(280, screenHeight * 0.45)));
+  const cardContentPadding = 24 * 2; // cardContent.padding, haut + bas
+  const cardSeparatorSpace = 2 + 20 * 2; // separator.height + marginVertical haut/bas
+  const cardTextMaxHeightFull = cardMaxHeight - cardContentPadding;
+  const cardTextMaxHeightSplit = Math.round((cardMaxHeight - cardContentPadding - cardSeparatorSpace) / 2);
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -159,6 +170,7 @@ export default function Home() {
     card: {
       backgroundColor: theme.surface,
       borderRadius: 20,
+      maxHeight: cardMaxHeight,
       justifyContent: 'center',
       shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 8 },
@@ -169,6 +181,23 @@ export default function Home() {
     },
     cardContent: {
       padding: 24,
+    },
+    // Bornent la hauteur du texte recto/verso : tant que ça tient, ScrollView se
+    // comporte comme un simple conteneur (contentContainerStyle centre le texte
+    // verticalement comme avant) ; au-delà, ça défile au lieu de déborder de la
+    // carte. "Full" = recto seul (réponse pas encore révélée), "Split" = recto et
+    // verso une fois la réponse révélée, chacun sa moitié du budget vertical.
+    textScrollFull: {
+      alignSelf: 'stretch',
+      maxHeight: cardTextMaxHeightFull,
+    },
+    textScrollSplit: {
+      alignSelf: 'stretch',
+      maxHeight: cardTextMaxHeightSplit,
+    },
+    textScrollContent: {
+      flexGrow: 1,
+      justifyContent: 'center',
     },
     separator: {
       height: 2,
@@ -982,7 +1011,11 @@ export default function Home() {
               styles.cardZone,
               { bottom: transitionAnim.interpolate({ inputRange: [0, 1], outputRange: [0, difficultyReserve] }) },
             ]}
-            pointerEvents="none"
+            // box-none (au lieu de none) : la zone elle-même laisse toujours passer le
+            // tap vers tapZone en dessous (flip/révéler la réponse), mais ses enfants
+            // — les ScrollView du recto/verso — doivent rester de vraies cibles tactiles
+            // pour pouvoir défiler. 'none' bloquait tout le sous-arbre, y compris eux.
+            pointerEvents="box-none"
           >
             {mode === 'review' && !currentCard ? (
               <ActivityIndicator size="large" color={theme.primary} />
@@ -999,15 +1032,33 @@ export default function Home() {
                   ]}
                 >
                   <View style={styles.cardContent}>
-                    <Text style={[styles.cardText, { color: mode === 'review' ? getTextColor() : theme.text }]}>
-                      {mode === 'home' ? getCardTextMessage() : currentCard?.front}
-                    </Text>
+                    {/* Recto : défile en interne plutôt que de déborder de la carte sur
+                        les textes longs (voir cardMaxHeight plus haut). */}
+                    <ScrollView
+                      style={mode === 'review' && showAnswer ? styles.textScrollSplit : styles.textScrollFull}
+                      contentContainerStyle={styles.textScrollContent}
+                      showsVerticalScrollIndicator={false}
+                      bounces={false}
+                      overScrollMode="never"
+                    >
+                      <Text style={[styles.cardText, { color: mode === 'review' ? getTextColor() : theme.text }]}>
+                        {mode === 'home' ? getCardTextMessage() : currentCard?.front}
+                      </Text>
+                    </ScrollView>
 
                     {mode === 'review' && showAnswer && <View style={styles.separator} />}
 
                     {mode === 'review' && showAnswer && (
                       <Animated.View style={{ opacity: fadeAnimation }}>
-                        <Text style={[styles.cardText, { color: getTextColor() }]}>{currentCard?.back}</Text>
+                        <ScrollView
+                          style={styles.textScrollSplit}
+                          contentContainerStyle={styles.textScrollContent}
+                          showsVerticalScrollIndicator={false}
+                          bounces={false}
+                          overScrollMode="never"
+                        >
+                          <Text style={[styles.cardText, { color: getTextColor() }]}>{currentCard?.back}</Text>
+                        </ScrollView>
                       </Animated.View>
                     )}
                   </View>

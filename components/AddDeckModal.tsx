@@ -7,8 +7,6 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   Alert,
   ScrollView,
 } from 'react-native';
@@ -322,10 +320,11 @@ export default function AddDeckModal({
       navigationBarTranslucent
     >
       <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView 
-          style={styles.mainContent}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
+        {/* Pas de KeyboardAvoidingView ici — même pattern que AddCardModal (qui n'en a
+            pas) : le resize géré par l'OS suffit, et empiler un KeyboardAvoidingView
+            par-dessus (qui enveloppait aussi le header) faisait bouger toute la zone
+            deux fois à l'apparition du clavier. */}
+        <View style={styles.mainContent}>
           {/* Header */}
           <View style={styles.header}>
             <Pressable onPress={handleClose}>
@@ -483,7 +482,7 @@ export default function AddDeckModal({
               </View>
             </View>
           </ScrollView>
-        </KeyboardAvoidingView>
+        </View>
       </SafeAreaView>
     </Modal>
   );

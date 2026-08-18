@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView, Animated, BackHandler, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView, Animated, BackHandler, Platform, useWindowDimensions } from 'react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -117,6 +117,25 @@ export default function DeckDetail() {
   const router = useRouter();
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
+
+  // Espace réservé en bas pour les boutons de difficulté en mode entraînement,
+  // même formule que difficultyReserve dans app/index.tsx (mode révision de
+  // l'accueil) — avant, cette valeur était en dur (250) ici, donc elle mangeait
+  // une part disproportionnée de l'écran sur un petit tel (iPhone SE, Android
+  // compact) et laissait un vide exagéré sur un grand écran, contrairement à
+  // l'accueil qui s'adapte déjà à la hauteur d'écran.
+  const { height: screenHeight } = useWindowDimensions();
+  const difficultyReserve = Math.round(Math.min(260, Math.max(190, screenHeight * 0.26)));
+
+  // Même parade que app/index.tsx (mode révision de l'accueil) : au-delà de cette
+  // hauteur, le texte recto/verso défile en interne (ScrollView) plutôt que de
+  // pousser la carte plus haut que l'espace disponible — sur une carte à texte
+  // long (~300 caractères recto ET verso), la carte débordait sinon.
+  const cardMaxHeight = Math.round(Math.min(420, Math.max(280, screenHeight * 0.45)));
+  const cardContentPadding = 24 * 2; // trainingCardContent.padding, haut + bas
+  const cardSeparatorSpace = 2 + 20 * 2; // separator.height + marginVertical haut/bas
+  const cardTextMaxHeightFull = cardMaxHeight - cardContentPadding;
+  const cardTextMaxHeightSplit = Math.round((cardMaxHeight - cardContentPadding - cardSeparatorSpace) / 2);
 
   const styles = StyleSheet.create({
   container: {
@@ -575,7 +594,7 @@ addCategoryButtonInactive: {
     top: 0,
     left: 0,
     right: 0,
-    bottom: 250,
+    bottom: difficultyReserve,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -594,6 +613,7 @@ addCategoryButtonInactive: {
     backgroundColor: theme.surface,
     borderRadius: 20,
     minHeight: 250,
+    maxHeight: cardMaxHeight,
     shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
@@ -601,6 +621,7 @@ addCategoryButtonInactive: {
     elevation: 12,
     borderBottomWidth: 8,
     borderBottomColor: theme.primary,
+    overflow: 'hidden',
   },
   trainingCardContent: {
     flex: 1,
@@ -612,6 +633,22 @@ addCategoryButtonInactive: {
   },
   answerSection: {
     alignItems: 'center',
+  },
+  // Bornent la hauteur du texte recto/verso : ScrollView reste un simple conteneur
+  // centré tant que ça tient (contentContainerStyle), et défile au-delà au lieu de
+  // faire déborder la carte. "Full" = recto seul, "Split" = recto + verso une fois
+  // la réponse révélée, chacun sa moitié du budget vertical.
+  textScrollFull: {
+    alignSelf: 'stretch',
+    maxHeight: cardTextMaxHeightFull,
+  },
+  textScrollSplit: {
+    alignSelf: 'stretch',
+    maxHeight: cardTextMaxHeightSplit,
+  },
+  textScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   separator: {
     height: 2,
@@ -1626,9 +1663,16 @@ addCategoryButtonInactive: {
             styles du header de la liste du deck (donc de tous les autres écrans),
             au lieu d'un floatingHeader séparé dont le padding/margin ne matchait
             jamais vraiment, peu importe comment on essayait de le recaler. Même
-            style = même position, garanti. */}
+            style = même position, garanti.
+            alignItems: 'flex-start' en override (au lieu du 'center' hérité de
+            headerRow) : ici headerCenter est plus haut que 48 (pastille nom + compteur
+            empilés, comme en révision globale), donc 'center' recentrait verticalement
+            le bouton retour/StreakFlame et les décalait vers le bas par rapport au
+            reste de l'app — 'flex-start' les recale en haut, comme la topBar de
+            l'accueil (qui n'a pas d'alignItems, donc stretch = top pour des
+            enfants à hauteur fixe). */}
         <View style={styles.headerSection}>
-          <View style={styles.headerRow}>
+          <View style={[styles.headerRow, { alignItems: 'flex-start' }]}>
             <Pressable style={styles.backButton} onPress={exitTraining}>
               <Ionicons name="chevron-back" size={24} color={theme.primary} />
             </Pressable>
@@ -1640,7 +1684,15 @@ addCategoryButtonInactive: {
                 </Text>
               )}
             </View>
-            <StreakFlame streak={streak} />
+            {/* Largeur fixe 48x48, StreakFlame centré dedans : le badge s'élargit avec
+                le nombre de jours (minWidth 48 + padding), ce qui, laissé en enfant flex
+                direct, grignote l'espace du bloc titre et décale le texte du deck à
+                chaque changement de streak. Même parade que la topBar de l'accueil
+                (boîte fixe + centrage dedans) : la largeur comptée dans le flex layout
+                ne bouge plus, seul le débordement visuel est centré dessus. */}
+            <View style={{ width: 48, height: 48, justifyContent: 'center', alignItems: 'center' }}>
+              <StreakFlame streak={streak} />
+            </View>
           </View>
         </View>
 
@@ -1661,17 +1713,27 @@ addCategoryButtonInactive: {
               ]}
             >
               <View style={styles.trainingCardContent}>
-                {/* Section Question - toujours visible */}
+                {/* Section Question - toujours visible. Défile en interne plutôt que
+                    de déborder de la carte sur les textes longs (voir cardMaxHeight
+                    plus haut). */}
                 <View style={styles.questionSection}>
-                  <Text style={[styles.cardText, { color: getTextColor() }]}>
-                    {trainingCard.front}
-                  </Text>
+                  <ScrollView
+                    style={showAnswer ? styles.textScrollSplit : styles.textScrollFull}
+                    contentContainerStyle={styles.textScrollContent}
+                    showsVerticalScrollIndicator={false}
+                    bounces={false}
+                    overScrollMode="never"
+                  >
+                    <Text style={[styles.cardText, { color: getTextColor() }]}>
+                      {trainingCard.front}
+                    </Text>
+                  </ScrollView>
                 </View>
 
                 {/* Séparateur quand la réponse est affichée */}
                 {showAnswer && <View style={styles.separator} />}
 
-                {/* Section Réponse - apparaît avec animation */}
+                {/* Section Réponse - apparaît avec animation, même parade de scroll */}
                 {showAnswer && (
                   <Animated.View
                     style={[
@@ -1679,9 +1741,17 @@ addCategoryButtonInactive: {
                       { opacity: fadeAnimation }
                     ]}
                   >
-                    <Text style={[styles.cardText, { color: getTextColor() }]}>
-                      {trainingCard.back}
-                    </Text>
+                    <ScrollView
+                      style={styles.textScrollSplit}
+                      contentContainerStyle={styles.textScrollContent}
+                      showsVerticalScrollIndicator={false}
+                      bounces={false}
+                      overScrollMode="never"
+                    >
+                      <Text style={[styles.cardText, { color: getTextColor() }]}>
+                        {trainingCard.back}
+                      </Text>
+                    </ScrollView>
                   </Animated.View>
                 )}
               </View>
