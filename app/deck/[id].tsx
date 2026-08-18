@@ -531,22 +531,8 @@ addCategoryButtonInactive: {
   },
 
   // ---- Mode entraînement (ex app/card/[id].tsx) ----
-  floatingHeader: {
-    // Plus du tout en position:absolute avec un top deviné/calculé — ça n'a
-    // jamais matché la position du header partagé par le reste de l'app
-    // (list/decks/profile), qui est simplement un enfant normal du flux à
-    // l'intérieur de mainContent, sous la gestion automatique de SafeAreaView.
-    // Même traitement ici : bloc normal, exactement au même endroit partout.
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    paddingTop: 5,
-    paddingBottom: 15,
-    width: '100%',
-    maxWidth: 500,
-    alignSelf: 'center',
-  },
+  // Le header réutilise headerSection/headerRow (plus haut) — plus de style dédié
+  // ici, voir le commentaire sur son usage en JSX.
   headerCenter: {
     alignItems: 'center',
     flex: 1,
@@ -1636,21 +1622,26 @@ addCategoryButtonInactive: {
       </View>
       ) : (
       <View style={styles.mainContent}>
-        {/* Header (mode entraînement) — bloc normal du flux, comme partout
-            ailleurs dans l'app, plus de position:absolute. */}
-        <View style={styles.floatingHeader}>
-          <Pressable style={styles.backButton} onPress={exitTraining}>
-            <Ionicons name="chevron-back" size={24} color={theme.primary} />
-          </Pressable>
-          <View style={styles.headerCenter}>
-            <Text style={styles.deckName}>{deck.name}</Text>
-            {trainingCards.length > 1 && (
-              <Text style={styles.cardProgress}>
-                {currentCardIndex + 1} / {trainingCards.length}
-              </Text>
-            )}
+        {/* Header (mode entraînement) — réutilise headerSection/headerRow, les
+            styles du header de la liste du deck (donc de tous les autres écrans),
+            au lieu d'un floatingHeader séparé dont le padding/margin ne matchait
+            jamais vraiment, peu importe comment on essayait de le recaler. Même
+            style = même position, garanti. */}
+        <View style={styles.headerSection}>
+          <View style={styles.headerRow}>
+            <Pressable style={styles.backButton} onPress={exitTraining}>
+              <Ionicons name="chevron-back" size={24} color={theme.primary} />
+            </Pressable>
+            <View style={styles.headerCenter}>
+              <Text style={styles.deckName}>{deck.name}</Text>
+              {trainingCards.length > 1 && (
+                <Text style={styles.cardProgress}>
+                  {currentCardIndex + 1} / {trainingCards.length}
+                </Text>
+              )}
+            </View>
+            <StreakFlame streak={streak} />
           </View>
-          <StreakFlame streak={streak} />
         </View>
 
         {/* Container principal - Zone cliquable */}
