@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView, Animated, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView, Animated, BackHandler, Platform } from 'react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -1034,7 +1034,14 @@ addCategoryButtonInactive: {
         }
       };
 
-      if (typeof window !== 'undefined') {
+      // `typeof window !== 'undefined'` n'est PAS un test fiable de "web
+      // uniquement" ici : React Native définit global.window = global comme
+      // polyfill, donc ce test passe aussi sur Android/iOS — mais
+      // window.addEventListener n'y existe pas, ce qui plantait l'app
+      // (TypeError: undefined is not a function) dès que ce hook se montait,
+      // avant même d'atteindre le mode entraînement. Platform.OS est le seul
+      // check fiable pour du code réellement web-only.
+      if (Platform.OS === 'web') {
         window.addEventListener('keydown', handleKeyPress);
         return () => window.removeEventListener('keydown', handleKeyPress);
       }
