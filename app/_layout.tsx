@@ -58,18 +58,18 @@ function RootLayoutNav() {
       <Stack.Screen name="decks" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={{ headerShown: false }} />
       <Stack.Screen name="deck/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="card/[id]" options={{ headerShown: false }} />
       <Stack.Screen
         name="politique-de-confidentialite"
         options={{ headerShown: false }}
       />
-      {/* Pas de route review/global : la révision se fait désormais directement sur
-          l'écran d'accueil (app/index.tsx, mode 'home' <-> 'review'), sans jamais
-          naviguer — voir le commentaire en tête de ce fichier-là. Toute route ici
-          (modal ou push, `animation` quelle qu'elle soit) déclenche sa propre
-          transition native qu'aucune combinaison de props n'a réussi à faire
-          coïncider avec l'animation JS voulue (coupure noire + glissement
-          parasite au tap sur la tinycard) — cf. git history sur ce fichier. */}
+      {/* Ni review/global ni card/[id] : révision et entraînement se font tous les
+          deux directement sur leur écran parent (app/index.tsx mode 'home'<->'review',
+          app/deck/[id].tsx mode 'list'<->'training'), sans jamais naviguer — voir les
+          commentaires en tête de ces fichiers-là. Toute route ici (modal ou push,
+          `animation` quelle qu'elle soit) déclenche sa propre transition native
+          qu'aucune combinaison de props n'a réussi à faire coïncider avec l'animation
+          JS voulue (coupure noire + glissement parasite / écran figé au tap) —
+          cf. git history sur ce fichier. */}
     </Stack>
   );
 }

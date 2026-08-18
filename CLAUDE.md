@@ -47,26 +47,38 @@ All screens use `headerShown: false`. Auth is enforced at the root layout level 
 |---|---|
 | `/` | Home dashboard **and** review session, same screen/component (see below) |
 | `/decks` | Collections list — CRUD on decks |
-| `/deck/[id]` | Deck detail — card list with category system |
+| `/deck/[id]` | Deck detail/list **and** practice mode, same screen/component (see below) |
 | `/profile` | Profile, stats, settings |
 
-There is no `/review/global` route (deleted). Every route-based transition tried for
-it — `presentation: 'modal'`, plain push, `animation` set to `fade`/`slide_from_bottom`/`none`
-— caused a black flash and/or a stray native slide no combination of props could
-suppress (a modal presentation animates itself independently of `animation`; even a
-plain push showed the same symptom). The fix was to stop navigating there at all:
-review now lives inside `app/index.tsx` as a second visual mode of the home screen
-(`mode: 'home' | 'review'` state, no route change). Tapping the home tinycard fetches
-due cards, shuffles them (keeping the already-shown card first), and morphs the
-screen in place via a single `transitionAnim` Animated.Value driving crossfades
-(topBar decks↔back and profile↔streak icons, welcome message↔"Révision globale"
-title+counter) and the card's position/shape (top/bottom insets, border width) —
-since the tapped card's `front` text is already on screen, the card's own text never
-needs to fade. Difficulty buttons render conditionally once the answer is revealed.
-Android hardware back returns to home mode instead of exiting (`BackHandler`, only
-active while `mode === 'review'`). Native root background is synced to theme via
-expo-system-ui in ThemeContext, fixing an earlier, separate white-flash issue on
-screen transitions elsewhere in the app — see git history.
+There is no `/review/global` and no `/card/[id]` route (both deleted). Every
+route-based transition tried for either — `presentation: 'modal'`, plain push,
+`animation` set to `fade`/`slide_from_bottom`/`none` — caused a black/white flash
+and/or a frozen screen no combination of props could suppress (a modal presentation
+animates itself independently of `animation`; even a plain push showed the same
+symptom, which is what `/card/[id]` used). The fix both times was to stop navigating
+there at all:
+
+- Review lives inside `app/index.tsx` as a second visual mode of the home screen
+  (`mode: 'home' | 'review'` state, no route change). Tapping the home tinycard fetches
+  due cards, shuffles them (keeping the already-shown card first), and morphs the
+  screen in place via a single `transitionAnim` Animated.Value driving crossfades
+  (topBar decks↔back and profile↔streak icons, welcome message↔"Révision globale"
+  title+counter) and the card's position/shape (top/bottom insets, border width) —
+  since the tapped card's `front` text is already on screen, the card's own text never
+  needs to fade. Difficulty buttons fade out via `reviewLayerOpacity` on exit (same
+  speed as the title, in sync with the FAB fading in) instead of popping instantly.
+  Android hardware back returns to home mode instead of exiting (`BackHandler`, only
+  active while `mode === 'review'`).
+- Practice ("S'entraîner") lives inside `app/deck/[id].tsx` as a second visual mode
+  of the deck screen (`mode: 'list' | 'training'` state). Reuses the deck's
+  already-fetched `cards` (shuffled locally) instead of a fresh fetch. Same
+  behavior as before: no real FSRS/stats writes, full deck loop with reshuffle
+  ("Continuer" on the end-of-session modal), free flip/re-flip. Android hardware
+  back returns to list mode (`BackHandler`, only active while `mode === 'training'`).
+
+Native root background is synced to theme via expo-system-ui in ThemeContext, fixing
+an earlier, separate white-flash issue on screen transitions elsewhere in the app —
+see git history.
 
 ### Auth & Theme (contexts/)
 
