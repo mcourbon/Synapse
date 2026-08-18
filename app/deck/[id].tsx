@@ -532,8 +532,14 @@ addCategoryButtonInactive: {
 
   // ---- Mode entraînement (ex app/card/[id].tsx) ----
   floatingHeader: {
+    // marginTop: 20 comme le topBar de l'écran de révision (index.tsx) — sans ça
+    // ce header (repris tel quel de l'ancien card/[id].tsx, qui compensait via un
+    // marginTop individuel sur chaque enfant) se retrouvait collé tout en haut,
+    // sous l'encoche/la barre de statut sur Android edge-to-edge : bouton retour
+    // invisible/pas cliquable.
     position: 'absolute',
     top: 0,
+    marginTop: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -546,10 +552,11 @@ addCategoryButtonInactive: {
     alignSelf: 'center',
   },
   headerCenter: {
+    // Pas de marginTop propre : floatingHeader porte maintenant le marginTop
+    // global, sinon ce bloc se retrouvait décalé plus bas que le bouton retour.
     alignItems: 'center',
     flex: 1,
     marginHorizontal: 16,
-    marginTop: 15,
   },
   deckName: {
     fontSize: 16,
