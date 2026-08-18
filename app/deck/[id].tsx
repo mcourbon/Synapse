@@ -590,11 +590,19 @@ addCategoryButtonInactive: {
     alignItems: 'center',
     paddingHorizontal: 20,
   },
+  // Largeur portée par ce wrapper plutôt que par `card` lui-même : `card` est le
+  // nœud qui anime borderBottomColor (JS driver), `cardScaleWrapper` celui qui
+  // anime le transform scale (native driver) — mélanger les deux animations sur
+  // le même nœud plante Android/Hermes dès qu'on relance l'anim de couleur après
+  // un scale natif ("Attempting to run JS driven animation on animated node that
+  // has been moved to native"), cf. bug écran noir au clic sur Facile/Moyen.
+  cardScaleWrapper: {
+    width: '100%',
+    maxWidth: 380,
+  },
   card: {
     backgroundColor: theme.surface,
     borderRadius: 20,
-    width: '100%',
-    maxWidth: 380,
     minHeight: 250,
     shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 8 },
@@ -1645,15 +1653,15 @@ addCategoryButtonInactive: {
           style={styles.mainContent}
           onPress={handleToggleAnswer}
         >
-          {/* Carte principale - toujours centrée */}
+          {/* Carte principale - toujours centrée.
+              Transform (scale) et borderBottomColor animent chacun sur leur propre
+              Animated.View — voir le commentaire sur cardScaleWrapper plus haut. */}
           <View style={styles.cardContainer}>
+            <Animated.View style={[styles.cardScaleWrapper, { transform: [{ scale: scaleAnimation }] }]}>
             <Animated.View
               style={[
                 styles.card,
-                {
-                  transform: [{ scale: scaleAnimation }],
-                  borderBottomColor: getAnimatedBorderColor(),
-                }
+                { borderBottomColor: getAnimatedBorderColor() }
               ]}
             >
               <View style={styles.trainingCardContent}>
@@ -1681,6 +1689,7 @@ addCategoryButtonInactive: {
                   </Animated.View>
                 )}
               </View>
+            </Animated.View>
             </Animated.View>
           </View>
 
