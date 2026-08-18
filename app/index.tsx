@@ -1005,9 +1005,15 @@ export default function Home() {
           </Animated.View>
         </Pressable>
 
-        {/* Boutons de difficulté, uniquement en révision une fois la réponse révélée */}
+        {/* Boutons de difficulté, uniquement en révision une fois la réponse révélée.
+            opacity: reviewLayerOpacity (= transitionAnim) — même valeur que le titre
+            "Révision globale" dans la topBar, pour fondre exactement à la même
+            vitesse que lui à la sortie. Sans ça (View simple, non animée), les
+            boutons restaient pleinement opaques jusqu'à la toute fin du tween de
+            sortie (mode ne repasse à 'home' qu'à la fin), pendant que le FAB '+'
+            fondait déjà en entrée par-dessus — d'où le chevauchement. */}
         {mode === 'review' && showAnswer && (
-          <View style={styles.difficultyContainer}>
+          <Animated.View style={[styles.difficultyContainer, { opacity: reviewLayerOpacity }]}>
             <Text style={styles.difficultyTitle}>Comment avez-vous trouvé cette carte ?</Text>
 
             <View style={styles.difficultyButtons}>
@@ -1084,7 +1090,7 @@ export default function Home() {
                 </Text>
               </View>
             )}
-          </View>
+          </Animated.View>
         )}
 
         {/* Bouton flottant d'ajout rapide — masqué pendant la révision. L'opacité
