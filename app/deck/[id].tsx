@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, ScrollView, Animated, BackHandler, Platform } from 'react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -117,12 +117,6 @@ export default function DeckDetail() {
   const router = useRouter();
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
-  // Calculé à la main plutôt que délégué à un marginTop fixe : ce header flottant
-  // (mode entraînement) est sur un écran poussé dans la pile (pas l'écran racine
-  // comme index.tsx), et dans ce contexte SafeAreaView ne rend pas le même inset
-  // du haut sur Android edge-to-edge — d'où le décalage constaté par rapport au
-  // header de l'écran de révision. insets.top donne la vraie valeur, fiable.
-  const insets = useSafeAreaInsets();
 
   const styles = StyleSheet.create({
   container: {
@@ -538,26 +532,22 @@ addCategoryButtonInactive: {
 
   // ---- Mode entraînement (ex app/card/[id].tsx) ----
   floatingHeader: {
-    // top: insets.top plutôt qu'un marginTop fixe deviné — cet écran est poussé
-    // dans la pile (pas l'écran racine), et SafeAreaView n'y rend pas le même
-    // inset du haut sur Android edge-to-edge ; un chiffre en dur calé pour matcher
-    // index.tsx ne matchait pas réellement. insets.top est la vraie valeur.
-    position: 'absolute',
-    top: insets.top,
+    // Plus du tout en position:absolute avec un top deviné/calculé — ça n'a
+    // jamais matché la position du header partagé par le reste de l'app
+    // (list/decks/profile), qui est simplement un enfant normal du flux à
+    // l'intérieur de mainContent, sous la gestion automatique de SafeAreaView.
+    // Même traitement ici : bloc normal, exactement au même endroit partout.
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: 20,
     paddingTop: 5,
     paddingBottom: 15,
-    zIndex: 10,
     width: '100%',
     maxWidth: 500,
     alignSelf: 'center',
   },
   headerCenter: {
-    // Pas de marginTop propre : floatingHeader porte maintenant le marginTop
-    // global, sinon ce bloc se retrouvait décalé plus bas que le bouton retour.
     alignItems: 'center',
     flex: 1,
     marginHorizontal: 16,
@@ -592,8 +582,11 @@ addCategoryButtonInactive: {
     elevation: 2,
   },
   cardContainer: {
+    // top: 0 et non plus 80 — cet espace ne sert plus à laisser la place à un
+    // floatingHeader qui flottait par-dessus (il est redevenu un bloc normal du
+    // flux, donc déjà "consommé" avant que ce conteneur ne commence).
     position: 'absolute',
-    top: 80,
+    top: 0,
     left: 0,
     right: 0,
     bottom: 250,
@@ -1642,8 +1635,9 @@ addCategoryButtonInactive: {
       )}
       </View>
       ) : (
-      <>
-        {/* Header flottant (mode entraînement) */}
+      <View style={styles.mainContent}>
+        {/* Header (mode entraînement) — bloc normal du flux, comme partout
+            ailleurs dans l'app, plus de position:absolute. */}
         <View style={styles.floatingHeader}>
           <Pressable style={styles.backButton} onPress={exitTraining}>
             <Ionicons name="chevron-back" size={24} color={theme.primary} />
@@ -1804,7 +1798,7 @@ addCategoryButtonInactive: {
             </Pressable>
           )}
         </Pressable>
-      </>
+      </View>
       )}
 
       {/* Toast */}
