@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, Alert, Animated, Modal, ActivityIndicator, Easing, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, Animated, Modal, ActivityIndicator, Easing, BackHandler, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -77,6 +77,18 @@ export default function Home() {
   const modalBackgroundAnimation = useRef(new Animated.Value(0)).current;
   const modalScaleAnimation = useRef(new Animated.Value(0.8)).current;
 
+  // Espacements verticaux dérivés de la hauteur d'écran plutôt que des px fixes —
+  // sinon la zone réservée en bas pour les boutons de difficulté (ex: 220px en dur)
+  // ou le point de départ de la tapZone/welcomeOverlay (ex: top:100 en dur) mangent
+  // une part disproportionnée de l'écran sur un petit tel (iPhone SE, Android
+  // compact) et laissent un vide exagéré sur un grand écran. Bornes min/max pour
+  // rester raisonnable aux deux extrêmes ; les valeurs par défaut (100 / 220) sont
+  // calées pour tomber ~pareil sur un gabarit "normal" (~850dp de haut), donc pas
+  // de changement visible sur les tels déjà testés.
+  const { height: screenHeight } = useWindowDimensions();
+  const topOffset = Math.round(Math.min(120, Math.max(80, screenHeight * 0.115)));
+  const difficultyReserve = Math.round(Math.min(260, Math.max(190, screenHeight * 0.26)));
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -126,7 +138,7 @@ export default function Home() {
       // pas seulement la carte elle-même : le centre, les côtés, le dessous, tout
       // déclenche la même action, en accueil comme en révision.
       position: 'absolute',
-      top: 100,
+      top: topOffset,
       left: 0,
       right: 0,
       bottom: 0,
@@ -185,7 +197,7 @@ export default function Home() {
     },
     welcomeOverlay: {
       position: 'absolute',
-      top: 100,
+      top: topOffset,
       left: 20,
       right: 20,
       alignItems: 'center',
@@ -968,7 +980,7 @@ export default function Home() {
           <Animated.View
             style={[
               styles.cardZone,
-              { bottom: transitionAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 220] }) },
+              { bottom: transitionAnim.interpolate({ inputRange: [0, 1], outputRange: [0, difficultyReserve] }) },
             ]}
             pointerEvents="none"
           >
