@@ -159,9 +159,10 @@ export class AvatarUpload {
   }
 
   /**
-   * Supprime l'ancien avatar de l'utilisateur
+   * Supprime les anciens avatars de l'utilisateur, à l'exclusion du fichier qu'on
+   * vient d'uploader (`keepFileName`) — appelée après un upload réussi, jamais avant.
    */
-  static async deleteOldAvatar(userId: string): Promise<void> {
+  static async deleteOldAvatar(userId: string, keepFileName?: string): Promise<void> {
     try {
       const { data: files, error: listError } = await supabase.storage
         .from('avatars')
@@ -171,8 +172,14 @@ export class AvatarUpload {
         return;
       }
 
-      const filePaths = files.map(file => `${userId}/${file.name}`);
-      
+      const filePaths = files
+        .filter(file => file.name !== keepFileName)
+        .map(file => `${userId}/${file.name}`);
+
+      if (filePaths.length === 0) {
+        return;
+      }
+
       const { error: deleteError } = await supabase.storage
         .from('avatars')
         .remove(filePaths);
@@ -185,20 +192,20 @@ export class AvatarUpload {
   }
 
   /**
-   * Met à jour l'avatar de l'utilisateur
+   * Met à jour l'avatar de l'utilisateur.
+   * Upload d'abord, nettoyage de l'ancien ensuite : si l'upload échoue (réseau,
+   * permission storage...), l'utilisateur garde son ancien avatar au lieu de se
+   * retrouver sans aucune photo.
    */
   static async updateUserAvatar(
     userId: string,
     imageAsset: ImagePicker.ImagePickerAsset
   ): Promise<string> {
-    
-    // 1. Supprimer l'ancien avatar
-    await this.deleteOldAvatar(userId);
 
-    // 2. Upload le nouveau
+    // 1. Upload le nouveau
     const avatarUrl = await this.uploadAvatar(userId, imageAsset);
 
-    // 3. Mettre à jour la BDD
+    // 2. Mettre à jour la BDD
     const { error: updateError } = await supabase
       .from('user_stats')
       .update({
@@ -211,6 +218,9 @@ export class AvatarUpload {
       throw updateError;
     }
 
+    // 3. Nettoyer les anciens avatars maintenant que le nouveau est en place
+    const newFileName = avatarUrl.split('/').pop()?.split('?')[0];
+    await this.deleteOldAvatar(userId, newFileName);
 
     return avatarUrl;
   }

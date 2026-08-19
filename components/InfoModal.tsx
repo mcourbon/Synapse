@@ -129,7 +129,13 @@ export default function InfoModal({ visible, onClose, title, icon, iconColor, ch
               </Pressable>
             </View>
 
-            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+            {/* maxHeight explicite au lieu de flex:1 : modalContent n'a pas de hauteur
+                propre (juste un maxHeight, dans un overlay en justifyContent:'center'
+                qui ne "stretch" jamais l'axe principal), donc flex:1 n'avait aucune
+                taille de référence à remplir et s'effondrait à ~0 — ne laissant que le
+                header visible. Un maxHeight direct sur le ScrollView se calcule sans
+                dépendre de la taille du parent, donc n'a pas ce problème. */}
+            <ScrollView style={{ maxHeight: windowHeight * 0.85 }} showsVerticalScrollIndicator={false}>
               <View style={styles.modalIconContainer}>
                 <View style={styles.iconCircle}>
                   <Ionicons name={icon} size={36} color={iconColor} />
