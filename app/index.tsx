@@ -1141,11 +1141,13 @@ export default function Home() {
               </Animated.View>
             </View>
 
-            {/* Stats de la carte : seulement une fois qu'on a répondu (pas dès que
-                la réponse est révélée), affichées sous les boutons comme avant. */}
-            {selectedDifficulty && currentCard && (
+            {/* Stats de la carte : la place est réservée dès que les boutons de
+                difficulté apparaissent (comme en mode entraînement) pour éviter que
+                leur arrivée fasse remonter tout le bloc ; seul le contenu reste
+                invisible (opacity) tant qu'on n'a pas cliqué sur un choix. */}
+            {currentCard && (
               <View style={styles.cardStatsContainer}>
-                <Text style={styles.cardStatsText}>
+                <Text style={[styles.cardStatsText, { opacity: selectedDifficulty ? 1 : 0 }]}>
                   Win Streak: {currentCard.repetitions || 0} •
                   Lapses: {currentCard.lapses || 0} •
                   Facilité: {difficultyToEasePercent(currentCard.difficulty) ?? '—'}% •
