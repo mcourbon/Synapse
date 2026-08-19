@@ -29,7 +29,13 @@ export default function StreakFlame({ streak }: StreakFlameProps) {
       minWidth: 48,
       height: 48,
       borderRadius: 24,
-      paddingHorizontal: 12,
+      // Padding asymétrique : la flamme (pleine, encre jusqu'aux bords de son cadre
+      // 20x20) et le chiffre (glyphes proportionnels, surtout "1") n'ont pas le même
+      // poids visuel à espace égal — un padding 12/12 identique donne l'impression
+      // qu'il reste plus d'air à droite du chiffre qu'à gauche de la flamme, surtout
+      // visible à partir de 2 chiffres. Corrigé à l'œil, pas déduit d'une formule.
+      paddingLeft: 14,
+      paddingRight: 10,
       backgroundColor: theme.surface,
       flexDirection: 'row',
       alignItems: 'center',
@@ -45,6 +51,9 @@ export default function StreakFlame({ streak }: StreakFlameProps) {
       fontSize: 15,
       fontWeight: '700',
       color: theme.text,
+      // Chiffres à largeur fixe : évite qu'un "1" plus étroit que les autres
+      // chiffres fasse bouger le centrage au fil des re-renders.
+      fontVariant: ['tabular-nums'],
     },
   });
 
