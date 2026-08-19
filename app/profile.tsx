@@ -1,5 +1,5 @@
 // app/profile.tsx
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch, Linking, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Linking, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -15,6 +15,7 @@ import InfoModal from '../components/InfoModal';
 import StatTile from '../components/StatTile';
 import ConfirmModal from '../components/ConfirmModal';
 import ImportCsvModal from '../components/ImportCsvModal';
+import ToggleSwitch from '../components/ToggleSwitch';
 import { enableReviewReminders, disableReviewReminders, areReviewRemindersEnabled } from '../lib/notifications';
 
 export default function Profile() {
@@ -674,13 +675,10 @@ avatarPlaceholder: {
                   <Ionicons name="notifications-outline" size={24} color={theme.textSecondary} />
                   <Text style={dynamicStyles.settingText}>Rappels de révision</Text>
                 </View>
-                <Switch
+                <ToggleSwitch
                   value={notificationsEnabled}
                   onValueChange={handleToggleNotifications}
                   disabled={updatingNotifications}
-                  trackColor={{ false: theme.border, true: theme.primary }}
-                  thumbColor={notificationsEnabled ? '#fff' : '#f4f3f4'}
-                  ios_backgroundColor={theme.border}
                 />
               </View>
             )}
@@ -695,13 +693,7 @@ avatarPlaceholder: {
                 />
                 <Text style={dynamicStyles.settingText}>Mode sombre</Text>
               </View>
-              <Switch
-                value={isDark}
-                onValueChange={toggleTheme}
-                trackColor={{ false: theme.border, true: theme.primary }}
-                thumbColor={isDark ? '#fff' : '#f4f3f4'}
-                ios_backgroundColor={theme.border}
-              />
+              <ToggleSwitch value={isDark} onValueChange={toggleTheme} />
             </View>
 
             <Pressable
