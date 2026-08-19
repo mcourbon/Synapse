@@ -80,6 +80,11 @@ export async function enableReviewReminders(): Promise<boolean> {
 
   await configureAndroidChannel();
 
+  // scheduleNotificationAsync/registerTaskAsync n'écrasent pas un appel précédent :
+  // sans ce nettoyage, activer le rappel plusieurs fois (toggle, rechargement en dev...)
+  // empile des rappels quotidiens identiques qui se déclenchent tous en même temps.
+  await Notifications.cancelAllScheduledNotificationsAsync();
+
   if (Platform.OS === 'android') {
     await BackgroundTask.registerTaskAsync(BACKGROUND_TASK_NAME, {
       minimumInterval: 6 * 60, // minutes ; l'OS espace généralement bien au-delà
