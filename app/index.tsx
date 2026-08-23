@@ -961,7 +961,11 @@ export default function Home() {
           {/* Titre "Révision globale" + compteur, aligné avec les boutons de la
               topBar (comme dans l'ancien header de review/global.tsx) — pas dans le
               bandeau plus bas, qui ne sert qu'au message motivant de l'accueil. */}
-          <Animated.View style={[styles.headerCenter, { opacity: reviewLayerOpacity }]} pointerEvents="none">
+          <Animated.View
+            style={[styles.headerCenter, { opacity: reviewLayerOpacity }]}
+            pointerEvents="none"
+            needsOffscreenAlphaCompositing
+          >
             <Text style={styles.reviewTitleText}>Révision globale</Text>
             {isReviewReady && (
               <Text style={styles.reviewCounterText}>
@@ -993,7 +997,11 @@ export default function Home() {
 
         {/* Bandeau du haut : message motivant de l'accueil, fondu au noir en révision */}
         <View style={styles.welcomeOverlay}>
-          <Animated.View style={{ opacity: homeLayerOpacity }} pointerEvents="none">
+          <Animated.View
+            style={{ opacity: homeLayerOpacity }}
+            pointerEvents="none"
+            needsOffscreenAlphaCompositing
+          >
             <Text style={styles.welcomeText}>{getWelcomeMessage()}</Text>
           </Animated.View>
         </View>
