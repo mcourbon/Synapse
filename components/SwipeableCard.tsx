@@ -4,8 +4,10 @@
 // Glisser-déposer contrôlé : la carte suit le doigt tant qu'il est posé, et sa couleur
 // (bordure du bas + texte, via tint()) vire progressivement au vert ou au rouge. La
 // couleur est pleine pile au seuil de validation : relâcher au-delà valide, en deçà la
-// carte revient au centre — on peut donc s'arrêter ou revenir en plein geste. Pas de
-// validation "au vol" sur un geste vif : seule la distance compte.
+// carte revient au centre — on peut donc s'arrêter ou revenir en plein geste.
+// Un geste vif ("lancer") valide aussi sur une courte distance, comme sur les apps de
+// swipe, et un lancer franc dans l'autre sens annule même au-delà du seuil : voir
+// swipeDecision(). Un glissé lent relâché avant le seuil revient toujours au centre.
 //
 // Le geste et le visuel sont séparés :
 // - useCardSwipe() fournit les panHandlers, à poser sur une vue qui ENGLOBE la zone
@@ -57,6 +59,19 @@ const SWIPE_THRESHOLD_RATIO = 0.35;
 const SWIPE_THRESHOLD_MAX = 160;
 const swipeThreshold = (width: number) => Math.min(width * SWIPE_THRESHOLD_RATIO, SWIPE_THRESHOLD_MAX);
 const FLY_OUT_DURATION = 220;
+// Lancer : vitesse au relâché (px/ms, ~500px/s) et distance minimale pour valider
+// sans atteindre le seuil — la distance évite qu'un simple tremblement parte.
+const FLICK_VELOCITY = 0.5;
+const FLICK_MIN_DISTANCE = 25;
+
+/** Décision au relâché : direction validée, ou null pour revenir au centre. */
+export function swipeDecision(dx: number, vx: number, threshold: number): SwipeDirection | null {
+  if (dx >= threshold) return vx < -FLICK_VELOCITY ? null : 'right';
+  if (dx <= -threshold) return vx > FLICK_VELOCITY ? null : 'left';
+  if (vx > FLICK_VELOCITY && dx > FLICK_MIN_DISTANCE) return 'right';
+  if (vx < -FLICK_VELOCITY && dx < -FLICK_MIN_DISTANCE) return 'left';
+  return null;
+}
 
 export function useCardSwipe({ enabled, resetKey, onSwipe }: UseCardSwipeOptions): CardSwipe {
   const { width } = useWindowDimensions();
@@ -81,12 +96,20 @@ export function useCardSwipe({ enabled, resetKey, onSwipe }: UseCardSwipeOptions
     flyingRef.current = false;
   }, [resetKey, translateX]);
 
-  const flyOut = (direction: SwipeDirection) => {
+  // from/velocity : position et vitesse au relâché d'un geste, pour que la carte
+  // parte dans la continuité du lancer (plus vif = plus rapide) au lieu de repartir
+  // à vitesse fixe. Boutons / clavier : partie du centre à vitesse standard.
+  const flyOut = (direction: SwipeDirection, from = 0, velocity = 0) => {
     if (flyingRef.current) return;
     flyingRef.current = true;
+    const toValue = (direction === 'right' ? 1 : -1) * widthRef.current * 1.5;
+    const speed = Math.abs(velocity);
+    const duration = speed > FLICK_VELOCITY
+      ? Math.min(FLY_OUT_DURATION, Math.max(120, Math.abs(toValue - from) / speed))
+      : FLY_OUT_DURATION;
     Animated.timing(translateX, {
-      toValue: (direction === 'right' ? 1 : -1) * widthRef.current * 1.5,
-      duration: FLY_OUT_DURATION,
+      toValue,
+      duration,
       useNativeDriver: false,
     }).start(() => onSwipeRef.current(direction));
   };
@@ -125,10 +148,9 @@ export function useCardSwipe({ enabled, resetKey, onSwipe }: UseCardSwipeOptions
         onPanResponderRelease: (_, g) => {
           const threshold = swipeThreshold(widthRef.current);
           const dx = g.dx + slopRef.current;
-          if (dx >= threshold) {
-            flyOut('right');
-          } else if (dx <= -threshold) {
-            flyOut('left');
+          const direction = swipeDecision(dx, g.vx, threshold);
+          if (direction) {
+            flyOut(direction, dx, g.vx);
           } else {
             springBack();
           }

@@ -95,8 +95,9 @@ on touch start, and the responder system then only lets its ancestors take over 
 handlers on the card (a descendant) are never consulted (that was the first, broken
 version). It's a controlled drag: the card follows the finger, its bottom border
 and text tint progressively to green/red (`swipe.tint(base)`), fully colored exactly
-at the validation threshold; releasing past it validates, before it springs back
-(no velocity-based flick). `translateX` is JS-driven (colors can't run on the native
+at the validation threshold; releasing past it validates, before it springs back.
+A quick flick (≥ 0.5 px/ms, ≥ 25px) also validates short of the threshold, and a
+strong flick back cancels even past it — see `swipeDecision()`. `translateX` is JS-driven (colors can't run on the native
 driver), so `<SwipeableCard swipe>` keeps its own Animated.View, separate from the
 native-driven scale node (cardScaleWrapper). Practice mode's `resetKey` includes a
 `trainingSession` counter so a new session always re-centers the card that flew
