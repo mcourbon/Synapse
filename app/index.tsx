@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
+import { logError } from '../lib/logger';
 import { Card } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
 import AddCardModal from '../components/AddCardModal';
@@ -501,11 +502,13 @@ export default function Home() {
         .eq('decks.user_id', user.id);
 
       if (error) {
+        logError('Home.fetchTotalCardsCount', error);
         return;
       }
 
       setTotalCardsCount(count || 0);
-    } catch {
+    } catch (error) {
+      logError('Home.fetchTotalCardsCount', error);
     }
   }
 

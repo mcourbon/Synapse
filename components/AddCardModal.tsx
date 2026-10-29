@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
+import { logError } from '../lib/logger';
 import { Deck } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -353,14 +354,16 @@ export default function AddCardModal({
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-      } else {
-        setDecks(data || []);
-        if (data && data.length > 0) {
-          setSelectedDeckId(data[0].id);
-        }
+      if (error) throw error;
+
+      setDecks(data || []);
+      if (data && data.length > 0) {
+        setSelectedDeckId(data[0].id);
       }
     } catch (err) {
+      // Sans la liste des decks, impossible de choisir où ranger la carte
+      logError('AddCardModal.fetchDecks', err);
+      Alert.alert('Erreur', 'Impossible de charger les decks');
     }
   };
 
@@ -395,6 +398,7 @@ export default function AddCardModal({
       
       setExistingCategories(uniqueCategories);
     } catch (error) {
+      logError('AddCardModal.fetchExistingCategories', error);
     }
   };
 

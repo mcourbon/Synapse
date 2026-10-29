@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Appearance } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SystemUI from 'expo-system-ui';
+import { logError } from '../lib/logger';
 
 // Définir les couleurs pour chaque thème
 export const lightTheme = {
@@ -99,6 +100,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     try {
       await AsyncStorage.setItem('theme', darkMode ? 'dark' : 'light');
     } catch (error) {
+      logError('ThemeContext.saveTheme', error);
     }
   };
 

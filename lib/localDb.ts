@@ -71,6 +71,11 @@ class LocalQueryBuilder implements PromiseLike<{ data: any; error: any; count?: 
     return this;
   }
 
+  // TODO: ne gère que .not(col, 'is', null) — l'opérateur et la valeur sont ignorés.
+  // Plus largement, ce builder n'imite qu'un sous-ensemble de l'API Supabase : une
+  // requête qui utilise un autre opérateur marchera en ligne mais renverra des
+  // résultats faux en mode invité, sans erreur. Lever une erreur sur tout cas non
+  // géré (ou centraliser les requêtes dans lib/api/) quand on y retouche.
   not(col: string, _operator: string, _val: any) {
     this.filters.push({ col, op: 'not_is_null', val: null });
     return this;

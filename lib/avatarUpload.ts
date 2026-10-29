@@ -2,6 +2,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
+import { logError } from './logger';
 
 // Import conditionnel de FileSystem (seulement pour mobile)
 let FileSystem: any;
@@ -184,10 +185,12 @@ export class AvatarUpload {
         .from('avatars')
         .remove(filePaths);
 
+      // Échec non bloquant : l'avatar neuf est déjà en place, seuls d'anciens fichiers restent
       if (deleteError) {
-      } else {
+        logError('AvatarUpload.deleteOldAvatars', deleteError);
       }
     } catch (error) {
+      logError('AvatarUpload.deleteOldAvatars', error);
     }
   }
 

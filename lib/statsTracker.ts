@@ -1,5 +1,7 @@
 // lib/statsTracker.ts
 import { supabase } from './supabase';
+import { logError } from './logger';
+import { toLocalDateKey, daysBetweenKeys } from '../utils/date';
 
 export interface ReviewStats {
   userId: string;
@@ -25,10 +27,11 @@ export class StatsTracker {
         .single();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
+        logError('StatsTracker.trackReview/fetch', fetchError);
         return;
       }
 
-      const today = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+      const today = toLocalDateKey(); // Jour local YYYY-MM-DD (pas UTC, cf. utils/date.ts)
 
       if (!existingStats) {
         // Créer les stats si elles n'existent pas
@@ -52,6 +55,7 @@ export class StatsTracker {
           });
 
         if (insertError) {
+          logError('StatsTracker.trackReview/insert', insertError);
         }
         return;
       }
@@ -62,11 +66,11 @@ export class StatsTracker {
       let newLongestStreak = existingStats.longest_streak || 0;
 
       if (lastStudyDate) {
-        const lastDate = new Date(lastStudyDate);
-        const todayDate = new Date(today);
-        const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        const diffDays = daysBetweenKeys(String(lastStudyDate).slice(0, 10), today);
 
-        if (diffDays === 0) {
+        // <= 0 : même jour, ou dernière date "dans le futur" (anciennes dates
+        // enregistrées en UTC, voyage vers un fuseau en retard) — on ne casse rien.
+        if (diffDays <= 0) {
           // Même jour, pas de changement de streak
           newStreak = existingStats.current_streak;
         } else if (diffDays === 1) {
@@ -121,8 +125,10 @@ export class StatsTracker {
         .eq('user_id', userId);
 
       if (updateError) {
+        logError('StatsTracker.trackReview/update', updateError);
       }
     } catch (error) {
+      logError('StatsTracker.trackReview', error);
     }
   }
 
@@ -179,6 +185,7 @@ export class StatsTracker {
         .eq('user_id', userId);
 
     } catch (error) {
+      logError('StatsTracker.updateCardDifficultyStats', error);
     }
   }
 
@@ -194,11 +201,13 @@ export class StatsTracker {
         .single();
 
       if (error && error.code !== 'PGRST116') {
+        logError('StatsTracker.getUserStats', error);
         return null;
       }
 
       return data;
     } catch (error) {
+      logError('StatsTracker.getUserStats', error);
       return null;
     }
   }
@@ -253,6 +262,7 @@ export class StatsTracker {
         cardsReviewed: reviewedCount || 0,
       };
     } catch (error) {
+      logError('StatsTracker.getLiveStats', error);
       return {
         totalDecks: 0,
         totalCards: 0,

@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import React from 'react';
 import { useAuth } from './AuthContext';
 import { StatsTracker } from '../lib/statsTracker';
+import { logError } from '../lib/logger';
 
 export interface UserStats {
   totalCards: number;
@@ -95,7 +96,8 @@ export function StatsProvider({ children }: { children: React.ReactNode }) {
         cardsMastered: userStats?.cards_mastered || 0,
         bestAnswerStreak: userStats?.best_answer_streak || 0,
       });
-    } catch {
+    } catch (error) {
+      logError('StatsContext.fetchStats', error);
     }
   }, [user]);
 

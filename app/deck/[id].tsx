@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { logError } from '../../lib/logger';
 import { Card, Deck } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -865,6 +866,7 @@ addCategoryButtonInactive: {
 
       setExistingCategories(uniqueCategories);
     } catch (error) {
+      logError('DeckDetail.fetchExistingCategories', error);
     }
   };
 

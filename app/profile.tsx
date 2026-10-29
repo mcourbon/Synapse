@@ -8,6 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useStats } from '../contexts/StatsContext';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { logError } from '../lib/logger';
 import { StatsTracker } from '../lib/statsTracker';
 import { AvatarUpload } from '../lib/avatarUpload';
 import { Image } from 'react-native';
@@ -97,7 +98,9 @@ const confirmLogout = async () => {
   setShowLogoutModal(false);
   try {
     await signOut();
-  } catch {
+  } catch (error) {
+    logError('Profile.confirmLogout', error);
+    Alert.alert('Erreur', 'Impossible de se déconnecter. Vérifiez votre connexion et réessayez.');
   }
 };
 

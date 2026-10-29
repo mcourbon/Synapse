@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
+import { logError } from '../lib/logger';
 import { Deck } from '../types/database';
 import AddDeckModal from '../components/AddDeckModal';
 import ConfirmModal from '../components/ConfirmModal';
@@ -312,11 +313,15 @@ saveButton: {
         .order('created_at', { ascending: false });
 
       if (error) {
+        logError('Decks.fetchDecks', error);
         Alert.alert('Erreur', 'Impossible de charger les decks');
       } else {
         setDecks(data || []);
       }
-    } catch {
+    } catch (error) {
+      // Exception réseau (hors-ligne, timeout) : même retour utilisateur que l'erreur Supabase
+      logError('Decks.fetchDecks', error);
+      Alert.alert('Erreur', 'Impossible de charger les decks');
     } finally {
       setLoading(false);
     }

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setGuestMode, isGuestMode } from '../lib/guestMode';
 import { resetLocalData } from '../lib/localDb';
+import { logError } from '../lib/logger';
 
 interface AuthContextType {
   user: User | null;
@@ -61,14 +62,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
       } catch (error) {
+        logError('AuthContext.checkDemoMode', error);
       }
 
       // Récupérer la session Supabase normale
       supabase.auth.getSession().then(({ data: { session }, error }) => {
         if (error) {
-        } else {
+          logError('AuthContext.getSession', error);
         }
-        
+
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
