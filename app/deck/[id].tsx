@@ -14,9 +14,13 @@ import Toast from '../../components/Toast';
 import CardStatsModal from '../../components/CardStatsModal';
 import { getCardMastery, difficultyToEasePercent } from '../../utils/fsrs';
 import { MASTERY_COLORS, MASTERY_LABELS, formatNextReview } from '../../utils/cardMastery';
+import { isFiche, ficheSteps, cardTitle, CARD_TEXT_MAX_LENGTH, FICHE_MAX_LENGTH } from '../../utils/fiche';
 import ProfessionalProgressCircle from '../../components/ProfessionalProgressCircle';
 import AnimatedSuccessIcon from '../../components/AnimatedSuccessIcon';
 import StreakFlame from '../../components/StreakFlame';
+import SwipeableCard, { useCardSwipe, CardSwipe, SwipeDirection } from '../../components/SwipeableCard';
+import AnswerButtons from '../../components/AnswerButtons';
+import CardTypeToggle from '../../components/CardTypeToggle';
 
 // Couleurs hardcodées — module level (iOS safe, jamais dans StyleSheet inside component)
 const staticStyles = StyleSheet.create({
@@ -90,26 +94,26 @@ export default function DeckDetail() {
   // l'edge-to-edge Android actif. Fix identique : plus de navigation, le mode
   // entraînement devient un second visuel de cet écran ('list' | 'training').
   // Reprend telle quelle la logique de l'ex app/card/[id].tsx : aucune écriture
-  // FSRS/stats réelle (voir handleDifficultyResponse), bouclage complet du deck
+  // FSRS/stats réelle (voir handleAnswer), bouclage complet du deck
   // possible ("Continuer" sur le modal de fin), flip/re-flip libre de la carte.
   const [mode, setMode] = useState<'list' | 'training'>('list');
   const [trainingCards, setTrainingCards] = useState<Card[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<'hard' | 'medium' | 'easy' | null>(null);
+  // Fiches (cartes sans verso) : nombre de lignes déjà dévoilées, la 1re (titre) d'office.
+  const [revealedSteps, setRevealedSteps] = useState(1);
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [streak, setStreak] = useState(0);
   const answeringRef = useRef(false);
+  const swipeRef = useRef<CardSwipe | null>(null);
+  const ficheScrollRef = useRef<ScrollView>(null);
+
+  // Type de la carte en cours d'édition (modal "Modifier la carte")
+  const [editIsFiche, setEditIsFiche] = useState(false);
 
   // Animations (mode entraînement)
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(1)).current;
-  const borderColorAnimation = useRef(new Animated.Value(0)).current;
-  const buttonScaleAnimations = {
-    hard: useRef(new Animated.Value(1)).current,
-    medium: useRef(new Animated.Value(1)).current,
-    easy: useRef(new Animated.Value(1)).current,
-  };
   const circleProgressAnimation = useRef(new Animated.Value(0)).current;
   const checkScaleAnimation = useRef(new Animated.Value(0)).current;
   const modalBackgroundAnimation = useRef(new Animated.Value(0)).current;
@@ -137,6 +141,7 @@ export default function DeckDetail() {
   const cardSeparatorSpace = 2 + 20 * 2; // separator.height + marginVertical haut/bas
   const cardTextMaxHeightFull = cardMaxHeight - cardContentPadding;
   const cardTextMaxHeightSplit = Math.round((cardMaxHeight - cardContentPadding - cardSeparatorSpace) / 2);
+  const ficheHintSpace = 12 + 18; // ficheHint.marginTop + une ligne de texte
 
   const styles = StyleSheet.create({
   container: {
@@ -651,6 +656,29 @@ addCategoryButtonInactive: {
     flexGrow: 1,
     justifyContent: 'center',
   },
+  // Fiche : place gardée sous les lignes pour l'indication "Touchez pour la suite".
+  textScrollFiche: {
+    alignSelf: 'stretch',
+    maxHeight: cardTextMaxHeightFull - ficheHintSpace,
+  },
+  ficheLine: {
+    fontSize: 16,
+    lineHeight: 23,
+    color: theme.text,
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  ficheHint: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  ficheBadge: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    color: theme.textSecondary,
+  },
   separator: {
     height: 2,
     backgroundColor: theme.border,
@@ -674,36 +702,6 @@ addCategoryButtonInactive: {
     paddingVertical: 24,
     alignSelf: 'center',
     maxWidth: 500,
-  },
-  difficultyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.text,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  difficultyButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  buttonWrapper: {
-    flex: 1,
-  },
-  difficultyButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    minHeight: 80,
-  },
-  difficultyButtonText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginTop: 8,
-    textAlign: 'center',
   },
   cardStatsContainer: {
     marginTop: 16,
@@ -1007,10 +1005,9 @@ addCategoryButtonInactive: {
     setTrainingCards(shuffleCards(cards));
     setCurrentCardIndex(0);
     setShowAnswer(false);
-    setSelectedDifficulty(null);
+    setRevealedSteps(1);
     setStreak(0);
     fadeAnimation.setValue(0);
-    borderColorAnimation.setValue(0);
     scaleAnimation.setValue(1);
     setMode('training');
   };
@@ -1035,8 +1032,14 @@ addCategoryButtonInactive: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
+  // Prêt à répondre : verso révélé, ou toutes les lignes de la fiche dévoilées.
+  const trainingIsFiche = isFiche(trainingCard);
+  const trainingFicheSteps = trainingIsFiche && trainingCard ? ficheSteps(trainingCard.front) : [];
+  const answerReady = !!trainingCard && (trainingIsFiche ? revealedSteps >= trainingFicheSteps.length : showAnswer);
+
   // Raccourcis clavier (web) en mode entraînement : espace pour retourner la
-  // carte, 1/2/3 pour répondre une fois la réponse affichée.
+  // carte (ou dévoiler la ligne suivante d'une fiche), flèche gauche / 1 pour
+  // "à revoir", flèche droite / 2 pour "je savais" une fois la réponse affichée.
   useFocusEffect(
     useCallback(() => {
       const handleKeyPress = (event: KeyboardEvent) => {
@@ -1047,25 +1050,18 @@ addCategoryButtonInactive: {
             event.preventDefault();
             handleToggleAnswer();
             break;
+          case 'ArrowLeft':
           case '1':
-            if (showAnswer) {
+            if (answerReady) {
               event.preventDefault();
-              animateButton('hard');
-              handleDifficultyResponse('hard');
+              swipeRef.current?.swipe('left');
             }
             break;
+          case 'ArrowRight':
           case '2':
-            if (showAnswer) {
+            if (answerReady) {
               event.preventDefault();
-              animateButton('medium');
-              handleDifficultyResponse('medium');
-            }
-            break;
-          case '3':
-            if (showAnswer) {
-              event.preventDefault();
-              animateButton('easy');
-              handleDifficultyResponse('easy');
+              swipeRef.current?.swipe('right');
             }
             break;
         }
@@ -1083,10 +1079,19 @@ addCategoryButtonInactive: {
         return () => window.removeEventListener('keydown', handleKeyPress);
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mode, showAnswer, showEndSessionModal])
+    }, [mode, showAnswer, revealedSteps, currentCardIndex, showEndSessionModal])
   );
 
   const handleToggleAnswer = () => {
+    if (!trainingCard) return;
+
+    // Fiche : chaque tap dévoile la ligne suivante ; une fois au bout, un tap
+    // la replie sur son titre (même liberté que le flip/re-flip d'une carte).
+    if (trainingIsFiche) {
+      setRevealedSteps(prev => (prev >= trainingFicheSteps.length ? 1 : prev + 1));
+      return;
+    }
+
     if (!showAnswer) {
       setShowAnswer(true);
       Animated.timing(fadeAnimation, {
@@ -1100,25 +1105,11 @@ addCategoryButtonInactive: {
     }
   };
 
-  // Fonction pour animer un bouton spécifique
-  const animateButton = (buttonType: 'hard' | 'medium' | 'easy') => {
-    Animated.sequence([
-      Animated.timing(buttonScaleAnimations[buttonType], {
-        toValue: 0.9,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(buttonScaleAnimations[buttonType], {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  // Fonction pour passer à la carte suivante
-  const goToNextCard = () => {
-    if (trainingCards.length <= 1) {
+  // Fonction pour passer à la carte suivante. queueLength : longueur de la file
+  // APRÈS la réponse (une carte "à revoir" y est rajoutée à la fin), le state
+  // trainingCards n'étant pas encore à jour à ce moment-là.
+  const goToNextCard = (queueLength: number) => {
+    if (queueLength <= 1) {
       // S'il n'y a qu'une seule carte, retourner à la liste du deck
       exitTraining();
       return;
@@ -1127,7 +1118,7 @@ addCategoryButtonInactive: {
     const nextIndex = currentCardIndex + 1;
 
     // Vérifier si on arrive à la fin du deck
-    if (nextIndex >= trainingCards.length) {
+    if (nextIndex >= queueLength) {
       // On a fini toutes les cartes - proposer les options avec animation professionnelle
       setShowEndSessionModal(true);
 
@@ -1175,9 +1166,8 @@ addCategoryButtonInactive: {
 
     // Sinon, continuer normalement
     setShowAnswer(false);
-    setSelectedDifficulty(null);
+    setRevealedSteps(1);
     fadeAnimation.setValue(0);
-    borderColorAnimation.setValue(0);
     setCurrentCardIndex(nextIndex);
 
     // Animation d'entrée pour la nouvelle carte
@@ -1191,18 +1181,17 @@ addCategoryButtonInactive: {
   };
 
   const handleContinueReview = () => {
-    // Remélanger les cartes
-    const shuffled = shuffleCards(trainingCards);
-    setTrainingCards(shuffled);
+    // Remélanger les cartes, sans les doublons ajoutés par les "à revoir"
+    const uniqueCards = Array.from(new Map(trainingCards.map(c => [c.id, c])).values());
+    setTrainingCards(shuffleCards(uniqueCards));
 
     // Repartir à la première carte
     setCurrentCardIndex(0);
 
     // Réinitialiser l'état
     setShowAnswer(false);
-    setSelectedDifficulty(null);
+    setRevealedSteps(1);
     fadeAnimation.setValue(0);
-    borderColorAnimation.setValue(0);
 
     // Reset des animations du modal
     circleProgressAnimation.setValue(0);
@@ -1260,147 +1249,31 @@ addCategoryButtonInactive: {
     });
   };
 
-  const handleDifficultyResponse = async (difficulty: 'hard' | 'medium' | 'easy') => {
+  // Appelée une fois la carte sortie de l'écran (swipe ou bouton).
+  // MODE ENTRAÎNEMENT - Pas de modification des stats réelles : "je savais" passe
+  // à la suivante, "à revoir" remet la carte en fin de file.
+  const handleAnswer = (direction: SwipeDirection) => {
     if (answeringRef.current || !trainingCard) return;
     answeringRef.current = true;
 
-    // Changer la couleur du texte immédiatement
-    setSelectedDifficulty(difficulty);
+    const knewIt = direction === 'right';
 
-    // Streak de réussites d'affilée : "Facile" l'incrémente, "Difficile" le remet à zéro
-    if (difficulty === 'easy') {
-      setStreak(prev => prev + 1);
-    } else if (difficulty === 'hard') {
-      setStreak(0);
-    }
+    // Streak de réussites d'affilée : "je savais" l'incrémente, "à revoir" la remet à zéro
+    setStreak(prev => (knewIt ? prev + 1 : 0));
 
-    // ANIMATION DE COULEUR POUR TOUS LES BOUTONS
-    borderColorAnimation.setValue(1);
+    const queue = knewIt ? trainingCards : [...trainingCards, trainingCard];
+    if (!knewIt) setTrainingCards(queue);
 
-    // Animation de feedback rapide sur la carte pour "medium" et "easy" (pas pour "hard")
-    if (difficulty !== 'hard') {
-      Animated.sequence([
-        Animated.timing(scaleAnimation, {
-          toValue: 0.95,
-          duration: 80,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnimation, {
-          toValue: 1,
-          duration: 80,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-
-    // MODE ENTRAÎNEMENT - Pas de modification des stats réelles
-
-    // Gestion différente selon la difficulté
-    if (difficulty === 'hard') {
-      // Pour "hard", on reste sur la même carte avec animation de reset
-      setTimeout(() => {
-        // Reset après 1 secondes
-        setShowAnswer(false);
-        setSelectedDifficulty(null);
-        fadeAnimation.setValue(0);
-
-        // Animation de disparition de la bordure rouge
-        Animated.timing(borderColorAnimation, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: false,
-        }).start();
-        answeringRef.current = false;
-      }, 1000);
-    } else {
-      // Pour "medium" et "easy", passer à la carte suivante après un délai
-      setTimeout(() => {
-        // Animation de disparition de la bordure colorée
-        Animated.timing(borderColorAnimation, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: false,
-        }).start();
-
-        // Animation de sortie de la carte
-        Animated.timing(scaleAnimation, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }).start(() => {
-          goToNextCard();
-          answeringRef.current = false;
-        });
-      }, 500);
-    }
+    goToNextCard(queue.length);
+    answeringRef.current = false;
   };
 
-  // Fonction pour obtenir la couleur du texte selon la difficulté sélectionnée
-  const getTextColor = () => {
-    if (selectedDifficulty === 'hard') return '#FF3B30';
-    if (selectedDifficulty === 'medium') return '#FF9500';
-    if (selectedDifficulty === 'easy') return '#34C759';
-    return theme.text;
-  };
-
-  // Fonction pour obtenir la couleur de bordure selon la difficulté sélectionnée
-  const getAnimatedBorderColor = () => {
-    if (!selectedDifficulty || !borderColorAnimation) {
-      // Pas de sélection = couleur primaire du thème
-      return theme.primary;
-    }
-
-    // Animation de la couleur selon la difficulté
-    let targetColor = theme.primary;
-    if (selectedDifficulty === 'hard') targetColor = '#FF3B30';
-    if (selectedDifficulty === 'medium') targetColor = '#FF9500';
-    if (selectedDifficulty === 'easy') targetColor = '#34C759';
-
-    return borderColorAnimation.interpolate({
-      inputRange: [0, 1],
-      outputRange: [theme.primary, targetColor],
-    });
-  };
-
-  const getButtonStyle = (buttonType: 'hard' | 'medium' | 'easy') => {
-    // Styles par défaut adaptés au thème
-    let defaultStyle = {};
-    if (buttonType === 'hard') defaultStyle = {
-      backgroundColor: isDark ? '#4A1A1A' : '#FFF5F5',
-      borderColor: '#FF3B30'
-    };
-    if (buttonType === 'medium') defaultStyle = {
-      backgroundColor: isDark ? '#4A2A0F' : '#FFFBF0',
-      borderColor: '#FF9500'
-    };
-    if (buttonType === 'easy') defaultStyle = {
-      backgroundColor: isDark ? '#1A3A1A' : '#F0FFF4',
-      borderColor: '#34C759'
-    };
-
-    // Si ce bouton est sélectionné, utiliser la couleur pleine
-    if (selectedDifficulty === buttonType) {
-      if (buttonType === 'hard') return { backgroundColor: '#FF3B30', borderColor: '#FF3B30' };
-      if (buttonType === 'medium') return { backgroundColor: '#FF9500', borderColor: '#FF9500' };
-      if (buttonType === 'easy') return { backgroundColor: '#34C759', borderColor: '#34C759' };
-    }
-
-    return defaultStyle;
-  };
-
-  const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
-    // Si le bouton est sélectionné, texte blanc
-    if (selectedDifficulty === buttonType) {
-      return "#fff";
-    }
-
-    // Sinon, couleur adaptée au thème
-    return isDark ? '#fff' : '#333';
-  };
+  const editFrontMaxLength = editIsFiche ? FICHE_MAX_LENGTH : CARD_TEXT_MAX_LENGTH;
+  const canSaveEdit = !!front.trim() && front.length <= editFrontMaxLength && (editIsFiche || !!back.trim());
 
   const handleEditCard = async () => {
-    if (!front.trim() || !back.trim()) {
-      showError('Veuillez remplir le recto et le verso');
+    if (!canSaveEdit) {
+      showError(editIsFiche ? 'Veuillez remplir la fiche' : 'Veuillez remplir le recto et le verso');
       return;
     }
 
@@ -1416,7 +1289,7 @@ addCategoryButtonInactive: {
         .from('cards')
         .update({
           front: front.trim(),
-          back: back.trim(),
+          back: editIsFiche ? '' : back.trim(),
           categories: categories.length > 0 ? categories : null,
         })
         .eq('id', selectedCard.id);
@@ -1476,6 +1349,7 @@ addCategoryButtonInactive: {
     setSelectedCard(card);
     setFront(card.front);
     setBack(card.back);
+    setEditIsFiche(isFiche(card));
     setCategories(card.categories || []);
     setCurrentCategoryInput('');
     setShowEditCardModal(true);
@@ -1491,6 +1365,7 @@ addCategoryButtonInactive: {
     setShowEditCardModal(false);
     setFront('');
     setBack('');
+    setEditIsFiche(false);
     setCategories([]);
     setCurrentCategoryInput('');
     setSelectedCard(null);
@@ -1518,11 +1393,17 @@ addCategoryButtonInactive: {
       >
         <View style={styles.cardContent}>
           <Text style={styles.cardFront} numberOfLines={2}>
-            {item.front}
+            {cardTitle(item)}
           </Text>
-          <Text style={styles.cardBack} numberOfLines={2}>
-            {item.back}
-          </Text>
+          {isFiche(item) ? (
+            <Text style={[styles.cardBack, styles.ficheBadge]} numberOfLines={1}>
+              Fiche · {ficheSteps(item.front).length} ligne{ficheSteps(item.front).length > 1 ? 's' : ''}
+            </Text>
+          ) : (
+            <Text style={styles.cardBack} numberOfLines={2}>
+              {item.back}
+            </Text>
+          )}
           {item.categories && item.categories.length > 0 && (
             <View style={styles.cardCategoriesContainer}>
               {item.categories.slice(0, 3).map((cat, index) => (
@@ -1567,6 +1448,14 @@ addCategoryButtonInactive: {
       </Pressable>
     );
   };
+
+  // Avant les returns anticipés (hook) et après handleAnswer (utilisé tel quel).
+  const cardSwipe = useCardSwipe({
+    enabled: mode === 'training' && answerReady,
+    resetKey: `${currentCardIndex}-${trainingCards.length}`,
+    onSwipe: handleAnswer,
+  });
+  swipeRef.current = cardSwipe; // pour les raccourcis clavier, déclarés plus haut
 
   if (loading) {
     return (
@@ -1699,152 +1588,107 @@ addCategoryButtonInactive: {
         </View>
 
         {/* Container principal - Zone cliquable */}
+        {/* Le swipe est capté par cette View, ancêtre du Pressable qui tient le
+            toucher — voir l'en-tête de components/SwipeableCard.tsx. */}
+        <View style={styles.mainContent} {...cardSwipe.panHandlers}>
         <Pressable
           style={styles.mainContent}
           onPress={handleToggleAnswer}
         >
           {/* Carte principale - toujours centrée.
-              Transform (scale) et borderBottomColor animent chacun sur leur propre
-              Animated.View — voir le commentaire sur cardScaleWrapper plus haut. */}
+              Transform (scale) et swipe (translateX/rotate) animent chacun sur leur
+              propre Animated.View — voir le commentaire sur cardScaleWrapper plus haut. */}
           <View style={styles.cardContainer}>
             <Animated.View style={[styles.cardScaleWrapper, { transform: [{ scale: scaleAnimation }] }]}>
-            <Animated.View
-              style={[
-                styles.card,
-                { borderBottomColor: getAnimatedBorderColor() }
-              ]}
-            >
+            <SwipeableCard swipe={cardSwipe}>
+            <View style={styles.card}>
               <View style={styles.trainingCardContent}>
-                {/* Section Question - toujours visible. Défile en interne plutôt que
-                    de déborder de la carte sur les textes longs (voir cardMaxHeight
-                    plus haut). */}
-                <View style={styles.questionSection}>
-                  <ScrollView
-                    style={showAnswer ? styles.textScrollSplit : styles.textScrollFull}
-                    contentContainerStyle={styles.textScrollContent}
-                    showsVerticalScrollIndicator={false}
-                    bounces={false}
-                    overScrollMode="never"
-                  >
-                    <Text style={[styles.cardText, { color: getTextColor() }]}>
-                      {trainingCard.front}
+                {trainingIsFiche ? (
+                  <>
+                    {/* Fiche : lignes dévoilées une à une, défile vers la dernière
+                        dévoilée quand ça dépasse la hauteur de la carte. */}
+                    <View style={styles.questionSection}>
+                      <ScrollView
+                        ref={ficheScrollRef}
+                        style={styles.textScrollFiche}
+                        contentContainerStyle={styles.textScrollContent}
+                        showsVerticalScrollIndicator={false}
+                        bounces={false}
+                        overScrollMode="never"
+                        onContentSizeChange={() => ficheScrollRef.current?.scrollToEnd({ animated: true })}
+                      >
+                        {trainingFicheSteps.slice(0, revealedSteps).map((line, index) => (
+                          <Text key={index} style={index === 0 ? styles.cardText : styles.ficheLine}>
+                            {line}
+                          </Text>
+                        ))}
+                      </ScrollView>
+                    </View>
+                    <Text style={styles.ficheHint}>
+                      {answerReady
+                        ? 'Fiche terminée'
+                        : `Touchez pour la suite · ${revealedSteps}/${trainingFicheSteps.length}`}
                     </Text>
-                  </ScrollView>
-                </View>
+                  </>
+                ) : (
+                  <>
+                    {/* Section Question - toujours visible. Défile en interne plutôt que
+                        de déborder de la carte sur les textes longs (voir cardMaxHeight
+                        plus haut). */}
+                    <View style={styles.questionSection}>
+                      <ScrollView
+                        style={showAnswer ? styles.textScrollSplit : styles.textScrollFull}
+                        contentContainerStyle={styles.textScrollContent}
+                        showsVerticalScrollIndicator={false}
+                        bounces={false}
+                        overScrollMode="never"
+                      >
+                        <Text style={styles.cardText}>
+                          {trainingCard.front}
+                        </Text>
+                      </ScrollView>
+                    </View>
 
-                {/* Séparateur quand la réponse est affichée */}
-                {showAnswer && <View style={styles.separator} />}
+                    {/* Séparateur quand la réponse est affichée */}
+                    {showAnswer && <View style={styles.separator} />}
 
-                {/* Section Réponse - apparaît avec animation, même parade de scroll */}
-                {showAnswer && (
-                  <Animated.View
-                    style={[
-                      styles.answerSection,
-                      { opacity: fadeAnimation }
-                    ]}
-                  >
-                    <ScrollView
-                      style={styles.textScrollSplit}
-                      contentContainerStyle={styles.textScrollContent}
-                      showsVerticalScrollIndicator={false}
-                      bounces={false}
-                      overScrollMode="never"
-                    >
-                      <Text style={[styles.cardText, { color: getTextColor() }]}>
-                        {trainingCard.back}
-                      </Text>
-                    </ScrollView>
-                  </Animated.View>
+                    {/* Section Réponse - apparaît avec animation, même parade de scroll */}
+                    {showAnswer && (
+                      <Animated.View
+                        style={[
+                          styles.answerSection,
+                          { opacity: fadeAnimation }
+                        ]}
+                      >
+                        <ScrollView
+                          style={styles.textScrollSplit}
+                          contentContainerStyle={styles.textScrollContent}
+                          showsVerticalScrollIndicator={false}
+                          bounces={false}
+                          overScrollMode="never"
+                        >
+                          <Text style={styles.cardText}>
+                            {trainingCard.back}
+                          </Text>
+                        </ScrollView>
+                      </Animated.View>
+                    )}
+                  </>
                 )}
               </View>
-            </Animated.View>
+            </View>
+            </SwipeableCard>
             </Animated.View>
           </View>
 
-          {/* Boutons de difficulté */}
-          {showAnswer && (
+          {/* Réponses ("À revoir" / "Je savais"), une fois la réponse affichée ou la
+              fiche entièrement dévoilée */}
+          {answerReady && (
             <Pressable
               style={styles.difficultyContainer}
               onPress={(e) => e.stopPropagation()}
             >
-              <Text style={styles.difficultyTitle}>Comment avez-vous trouvé cette carte ?</Text>
-
-              <View style={styles.difficultyButtons}>
-                <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.hard }] }]}>
-                  <Pressable
-                    style={[
-                      styles.difficultyButton,
-                      getButtonStyle('hard')
-                    ]}
-                    onPress={() => {
-                      animateButton('hard');
-                      handleDifficultyResponse('hard');
-                    }}
-                  >
-                    <Ionicons
-                      name="close-circle"
-                      size={24}
-                      color={selectedDifficulty === 'hard' ? "#fff" : "#FF3B30"}
-                    />
-                    <Text style={[
-                      styles.difficultyButtonText,
-                      { color: getButtonTextColor('hard') }
-                    ]}>
-                      Difficile
-                    </Text>
-                  </Pressable>
-                </Animated.View>
-
-                <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.medium }] }]}>
-                  <Pressable
-                    style={[
-                      styles.difficultyButton,
-                      getButtonStyle('medium')
-                    ]}
-                    onPress={() => {
-                      animateButton('medium');
-                      handleDifficultyResponse('medium');
-                    }}
-                  >
-                    <Ionicons
-                      name="help-circle"
-                      size={24}
-                      color={selectedDifficulty === 'medium' ? "#fff" : "#FF9500"}
-                    />
-                    <Text style={[
-                      styles.difficultyButtonText,
-                      { color: getButtonTextColor('medium') }
-                    ]}>
-                      Moyen
-                    </Text>
-                  </Pressable>
-                </Animated.View>
-
-                <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.easy }] }]}>
-                  <Pressable
-                    style={[
-                      styles.difficultyButton,
-                      getButtonStyle('easy')
-                    ]}
-                    onPress={() => {
-                      animateButton('easy');
-                      handleDifficultyResponse('easy');
-                    }}
-                  >
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={24}
-                      color={selectedDifficulty === 'easy' ? "#fff" : "#34C759"}
-                    />
-                    <Text style={[
-                      styles.difficultyButtonText,
-                      { color: getButtonTextColor('easy') }
-                    ]}>
-                      Facile
-                    </Text>
-                  </Pressable>
-                </Animated.View>
-              </View>
+              <AnswerButtons onAnswer={cardSwipe.swipe} />
 
               {/* Indicateur de progression */}
               <View style={styles.cardStatsContainer}>
@@ -1861,6 +1705,7 @@ addCategoryButtonInactive: {
             </Pressable>
           )}
         </Pressable>
+        </View>
       </View>
       )}
 
@@ -1938,12 +1783,12 @@ addCategoryButtonInactive: {
         <Text style={styles.modalTitle}>Modifier la carte</Text>
         <Pressable
           onPress={() => {
-            if (editingCard || !front.trim() || !back.trim()) return;
+            if (editingCard || !canSaveEdit) return;
             handleEditCard();
           }}
-          style={[styles.saveButton, (editingCard || !front.trim() || !back.trim()) && (isDark ? staticStyles.saveButtonDisabledDark : staticStyles.saveButtonDisabledLight)]}
+          style={[styles.saveButton, (editingCard || !canSaveEdit) && (isDark ? staticStyles.saveButtonDisabledDark : staticStyles.saveButtonDisabledLight)]}
         >
-          <Text style={[staticStyles.saveButtonText, (editingCard || !front.trim() || !back.trim()) && (isDark ? staticStyles.saveButtonTextDisabledDark : staticStyles.saveButtonTextDisabledLight)]}>
+          <Text style={[staticStyles.saveButtonText, (editingCard || !canSaveEdit) && (isDark ? staticStyles.saveButtonTextDisabledDark : staticStyles.saveButtonTextDisabledLight)]}>
             {editingCard ? 'Modification...' : 'Modifier'}
           </Text>
         </Pressable>
@@ -1952,23 +1797,30 @@ addCategoryButtonInactive: {
       <ScrollView style={styles.modalContent}>
         {/* Formulaire */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Question</Text>
+          <CardTypeToggle isFiche={editIsFiche} onChange={setEditIsFiche} />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>{editIsFiche ? 'Fiche' : 'Question'}</Text>
           <TextInput
-            style={[styles.textInput, { outlineWidth: 0, borderColor: theme.primary }]}
+            style={[styles.textInput, { outlineWidth: 0, borderColor: theme.primary }, editIsFiche && { minHeight: 160 }]}
             value={front}
             onChangeText={setFront}
-            placeholder="Tapez votre question..."
+            placeholder={editIsFiche
+              ? "Titre sur la 1re ligne, puis une info par ligne.\nEn révision, elles se dévoilent une à une."
+              : "Tapez votre question..."}
             placeholderTextColor={theme.textMuted}
             multiline
-            numberOfLines={4}
+            numberOfLines={editIsFiche ? 8 : 4}
             textAlignVertical="top"
-            maxLength={300}
+            maxLength={editFrontMaxLength}
           />
-          <Text style={{ fontSize: 12, color: front.length >= 300 ? '#EF4444' : front.length > 270 ? '#F59E0B' : theme.textSecondary, textAlign: 'right', marginTop: 4 }}>
-            {front.length}/300
+          <Text style={{ fontSize: 12, color: front.length >= editFrontMaxLength ? '#EF4444' : front.length > editFrontMaxLength * 0.9 ? '#F59E0B' : theme.textSecondary, textAlign: 'right', marginTop: 4 }}>
+            {front.length}/{editFrontMaxLength}
           </Text>
         </View>
 
+        {!editIsFiche && (
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Réponse</Text>
           <TextInput
@@ -1986,6 +1838,7 @@ addCategoryButtonInactive: {
             {back.length}/300
           </Text>
         </View>
+        )}
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>
@@ -2074,17 +1927,19 @@ addCategoryButtonInactive: {
             <Text style={styles.previewTitle}>Aperçu</Text>
             <View style={styles.previewCards}>
               <View style={styles.previewCard}>
-                <Text style={styles.previewLabel}>Recto</Text>
+                <Text style={styles.previewLabel}>{editIsFiche ? 'Fiche' : 'Recto'}</Text>
                 <Text style={styles.previewText}>
                   {front || 'Votre question...'}
                 </Text>
               </View>
+              {!editIsFiche && (
               <View style={styles.previewCard}>
                 <Text style={styles.previewLabel}>Verso</Text>
                 <Text style={styles.previewText}>
                   {back || 'Votre réponse...'}
                 </Text>
               </View>
+              )}
             </View>
           </View>
         )}

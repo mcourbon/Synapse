@@ -12,11 +12,14 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useStats } from '../contexts/StatsContext';
 import { useFocusEffect } from '@react-navigation/native';
 import React from 'react';
-import { scheduleNext, isDue, getCardMastery, difficultyToEasePercent } from '../utils/fsrs';
+import { scheduleNext, isDue, getCardMastery, difficultyToEasePercent, ReviewResponse } from '../utils/fsrs';
 import { StatsTracker } from '../lib/statsTracker';
+import { isFiche, ficheSteps, cardTitle } from '../utils/fiche';
 import StreakFlame from '../components/StreakFlame';
 import ProfessionalProgressCircle from '../components/ProfessionalProgressCircle';
 import AnimatedSuccessIcon from '../components/AnimatedSuccessIcon';
+import SwipeableCard, { useCardSwipe, SwipeDirection } from '../components/SwipeableCard';
+import AnswerButtons from '../components/AnswerButtons';
 
 // Couleurs hardcodées — module level (iOS safe, jamais dans StyleSheet inside component)
 const staticStyles = StyleSheet.create({
@@ -57,22 +60,23 @@ export default function Home() {
   const [dueCards, setDueCards] = useState<Card[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<'hard' | 'medium' | 'easy' | null>(null);
+  // Fiches (cartes sans verso) : nombre de lignes déjà dévoilées, la 1re (titre) d'office.
+  const [revealedSteps, setRevealedSteps] = useState(1);
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [totalCardsReviewed, setTotalCardsReviewed] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
   const answeringRef = useRef(false);
+  const ficheScrollRef = useRef<ScrollView>(null);
+  // Les écritures (carte + user_stats) partent en arrière-plan pour enchaîner les
+  // cartes sans attendre le réseau, mais restent sérialisées : StatsTracker fait un
+  // lire-modifier-écrire sur user_stats, deux réponses en parallèle perdraient des
+  // compteurs. Tout ce qui relit les données (stats, tinycard) attend cette file.
+  const writeQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const saveErrorShownRef = useRef(false);
 
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(1)).current;
-  const borderColorAnimation = useRef(new Animated.Value(0)).current;
-  const buttonScaleAnimations = {
-    hard: useRef(new Animated.Value(1)).current,
-    medium: useRef(new Animated.Value(1)).current,
-    easy: useRef(new Animated.Value(1)).current,
-  };
   const circleProgressAnimation = useRef(new Animated.Value(0)).current;
   const checkScaleAnimation = useRef(new Animated.Value(0)).current;
   const modalBackgroundAnimation = useRef(new Animated.Value(0)).current;
@@ -100,6 +104,7 @@ export default function Home() {
   const cardSeparatorSpace = 2 + 20 * 2; // separator.height + marginVertical haut/bas
   const cardTextMaxHeightFull = cardMaxHeight - cardContentPadding;
   const cardTextMaxHeightSplit = Math.round((cardMaxHeight - cardContentPadding - cardSeparatorSpace) / 2);
+  const ficheHintSpace = 12 + 18; // ficheHint.marginTop + une ligne de texte
 
   const styles = StyleSheet.create({
     container: {
@@ -200,6 +205,24 @@ export default function Home() {
       flexGrow: 1,
       justifyContent: 'center',
     },
+    // Fiche : place gardée sous les lignes pour l'indication "Touchez pour la suite".
+    textScrollFiche: {
+      alignSelf: 'stretch',
+      maxHeight: cardTextMaxHeightFull - ficheHintSpace,
+    },
+    ficheLine: {
+      fontSize: 17,
+      lineHeight: 24,
+      color: theme.text,
+      textAlign: 'center',
+      marginTop: 14,
+    },
+    ficheHint: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      textAlign: 'center',
+      marginTop: 12,
+    },
     separator: {
       height: 2,
       backgroundColor: theme.border,
@@ -290,36 +313,6 @@ export default function Home() {
       alignSelf: 'center',
       maxWidth: 500,
       width: '100%',
-    },
-    difficultyTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.text,
-      textAlign: 'center',
-      marginBottom: 20,
-    },
-    difficultyButtons: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      gap: 12,
-    },
-    buttonWrapper: {
-      flex: 1,
-    },
-    difficultyButton: {
-      flex: 1,
-      alignItems: 'center',
-      paddingVertical: 16,
-      paddingHorizontal: 12,
-      borderRadius: 12,
-      borderWidth: 2,
-      minHeight: 80,
-    },
-    difficultyButtonText: {
-      fontSize: 14,
-      fontWeight: 'bold',
-      marginTop: 8,
-      textAlign: 'center',
     },
     fab: {
       position: 'absolute',
@@ -558,7 +551,7 @@ export default function Home() {
   const getCardTextMessage = () => {
     // Cas 1: Il y a une carte à réviser
     if (homeCard) {
-      return homeCard.front;
+      return cardTitle(homeCard); // pour une fiche : sa 1re ligne, comme au début de la révision
     }
     // Cas 2: Il n'y a pas de carte à réviser, mais l'utilisateur a déjà créé des cartes
     if (totalCardsCount > 0) {
@@ -603,12 +596,12 @@ export default function Home() {
     setDueCards(shuffled);
     setCurrentCardIndex(0);
     setShowAnswer(false);
-    setSelectedDifficulty(null);
+    setRevealedSteps(1);
     setTotalCardsReviewed(0);
     setStreak(0);
     setCardStartTime(new Date());
+    saveErrorShownRef.current = false;
     fadeAnimation.setValue(0);
-    borderColorAnimation.setValue(0);
     scaleAnimation.setValue(1);
     setMode('review');
 
@@ -631,14 +624,26 @@ export default function Home() {
       setDueCards([]);
       setCurrentCardIndex(0);
       setShowAnswer(false);
-      setSelectedDifficulty(null);
-      updateHomeScreenCard();
-      fetchTotalCardsCount();
+      setRevealedSteps(1);
+      scaleAnimation.setValue(1);
+      // Attendre les dernières réponses encore en cours d'écriture, sinon la
+      // tinycard pourrait reproposer une carte qu'on vient juste de réviser.
+      writeQueueRef.current.then(() => {
+        updateHomeScreenCard();
+        fetchTotalCardsCount();
+      });
     });
   };
 
   const handleToggleAnswer = () => {
-    if (mode !== 'review' || showAnswer) return;
+    if (mode !== 'review' || showAnswer || !currentCard) return;
+
+    // Fiche : chaque tap dévoile la ligne suivante, jusqu'à la dernière.
+    if (isFiche(currentCard)) {
+      setRevealedSteps(prev => Math.min(prev + 1, ficheSteps(currentCard.front).length));
+      return;
+    }
+
     // Quand on révèle la réponse, on démarre le timer
     setCardStartTime(new Date());
     setShowAnswer(true);
@@ -649,28 +654,15 @@ export default function Home() {
     }).start();
   };
 
-  const animateButton = (buttonType: 'hard' | 'medium' | 'easy') => {
-    Animated.sequence([
-      Animated.timing(buttonScaleAnimations[buttonType], {
-        toValue: 0.9,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(buttonScaleAnimations[buttonType], {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  const goToNextCard = () => {
+  // queueLength : longueur de la file APRÈS la réponse (une carte "à revoir" y est
+  // rajoutée à la fin), le state dueCards n'étant pas encore à jour à ce moment-là.
+  const goToNextCard = (queueLength: number) => {
     setCardStartTime(new Date()); // ⭐ RESET LE TIMER
     const nextIndex = currentCardIndex + 1;
 
-    if (nextIndex >= dueCards.length) {
-      // Session terminée - rafraîchir les stats en arrière-plan
-      refreshStats();
+    if (nextIndex >= queueLength) {
+      // Session terminée - rafraîchir les stats une fois toutes les réponses écrites
+      writeQueueRef.current.then(() => refreshStats());
       setShowEndSessionModal(true);
 
       // Animations du modal
@@ -714,9 +706,8 @@ export default function Home() {
     // Passer à la carte suivante
     setCurrentCardIndex(nextIndex);
     setShowAnswer(false);
-    setSelectedDifficulty(null);
+    setRevealedSteps(1);
     fadeAnimation.setValue(0);
-    borderColorAnimation.setValue(0);
 
     // Animation d'entrée
     scaleAnimation.setValue(0.8);
@@ -728,138 +719,76 @@ export default function Home() {
     }).start();
   };
 
-  const handleDifficultyResponse = async (difficulty: 'hard' | 'medium' | 'easy') => {
-    if (answeringRef.current || isProcessing || !dueCards[currentCardIndex]) return;
+  // Écrit une réponse en base, en file derrière les précédentes (voir writeQueueRef).
+  const persistReview = (card: Card, update: Partial<Card>, response: ReviewResponse, studyTime: number) => {
+    writeQueueRef.current = writeQueueRef.current.then(async () => {
+      try {
+        const { error } = await supabase.from('cards').update(update).eq('id', card.id);
+        if (error) throw error;
+
+        await StatsTracker.trackReview({
+          userId: user!.id,
+          response,
+          cardId: card.id,
+          deckId: card.deck_id,
+          studyTime,
+        });
+      } catch (error) {
+        logError('Home.persistReview', error);
+        // Une seule alerte par session, pas une par carte si le réseau est coupé
+        if (!saveErrorShownRef.current) {
+          saveErrorShownRef.current = true;
+          Alert.alert('Erreur', "Une révision n'a pas pu être enregistrée. Vérifiez votre connexion.");
+        }
+      }
+    });
+  };
+
+  // Appelée une fois la carte sortie de l'écran (swipe ou bouton).
+  // Droite = "je savais" -> Good (3) ; gauche = "à revoir" -> Again (1), la carte
+  // revient en fin de session (comme avant, où elle restait affichée jusqu'à réussite).
+  const handleAnswer = (direction: SwipeDirection) => {
+    const card = dueCards[currentCardIndex];
+    if (answeringRef.current || !card) return;
     answeringRef.current = true;
 
-    const card = dueCards[currentCardIndex];
-    setSelectedDifficulty(difficulty);
-    borderColorAnimation.setValue(1);
+    const response: ReviewResponse = direction === 'right' ? 'medium' : 'hard';
+    const knewIt = response !== 'hard';
 
-    // Streak de réussites d'affilée : "Facile" l'incrémente, "Difficile" le remet à zéro
-    if (difficulty === 'easy') {
-      setStreak(prev => prev + 1);
-    } else if (difficulty === 'hard') {
-      setStreak(0);
-    }
+    // Streak de réussites d'affilée : "je savais" l'incrémente, "à revoir" la remet à zéro
+    setStreak(prev => (knewIt ? prev + 1 : 0));
 
-    if (difficulty !== 'hard') {
-      Animated.sequence([
-        Animated.timing(scaleAnimation, {
-          toValue: 0.95,
-          duration: 80,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnimation, {
-          toValue: 1,
-          duration: 80,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
+    const result = scheduleNext(
+      {
+        stability: card.stability ?? null,
+        difficulty: card.difficulty ?? null,
+        lastReviewed: card.last_reviewed,
+        lapses: card.lapses || 0,
+      },
+      response
+    );
 
-    const newRepetitions = difficulty === 'hard' ? 0 : (card.repetitions || 0) + 1;
+    const update = {
+      stability: result.stability,
+      difficulty: result.difficulty,
+      interval: result.interval,
+      repetitions: knewIt ? (card.repetitions || 0) + 1 : 0,
+      last_reviewed: result.lastReviewed.toISOString(),
+      next_review: result.nextReview.toISOString(),
+      lapses: result.lapses,
+    };
+    const updatedCard = { ...card, ...update };
 
-    setIsProcessing(true);
-    try {
-      const result = scheduleNext(
-        {
-          stability: card.stability ?? null,
-          difficulty: card.difficulty ?? null,
-          lastReviewed: card.last_reviewed,
-          lapses: card.lapses || 0,
-        },
-        difficulty
-      );
+    const queue = dueCards.map((c, index) => (index === currentCardIndex ? updatedCard : c));
+    if (!knewIt) queue.push(updatedCard);
+    setDueCards(queue);
+    setTotalCardsReviewed(prev => prev + 1);
 
-      const { error } = await supabase
-        .from('cards')
-        .update({
-          stability: result.stability,
-          difficulty: result.difficulty,
-          interval: result.interval,
-          repetitions: newRepetitions,
-          last_reviewed: result.lastReviewed.toISOString(),
-          next_review: result.nextReview.toISOString(),
-          lapses: result.lapses,
-        })
-        .eq('id', card.id);
+    const studyTime = Math.floor((new Date().getTime() - cardStartTime.getTime()) / 1000);
+    persistReview(card, update, response, studyTime);
 
-      if (error) {
-        throw new Error('Erreur lors de la mise à jour');
-      }
-
-      // Tracker les stats utilisateur
-      const studyTime = Math.floor((new Date().getTime() - cardStartTime.getTime()) / 1000);
-
-      await StatsTracker.trackReview({
-        userId: user!.id,
-        response: difficulty,
-        cardId: card.id,
-        deckId: card.deck_id,
-        studyTime: studyTime,
-      });
-
-      setDueCards(prevCards =>
-          prevCards.map((c, index) =>
-              index === currentCardIndex
-              ? {
-                  ...c,
-                  stability: result.stability,
-                  difficulty: result.difficulty,
-                  interval: result.interval,
-                  repetitions: newRepetitions,
-                  last_reviewed: result.lastReviewed.toISOString(),
-                  next_review: result.nextReview.toISOString(),
-                  lapses: result.lapses,
-                  }
-              : c
-          )
-      );
-
-      setTotalCardsReviewed(prev => prev + 1);
-
-      if (difficulty === 'hard') {
-        // Pour "hard", rester sur la même carte
-        setTimeout(() => {
-          setShowAnswer(false);
-          setSelectedDifficulty(null);
-          fadeAnimation.setValue(0);
-          setCardStartTime(new Date());
-
-          Animated.timing(borderColorAnimation, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: false,
-          }).start();
-          answeringRef.current = false;
-        }, 1000);
-      } else {
-        // Pour "medium" et "easy", passer à la suivante
-        setTimeout(() => {
-          Animated.timing(borderColorAnimation, {
-            toValue: 0,
-            duration: 150,
-            useNativeDriver: false,
-          }).start();
-
-          Animated.timing(scaleAnimation, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-          }).start(() => {
-            setCardStartTime(new Date());
-            goToNextCard();
-            answeringRef.current = false;
-          });
-        }, 500);
-      }
-    } catch (error) {
-      goToNextCard();
-      answeringRef.current = false;
-    } finally {
-      setIsProcessing(false);
-    }
+    goToNextCard(queue.length);
+    answeringRef.current = false;
   };
 
   const handleEndSession = () => {
@@ -880,62 +809,17 @@ export default function Home() {
     });
   };
 
-  const getTextColor = () => {
-    if (selectedDifficulty === 'hard') return '#FF3B30';
-    if (selectedDifficulty === 'medium') return '#FF9500';
-    if (selectedDifficulty === 'easy') return '#34C759';
-    return theme.text;
-  };
-
-  const getAnimatedBorderColor = () => {
-    if (!selectedDifficulty || !borderColorAnimation) {
-      return theme.primary;
-    }
-
-    let targetColor = theme.primary;
-    if (selectedDifficulty === 'hard') targetColor = '#FF3B30';
-    if (selectedDifficulty === 'medium') targetColor = '#FF9500';
-    if (selectedDifficulty === 'easy') targetColor = '#34C759';
-
-    return borderColorAnimation.interpolate({
-      inputRange: [0, 1],
-      outputRange: [theme.primary, targetColor],
-    });
-  };
-
-  const getButtonStyle = (buttonType: 'hard' | 'medium' | 'easy') => {
-    let defaultStyle = {};
-    if (buttonType === 'hard') defaultStyle = {
-      backgroundColor: isDark ? '#4A1A1A' : '#FFF5F5',
-      borderColor: '#FF3B30'
-    };
-    if (buttonType === 'medium') defaultStyle = {
-      backgroundColor: isDark ? '#4A2A0F' : '#FFFBF0',
-      borderColor: '#FF9500'
-    };
-    if (buttonType === 'easy') defaultStyle = {
-      backgroundColor: isDark ? '#1A3A1A' : '#F0FFF4',
-      borderColor: '#34C759'
-    };
-
-    if (selectedDifficulty === buttonType) {
-      if (buttonType === 'hard') return { backgroundColor: '#FF3B30', borderColor: '#FF3B30' };
-      if (buttonType === 'medium') return { backgroundColor: '#FF9500', borderColor: '#FF9500' };
-      if (buttonType === 'easy') return { backgroundColor: '#34C759', borderColor: '#34C759' };
-    }
-
-    return defaultStyle;
-  };
-
-  const getButtonTextColor = (buttonType: 'hard' | 'medium' | 'easy') => {
-    if (selectedDifficulty === buttonType) {
-      return "#fff";
-    }
-    return isDark ? '#fff' : '#333';
-  };
-
   const currentCard = dueCards[currentCardIndex];
   const isReviewReady = mode === 'review' && !!currentCard;
+  const currentIsFiche = isReviewReady && isFiche(currentCard);
+  const currentFicheSteps = currentIsFiche ? ficheSteps(currentCard.front) : [];
+  // Prêt à répondre : verso révélé, ou toutes les lignes de la fiche dévoilées.
+  const answerReady = isReviewReady && (currentIsFiche ? revealedSteps >= currentFicheSteps.length : showAnswer);
+  const cardSwipe = useCardSwipe({
+    enabled: answerReady,
+    resetKey: `${mode}-${currentCardIndex}`,
+    onSwipe: handleAnswer,
+  });
 
   // Opacités croisées pilotées par une seule Animated.Value (transitionAnim) : pas
   // de useNativeDriver possible ici car elle anime aussi des props de layout
@@ -1012,9 +896,12 @@ export default function Home() {
         {/* Zone cliquable : n'importe où sous le bandeau du haut (pas seulement la
             carte) retourne la carte à l'accueil, ou révèle la réponse en révision.
             La carte elle-même n'a plus son propre Pressable — purement visuelle,
-            pointerEvents 'none' pour laisser passer le tap jusqu'ici. */}
+            pointerEvents 'none' pour laisser passer le tap jusqu'ici.
+            Le swipe de la carte est capté par la View qui l'englobe (ancêtre du
+            Pressable), voir l'en-tête de components/SwipeableCard.tsx. */}
+        <View style={styles.tapZone} {...cardSwipe.panHandlers}>
         <Pressable
-          style={styles.tapZone}
+          style={StyleSheet.absoluteFill}
           onPress={mode === 'home' ? handleHomeCardPress : handleToggleAnswer}
         >
           <Animated.View
@@ -1032,133 +919,102 @@ export default function Home() {
               <ActivityIndicator size="large" color={theme.primary} />
             ) : (
               <Animated.View style={[styles.cardScaleWrapper, { transform: [{ scale: scaleAnimation }] }]}>
+                {/* Swipe droite/gauche une fois la réponse affichée — nœud animé à part,
+                    voir l'en-tête de components/SwipeableCard.tsx. */}
+                <SwipeableCard swipe={cardSwipe}>
                 <Animated.View
                   style={[
                     styles.card,
                     {
                       minHeight: transitionAnim.interpolate({ inputRange: [0, 1], outputRange: [200, 250] }),
                       borderBottomWidth: transitionAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 8] }),
-                      borderBottomColor: mode === 'review' ? getAnimatedBorderColor() : theme.primary,
+                      borderBottomColor: theme.primary,
                     },
                   ]}
                 >
                   <View style={styles.cardContent}>
-                    {/* Recto : défile en interne plutôt que de déborder de la carte sur
-                        les textes longs (voir cardMaxHeight plus haut). */}
-                    <ScrollView
-                      style={mode === 'review' && showAnswer ? styles.textScrollSplit : styles.textScrollFull}
-                      contentContainerStyle={styles.textScrollContent}
-                      showsVerticalScrollIndicator={false}
-                      bounces={false}
-                      overScrollMode="never"
-                    >
-                      <Text style={[styles.cardText, { color: mode === 'review' ? getTextColor() : theme.text }]}>
-                        {mode === 'home' ? getCardTextMessage() : currentCard?.front}
-                      </Text>
-                    </ScrollView>
-
-                    {mode === 'review' && showAnswer && <View style={styles.separator} />}
-
-                    {mode === 'review' && showAnswer && (
-                      <Animated.View style={{ opacity: fadeAnimation }}>
+                    {currentIsFiche ? (
+                      <>
+                        {/* Fiche : lignes dévoilées une à une, défile vers la dernière
+                            dévoilée quand ça dépasse la hauteur de la carte. */}
                         <ScrollView
-                          style={styles.textScrollSplit}
+                          ref={ficheScrollRef}
+                          style={styles.textScrollFiche}
+                          contentContainerStyle={styles.textScrollContent}
+                          showsVerticalScrollIndicator={false}
+                          bounces={false}
+                          overScrollMode="never"
+                          onContentSizeChange={() => ficheScrollRef.current?.scrollToEnd({ animated: true })}
+                        >
+                          {currentFicheSteps.slice(0, revealedSteps).map((line, index) => (
+                            <Text key={index} style={index === 0 ? styles.cardText : styles.ficheLine}>
+                              {line}
+                            </Text>
+                          ))}
+                        </ScrollView>
+                        <Text style={styles.ficheHint}>
+                          {answerReady
+                            ? 'Fiche terminée'
+                            : `Touchez pour la suite · ${revealedSteps}/${currentFicheSteps.length}`}
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        {/* Recto : défile en interne plutôt que de déborder de la carte sur
+                            les textes longs (voir cardMaxHeight plus haut). */}
+                        <ScrollView
+                          style={mode === 'review' && showAnswer ? styles.textScrollSplit : styles.textScrollFull}
                           contentContainerStyle={styles.textScrollContent}
                           showsVerticalScrollIndicator={false}
                           bounces={false}
                           overScrollMode="never"
                         >
-                          <Text style={[styles.cardText, { color: getTextColor() }]}>{currentCard?.back}</Text>
+                          <Text style={styles.cardText}>
+                            {mode === 'home' ? getCardTextMessage() : currentCard?.front}
+                          </Text>
                         </ScrollView>
-                      </Animated.View>
+
+                        {mode === 'review' && showAnswer && <View style={styles.separator} />}
+
+                        {mode === 'review' && showAnswer && (
+                          <Animated.View style={{ opacity: fadeAnimation }}>
+                            <ScrollView
+                              style={styles.textScrollSplit}
+                              contentContainerStyle={styles.textScrollContent}
+                              showsVerticalScrollIndicator={false}
+                              bounces={false}
+                              overScrollMode="never"
+                            >
+                              <Text style={styles.cardText}>{currentCard?.back}</Text>
+                            </ScrollView>
+                          </Animated.View>
+                        )}
+                      </>
                     )}
                   </View>
                 </Animated.View>
+                </SwipeableCard>
               </Animated.View>
             )}
           </Animated.View>
         </Pressable>
+        </View>
 
-        {/* Boutons de difficulté, uniquement en révision une fois la réponse révélée.
+        {/* Réponses ("À revoir" / "Je savais"), uniquement en révision une fois la
+            réponse révélée — ou la fiche entièrement dévoilée.
             opacity: reviewLayerOpacity (= transitionAnim) — même valeur que le titre
             "Révision globale" dans la topBar, pour fondre exactement à la même
             vitesse que lui à la sortie. Sans ça (View simple, non animée), les
             boutons restaient pleinement opaques jusqu'à la toute fin du tween de
             sortie (mode ne repasse à 'home' qu'à la fin), pendant que le FAB '+'
             fondait déjà en entrée par-dessus — d'où le chevauchement. */}
-        {mode === 'review' && showAnswer && (
+        {answerReady && (
           <Animated.View style={[styles.difficultyContainer, { opacity: reviewLayerOpacity }]}>
-            <Text style={styles.difficultyTitle}>Comment avez-vous trouvé cette carte ?</Text>
+            <AnswerButtons onAnswer={cardSwipe.swipe} />
 
-            <View style={styles.difficultyButtons}>
-              <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.hard }] }]}>
-                <Pressable
-                  style={[styles.difficultyButton, getButtonStyle('hard')]}
-                  onPress={() => {
-                    animateButton('hard');
-                    handleDifficultyResponse('hard');
-                  }}
-                  disabled={isProcessing}
-                >
-                  <Ionicons
-                    name="close-circle"
-                    size={24}
-                    color={selectedDifficulty === 'hard' ? "#fff" : "#FF3B30"}
-                  />
-                  <Text style={[styles.difficultyButtonText, { color: getButtonTextColor('hard') }]}>
-                    Difficile
-                  </Text>
-                </Pressable>
-              </Animated.View>
-
-              <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.medium }] }]}>
-                <Pressable
-                  style={[styles.difficultyButton, getButtonStyle('medium')]}
-                  onPress={() => {
-                    animateButton('medium');
-                    handleDifficultyResponse('medium');
-                  }}
-                  disabled={isProcessing}
-                >
-                  <Ionicons
-                    name="help-circle"
-                    size={24}
-                    color={selectedDifficulty === 'medium' ? "#fff" : "#FF9500"}
-                  />
-                  <Text style={[styles.difficultyButtonText, { color: getButtonTextColor('medium') }]}>
-                    Moyen
-                  </Text>
-                </Pressable>
-              </Animated.View>
-
-              <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScaleAnimations.easy }] }]}>
-                <Pressable
-                  style={[styles.difficultyButton, getButtonStyle('easy')]}
-                  onPress={() => {
-                    animateButton('easy');
-                    handleDifficultyResponse('easy');
-                  }}
-                  disabled={isProcessing}
-                >
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={24}
-                    color={selectedDifficulty === 'easy' ? "#fff" : "#34C759"}
-                  />
-                  <Text style={[styles.difficultyButtonText, { color: getButtonTextColor('easy') }]}>
-                    Facile
-                  </Text>
-                </Pressable>
-              </Animated.View>
-            </View>
-
-            {/* Stats de la carte : la place est réservée dès que les boutons de
-                difficulté apparaissent (comme en mode entraînement) pour éviter que
-                leur arrivée fasse remonter tout le bloc ; seul le contenu reste
-                invisible (opacity) tant qu'on n'a pas cliqué sur un choix. */}
             {currentCard && (
               <View style={styles.cardStatsContainer}>
-                <Text style={[styles.cardStatsText, { opacity: selectedDifficulty ? 1 : 0 }]}>
+                <Text style={styles.cardStatsText}>
                   Win Streak: {currentCard.repetitions || 0} •
                   Lapses: {currentCard.lapses || 0} •
                   Facilité: {difficultyToEasePercent(currentCard.difficulty) ?? '—'}% •

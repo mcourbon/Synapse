@@ -6,6 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Card } from '../types/database';
 import { getCardMastery, difficultyToEasePercent } from '../utils/fsrs';
 import { MASTERY_COLORS, MASTERY_LABELS, formatNextReview } from '../utils/cardMastery';
+import { isFiche } from '../utils/fiche';
 
 interface CardStatsModalProps {
   visible: boolean;
@@ -231,8 +232,13 @@ export default function CardStatsModal({ visible, card, onClose }: CardStatsModa
                     {/* Aperçu front / back */}
                     <View style={styles.statsPreview}>
                       <Text style={styles.statsPreviewFront}>{card.front}</Text>
-                      <View style={styles.statsPreviewDivider} />
-                      <Text style={styles.statsPreviewBack}>{card.back}</Text>
+                      {/* Fiche : pas de verso, tout est déjà dans le recto */}
+                      {!isFiche(card) && (
+                        <>
+                          <View style={styles.statsPreviewDivider} />
+                          <Text style={styles.statsPreviewBack}>{card.back}</Text>
+                        </>
+                      )}
                     </View>
 
                     {/* Mastery banner */}

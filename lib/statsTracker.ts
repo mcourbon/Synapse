@@ -47,8 +47,8 @@ export class StatsTracker {
             total_study_time: studyTime,
             current_streak: 1,
             longest_streak: 1,
-            current_answer_streak: response === 'easy' ? 1 : 0,
-            best_answer_streak: response === 'easy' ? 1 : 0,
+            current_answer_streak: response !== 'hard' ? 1 : 0,
+            best_answer_streak: response !== 'hard' ? 1 : 0,
             last_study_date: today,
             study_days: [today],
             updated_at: new Date().toISOString(),
@@ -89,13 +89,9 @@ export class StatsTracker {
         newLongestStreak = newStreak;
       }
 
-      // Streak de réussites d'affilée : "Facile" l'incrémente, "Difficile" le remet à zéro, "Moyen" ne change rien
-      let newAnswerStreak = existingStats.current_answer_streak || 0;
-      if (response === 'easy') {
-        newAnswerStreak += 1;
-      } else if (response === 'hard') {
-        newAnswerStreak = 0;
-      }
+      // Streak de réussites d'affilée : "je savais" (medium, ou easy de l'ancien
+      // système à 3 boutons) l'incrémente, "à revoir" (hard) la remet à zéro
+      const newAnswerStreak = response === 'hard' ? 0 : (existingStats.current_answer_streak || 0) + 1;
       const newBestAnswerStreak = Math.max(existingStats.best_answer_streak || 0, newAnswerStreak);
 
       // Mettre à jour l'array des jours d'étude

@@ -65,8 +65,12 @@ there at all:
   (topBar decks↔back and profile↔streak icons, welcome message↔"Révision globale"
   title+counter) and the card's position/shape (top/bottom insets, border width) —
   since the tapped card's `front` text is already on screen, the card's own text never
-  needs to fade. Difficulty buttons fade out via `reviewLayerOpacity` on exit (same
+  needs to fade. Answer buttons fade out via `reviewLayerOpacity` on exit (same
   speed as the title, in sync with the FAB fading in) instead of popping instantly.
+  Answers are written in the background through `writeQueueRef` (serialized promise
+  chain — `StatsTracker.trackReview` is a read-modify-write on `user_stats`, so
+  parallel writes would lose counts); anything re-reading data (stats refresh,
+  home tinycard) waits on that queue.
   Android hardware back returns to home mode instead of exiting (`BackHandler`, only
   active while `mode === 'review'`).
 - Practice ("S'entraîner") lives inside `app/deck/[id].tsx` as a second visual mode
@@ -75,6 +79,31 @@ there at all:
   behavior as before: no real FSRS/stats writes, full deck loop with reshuffle
   ("Continuer" on the end-of-session modal), free flip/re-flip. Android hardware
   back returns to list mode (`BackHandler`, only active while `mode === 'training'`).
+
+### Answering: swipe, two responses (`components/SwipeableCard.tsx`, `components/AnswerButtons.tsx`)
+
+Both review and practice use two answers instead of the former three buttons
+(Difficile/Moyen/Facile — kept on the `boutons-3-reponses` branch): swipe right /
+"Je savais" -> `'medium'` (FSRS Good), swipe left / "À revoir" -> `'hard'` (Again).
+`'easy'` is no longer sent but still handled for history. "À revoir" pushes the card
+back at the end of the session queue (`goToNextCard(queueLength)` takes the new
+length since state isn't updated yet). The swipe only engages once the answer is
+shown, and only on a clearly horizontal move (capture phase), so taps and vertical
+scrolls of long texts keep working. The `useCardSwipe()` panHandlers must sit on a
+View that WRAPS the tap Pressable, not on the card: the Pressable becomes responder
+on touch start, and the responder system then only lets its ancestors take over —
+handlers on the card (a descendant) are never consulted (that was the first, broken
+version). `<SwipeableCard swipe>` owns its own native-driven Animated.View — never
+merge it with the scale node or a JS-driven color node.
+
+### Fiches (`utils/fiche.ts`)
+
+A fiche is a card with an empty `back` (no DB column/migration, works in guest mode).
+Its `front` holds one piece of info per line, the first line being the title (shown on
+the home tinycard and in lists via `cardTitle`). In review each tap reveals the next
+line (active recall); answers unlock once all lines are shown. Up to 1000 chars vs 300
+for a regular card. Type is picked with `components/CardTypeToggle.tsx` in the add and
+edit modals.
 
 Native root background is synced to theme via expo-system-ui in ThemeContext, fixing
 an earlier, separate white-flash issue on screen transitions elsewhere in the app —
@@ -91,7 +120,7 @@ Single client export. Tables: `decks`, `cards`, `user_stats`. Storage bucket: `a
 
 ### Spaced Repetition (`utils/fsrs.ts`)
 
-FSRS (Free Spaced Repetition Scheduler), FSRS-4.5 default weights. Three responses: `hard` / `medium` / `easy`, mapped to FSRS grades Again(1)/Good(3)/Easy(4). Models memory via `stability` (days until recall probability decays to 90%) and `difficulty` (1–10). `hard` doesn't apply the computed long-term interval — it re-queues the card ~5 minutes later, same UX as the old system. Includes ±5% fuzz factor to prevent review clustering.
+FSRS (Free Spaced Repetition Scheduler), FSRS-4.5 default weights. Responses `hard` / `medium` / `easy` map to FSRS grades Again(1)/Good(3)/Easy(4); the app now only sends `hard` and `medium` (see "Answering" above). Models memory via `stability` (days until recall probability decays to 90%) and `difficulty` (1–10). `hard` doesn't apply the computed long-term interval — it sets `next_review` ~5 minutes later, same as the old system. Includes ±5% fuzz factor to prevent review clustering.
 
 Key card fields: `stability`, `difficulty` (both nullable — new/unreviewed cards), `interval` (days), `lapses`, `next_review`. `repetitions` is a UI-only "win streak" counter (increments on success, resets on `hard`), not consumed by the scheduling algorithm itself.
 
@@ -99,7 +128,7 @@ Migrated from a prior SM-2 implementation (`utils/spacedRepetition.ts`, deleted)
 
 ### Stats (`lib/statsTracker.ts`)
 
-Tracks per-user: streaks, `study_days` (JSONB array of ISO dates for heatmap), hard/medium/easy review counts, total study time (seconds), `cards_mastered` (stability ≥ 21 days and difficulty ≤ 6), `cards_difficult` (≥3 lapses). All written to `user_stats` table.
+Tracks per-user: streaks (answer streak: any non-`hard` answer increments it), `study_days` (JSONB array of local-day ISO dates for heatmap), hard/medium/easy review counts (profile shows "À revoir" = hard, "Je savais" = medium + easy), total study time (seconds), `cards_mastered` (stability ≥ 21 days and difficulty ≤ 6), `cards_difficult` (≥3 lapses). All written to `user_stats` table.
 
 ### Avatar Upload (`lib/avatarUpload.ts`)
 

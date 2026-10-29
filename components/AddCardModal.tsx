@@ -18,7 +18,9 @@ import { Deck } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import AddDeckModal from './AddDeckModal';
+import CardTypeToggle from './CardTypeToggle';
 import { getDeckCardCount, MAX_CARDS_PER_DECK } from '../lib/deckLimits';
+import { CARD_TEXT_MAX_LENGTH, FICHE_MAX_LENGTH } from '../utils/fiche';
 
 // Couleurs hardcodées — module level (iOS safe, jamais dans StyleSheet inside component)
 const staticStyles = StyleSheet.create({
@@ -62,10 +64,15 @@ export default function AddCardModal({
   // États pour le formulaire
   const [front, setFront] = useState('');
   const [back, setBack] = useState('');
+  // Fiche = carte sans verso (back vide en base), voir utils/fiche.ts
+  const [cardIsFiche, setCardIsFiche] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [currentCategoryInput, setCurrentCategoryInput] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
+  const frontMaxLength = cardIsFiche ? FICHE_MAX_LENGTH : CARD_TEXT_MAX_LENGTH;
+  const canSave = !!front.trim() && front.length <= frontMaxLength && (cardIsFiche || !!back.trim());
+
   // États pour la sélection de deck (si deckId n'est pas fourni)
   const [decks, setDecks] = useState<Deck[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
@@ -408,8 +415,8 @@ export default function AddCardModal({
   };
 
   const handleAddCard = async () => {
-    if (!front.trim() || !back.trim()) {
-      Alert.alert('Erreur', 'Veuillez remplir le recto et le verso');
+    if (!canSave) {
+      Alert.alert('Erreur', cardIsFiche ? 'Veuillez remplir la fiche' : 'Veuillez remplir le recto et le verso');
       return;
     }
 
@@ -439,7 +446,7 @@ export default function AddCardModal({
           {
             deck_id: targetDeckId,
             front: front.trim(),
-            back: back.trim(),
+            back: cardIsFiche ? '' : back.trim(),
             categories: categories.length > 0 ? categories : null,
           }
         ]);
@@ -461,6 +468,7 @@ export default function AddCardModal({
   const closeModal = () => {
     setFront('');
     setBack('');
+    setCardIsFiche(false);
     setCategories([]);
     setCurrentCategoryInput('');
     setSelectedDeckId('');
@@ -537,10 +545,10 @@ export default function AddCardModal({
             </Text>
             <Pressable
               onPress={handleAddCard}
-              disabled={loading || !front.trim() || !back.trim()}
-              style={[styles.saveButton, (loading || !front.trim() || !back.trim()) && (isDark ? staticStyles.saveButtonDisabledDark : staticStyles.saveButtonDisabledLight)]}
+              disabled={loading || !canSave}
+              style={[styles.saveButton, (loading || !canSave) && (isDark ? staticStyles.saveButtonDisabledDark : staticStyles.saveButtonDisabledLight)]}
             >
-              <Text style={[staticStyles.saveButtonText, (loading || !front.trim() || !back.trim()) && (isDark ? staticStyles.saveButtonTextDisabledDark : staticStyles.saveButtonTextDisabledLight)]}>
+              <Text style={[staticStyles.saveButtonText, (loading || !canSave) && (isDark ? staticStyles.saveButtonTextDisabledDark : staticStyles.saveButtonTextDisabledLight)]}>
                 {loading ? 'Ajout...' : 'Ajouter'}
               </Text>
             </Pressable>
@@ -602,23 +610,30 @@ export default function AddCardModal({
             {(deckId || selectedDeckId) && (
               <>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Question</Text>
+                  <CardTypeToggle isFiche={cardIsFiche} onChange={setCardIsFiche} />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{cardIsFiche ? 'Fiche' : 'Question'}</Text>
                   <TextInput
-                    style={[styles.textInput, { outlineWidth: 0, borderColor: theme.primary }]}
+                    style={[styles.textInput, { outlineWidth: 0, borderColor: theme.primary }, cardIsFiche && { minHeight: 160 }]}
                     value={front}
                     onChangeText={setFront}
-                    placeholder="Tapez votre question..."
+                    placeholder={cardIsFiche
+                      ? "Titre sur la 1re ligne, puis une info par ligne.\nEn révision, elles se dévoilent une à une."
+                      : "Tapez votre question..."}
                     placeholderTextColor={theme.textMuted}
                     multiline
-                    numberOfLines={4}
+                    numberOfLines={cardIsFiche ? 8 : 4}
                     textAlignVertical="top"
-                    maxLength={300}
+                    maxLength={frontMaxLength}
                   />
-                  <Text style={{ fontSize: 12, color: front.length >= 300 ? '#EF4444' : front.length > 270 ? '#F59E0B' : theme.textSecondary, textAlign: 'right', marginTop: 4 }}>
-                    {front.length}/300
+                  <Text style={{ fontSize: 12, color: front.length >= frontMaxLength ? '#EF4444' : front.length > frontMaxLength * 0.9 ? '#F59E0B' : theme.textSecondary, textAlign: 'right', marginTop: 4 }}>
+                    {front.length}/{frontMaxLength}
                   </Text>
                 </View>
 
+                {!cardIsFiche && (
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Réponse</Text>
                   <TextInput
@@ -636,6 +651,7 @@ export default function AddCardModal({
                     {back.length}/300
                   </Text>
                 </View>
+                )}
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>
@@ -724,17 +740,19 @@ export default function AddCardModal({
                     <Text style={styles.previewTitle}>Aperçu</Text>
                     <View style={styles.previewCards}>
                       <View style={styles.previewCard}>
-                        <Text style={styles.previewLabel}>Recto</Text>
+                        <Text style={styles.previewLabel}>{cardIsFiche ? 'Fiche' : 'Recto'}</Text>
                         <Text style={styles.previewText}>
                           {front || 'Votre question...'}
                         </Text>
                       </View>
+                      {!cardIsFiche && (
                       <View style={styles.previewCard}>
                         <Text style={styles.previewLabel}>Verso</Text>
                         <Text style={styles.previewText}>
                           {back || 'Votre réponse...'}
                         </Text>
                       </View>
+                      )}
                     </View>
                   </View>
                 )}

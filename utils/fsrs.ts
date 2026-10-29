@@ -38,8 +38,10 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-// Les 3 boutons de l'app correspondent à 3 des 4 notes FSRS (on saute "Hard"=2) :
-// Difficile -> Again (1), Moyen -> Good (3), Facile -> Easy (4).
+// La révision se fait en deux réponses (swipe ou boutons) : gauche "à revoir" ->
+// 'hard' -> Again (1), droite "je savais" -> 'medium' -> Good (3), la note standard
+// d'un rappel réussi. 'easy' -> Easy (4) reste géré pour l'historique de l'ancien
+// système à 3 boutons (Difficile/Moyen/Facile), mais n'est plus envoyé par l'app.
 function responseToGrade(response: ReviewResponse): 1 | 3 | 4 {
   if (response === 'hard') return 1;
   if (response === 'easy') return 4;

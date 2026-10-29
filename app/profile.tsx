@@ -616,23 +616,19 @@ avatarPlaceholder: {
 <View style={dynamicStyles.fullWidthCard}>
   <Text style={dynamicStyles.statSectionTitle}>Répartition des réponses</Text>
   <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 10 }}>
+    {/* Deux réponses depuis le swipe : "à revoir" = hard, "je savais" = medium.
+        Les "easy" de l'ancien système à 3 boutons comptent aussi comme réussies. */}
     <View style={{ alignItems: 'center' }}>
       <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.error }}>
         {stats.hardReviews}
       </Text>
-      <Text style={{ fontSize: 12, color: theme.textSecondary }}>Difficile</Text>
-    </View>
-    <View style={{ alignItems: 'center' }}>
-      <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.warning }}>
-        {stats.mediumReviews}
-      </Text>
-      <Text style={{ fontSize: 12, color: theme.textSecondary }}>Moyen</Text>
+      <Text style={{ fontSize: 12, color: theme.textSecondary }}>À revoir</Text>
     </View>
     <View style={{ alignItems: 'center' }}>
       <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.success }}>
-        {stats.easyReviews}
+        {stats.mediumReviews + stats.easyReviews}
       </Text>
-      <Text style={{ fontSize: 12, color: theme.textSecondary }}>Facile</Text>
+      <Text style={{ fontSize: 12, color: theme.textSecondary }}>Je savais</Text>
     </View>
   </View>
 </View>
