@@ -102,6 +102,8 @@ export default function DeckDetail() {
   const [showAnswer, setShowAnswer] = useState(false);
   // Fiches (cartes sans verso) : nombre de lignes déjà dévoilées, la 1re (titre) d'office.
   const [revealedSteps, setRevealedSteps] = useState(1);
+  // Incrémenté à chaque "S'entraîner" / "Continuer" : fait partie du resetKey du swipe.
+  const [trainingSession, setTrainingSession] = useState(0);
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [streak, setStreak] = useState(0);
   const answeringRef = useRef(false);
@@ -1003,6 +1005,7 @@ addCategoryButtonInactive: {
     }
 
     setTrainingCards(shuffleCards(cards));
+    setTrainingSession(prev => prev + 1);
     setCurrentCardIndex(0);
     setShowAnswer(false);
     setRevealedSteps(1);
@@ -1184,6 +1187,7 @@ addCategoryButtonInactive: {
     // Remélanger les cartes, sans les doublons ajoutés par les "à revoir"
     const uniqueCards = Array.from(new Map(trainingCards.map(c => [c.id, c])).values());
     setTrainingCards(shuffleCards(uniqueCards));
+    setTrainingSession(prev => prev + 1);
 
     // Repartir à la première carte
     setCurrentCardIndex(0);
@@ -1452,9 +1456,13 @@ addCategoryButtonInactive: {
   // Avant les returns anticipés (hook) et après handleAnswer (utilisé tel quel).
   const cardSwipe = useCardSwipe({
     enabled: mode === 'training' && answerReady,
-    resetKey: `${currentCardIndex}-${trainingCards.length}`,
+    // trainingSession : une nouvelle session repartant au même index/longueur que
+    // la précédente (ex. deck d'une carte) doit quand même recentrer la carte, sortie
+    // de l'écran à la dernière réponse — sinon elle restait invisible.
+    resetKey: `${trainingSession}-${currentCardIndex}-${trainingCards.length}`,
     onSwipe: handleAnswer,
   });
+  const textTint = cardSwipe.tint(theme.text);
   swipeRef.current = cardSwipe; // pour les raccourcis clavier, déclarés plus haut
 
   if (loading) {
@@ -1601,7 +1609,8 @@ addCategoryButtonInactive: {
           <View style={styles.cardContainer}>
             <Animated.View style={[styles.cardScaleWrapper, { transform: [{ scale: scaleAnimation }] }]}>
             <SwipeableCard swipe={cardSwipe}>
-            <View style={styles.card}>
+            {/* Bordure qui vire au vert / rouge pendant le glissé (voir useCardSwipe) */}
+            <Animated.View style={[styles.card, { borderBottomColor: cardSwipe.tint(theme.primary) }]}>
               <View style={styles.trainingCardContent}>
                 {trainingIsFiche ? (
                   <>
@@ -1618,9 +1627,9 @@ addCategoryButtonInactive: {
                         onContentSizeChange={() => ficheScrollRef.current?.scrollToEnd({ animated: true })}
                       >
                         {trainingFicheSteps.slice(0, revealedSteps).map((line, index) => (
-                          <Text key={index} style={index === 0 ? styles.cardText : styles.ficheLine}>
+                          <Animated.Text key={index} selectable={false} style={[index === 0 ? styles.cardText : styles.ficheLine, { color: textTint }]}>
                             {line}
-                          </Text>
+                          </Animated.Text>
                         ))}
                       </ScrollView>
                     </View>
@@ -1643,9 +1652,9 @@ addCategoryButtonInactive: {
                         bounces={false}
                         overScrollMode="never"
                       >
-                        <Text style={styles.cardText}>
+                        <Animated.Text selectable={false} style={[styles.cardText, { color: textTint }]}>
                           {trainingCard.front}
-                        </Text>
+                        </Animated.Text>
                       </ScrollView>
                     </View>
 
@@ -1667,16 +1676,16 @@ addCategoryButtonInactive: {
                           bounces={false}
                           overScrollMode="never"
                         >
-                          <Text style={styles.cardText}>
+                          <Animated.Text selectable={false} style={[styles.cardText, { color: textTint }]}>
                             {trainingCard.back}
-                          </Text>
+                          </Animated.Text>
                         </ScrollView>
                       </Animated.View>
                     )}
                   </>
                 )}
               </View>
-            </View>
+            </Animated.View>
             </SwipeableCard>
             </Animated.View>
           </View>

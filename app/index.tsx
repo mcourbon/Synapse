@@ -820,6 +820,7 @@ export default function Home() {
     resetKey: `${mode}-${currentCardIndex}`,
     onSwipe: handleAnswer,
   });
+  const textTint = cardSwipe.tint(theme.text);
 
   // Opacités croisées pilotées par une seule Animated.Value (transitionAnim) : pas
   // de useNativeDriver possible ici car elle anime aussi des props de layout
@@ -928,7 +929,8 @@ export default function Home() {
                     {
                       minHeight: transitionAnim.interpolate({ inputRange: [0, 1], outputRange: [200, 250] }),
                       borderBottomWidth: transitionAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 8] }),
-                      borderBottomColor: theme.primary,
+                      // Vire au vert / rouge pendant le glissé (voir useCardSwipe)
+                      borderBottomColor: cardSwipe.tint(theme.primary),
                     },
                   ]}
                 >
@@ -947,9 +949,9 @@ export default function Home() {
                           onContentSizeChange={() => ficheScrollRef.current?.scrollToEnd({ animated: true })}
                         >
                           {currentFicheSteps.slice(0, revealedSteps).map((line, index) => (
-                            <Text key={index} style={index === 0 ? styles.cardText : styles.ficheLine}>
+                            <Animated.Text key={index} selectable={false} style={[index === 0 ? styles.cardText : styles.ficheLine, { color: textTint }]}>
                               {line}
-                            </Text>
+                            </Animated.Text>
                           ))}
                         </ScrollView>
                         <Text style={styles.ficheHint}>
@@ -969,9 +971,9 @@ export default function Home() {
                           bounces={false}
                           overScrollMode="never"
                         >
-                          <Text style={styles.cardText}>
+                          <Animated.Text selectable={false} style={[styles.cardText, { color: textTint }]}>
                             {mode === 'home' ? getCardTextMessage() : currentCard?.front}
-                          </Text>
+                          </Animated.Text>
                         </ScrollView>
 
                         {mode === 'review' && showAnswer && <View style={styles.separator} />}
@@ -985,7 +987,7 @@ export default function Home() {
                               bounces={false}
                               overScrollMode="never"
                             >
-                              <Text style={styles.cardText}>{currentCard?.back}</Text>
+                              <Animated.Text selectable={false} style={[styles.cardText, { color: textTint }]}>{currentCard?.back}</Animated.Text>
                             </ScrollView>
                           </Animated.View>
                         )}
