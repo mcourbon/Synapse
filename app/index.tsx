@@ -20,8 +20,21 @@ import ProfessionalProgressCircle from '../components/ProfessionalProgressCircle
 import AnimatedSuccessIcon from '../components/AnimatedSuccessIcon';
 import SwipeableCard, { useCardSwipe, SwipeDirection } from '../components/SwipeableCard';
 import AnswerButtons from '../components/AnswerButtons';
+import UndoButton from '../components/UndoButton';
+import SessionSummary, { SessionResults, endSessionMessage, startSummaryAnimation } from '../components/SessionSummary';
 
 // Couleurs hardcodées — module level (iOS safe, jamais dans StyleSheet inside component)
+interface PendingAnswer {
+  persist: () => void;
+  // État de la session juste avant la réponse, rétabli par "Annuler"
+  previous: {
+    queue: Card[];
+    index: number;
+    streak: number;
+    results: SessionResults;
+  };
+}
+
 const staticStyles = StyleSheet.create({
   endSessionOverlayLight: { backgroundColor: 'rgba(0, 0, 0, 0.6)' },
   endSessionOverlayDark: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
@@ -63,7 +76,10 @@ export default function Home() {
   // Fiches (cartes sans verso) : nombre de lignes déjà dévoilées, la 1re (titre) d'office.
   const [revealedSteps, setRevealedSteps] = useState(1);
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
-  const [totalCardsReviewed, setTotalCardsReviewed] = useState(0);
+  // Résumé de fin de session : 1re réponse de chaque carte, et durée totale.
+  const [sessionResults, setSessionResults] = useState<SessionResults>({});
+  const [sessionDuration, setSessionDuration] = useState(0);
+  const sessionStartRef = useRef(Date.now());
   const [streak, setStreak] = useState(0);
   const [cardStartTime, setCardStartTime] = useState<Date>(new Date());
   const answeringRef = useRef(false);
@@ -74,6 +90,11 @@ export default function Home() {
   // compteurs. Tout ce qui relit les données (stats, tinycard) attend cette file.
   const writeQueueRef = useRef<Promise<void>>(Promise.resolve());
   const saveErrorShownRef = useRef(false);
+  // Dernière réponse, pas encore écrite en base : "Annuler" n'a donc rien à défaire
+  // côté serveur (FSRS de la carte, compteurs user_stats). Elle part dans la file
+  // d'écriture à la réponse suivante, en fin de session ou en quittant la révision.
+  const pendingAnswerRef = useRef<PendingAnswer | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
 
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(1)).current;
@@ -81,6 +102,7 @@ export default function Home() {
   const checkScaleAnimation = useRef(new Animated.Value(0)).current;
   const modalBackgroundAnimation = useRef(new Animated.Value(0)).current;
   const modalScaleAnimation = useRef(new Animated.Value(0.8)).current;
+  const summaryAnimation = useRef(new Animated.Value(0)).current;
 
   // Espacements verticaux dérivés de la hauteur d'écran plutôt que des px fixes —
   // sinon la zone réservée en bas pour les boutons de difficulté (ex: 220px en dur)
@@ -384,7 +406,7 @@ export default function Home() {
       color: theme.textSecondary,
       textAlign: 'center',
       lineHeight: 22,
-      marginBottom: 32,
+      marginBottom: 20,
       paddingHorizontal: 16,
     },
     endSessionButton: {
@@ -597,10 +619,13 @@ export default function Home() {
     setCurrentCardIndex(0);
     setShowAnswer(false);
     setRevealedSteps(1);
-    setTotalCardsReviewed(0);
+    setSessionResults({});
+    sessionStartRef.current = Date.now();
     setStreak(0);
     setCardStartTime(new Date());
     saveErrorShownRef.current = false;
+    pendingAnswerRef.current = null;
+    setCanUndo(false);
     fadeAnimation.setValue(0);
     scaleAnimation.setValue(1);
     setMode('review');
@@ -614,6 +639,7 @@ export default function Home() {
   };
 
   const exitReview = () => {
+    flushPendingAnswer(); // révision quittée en cours de route
     Animated.timing(transitionAnim, {
       toValue: 0,
       duration: 300,
@@ -662,8 +688,11 @@ export default function Home() {
 
     if (nextIndex >= queueLength) {
       // Session terminée - rafraîchir les stats une fois toutes les réponses écrites
+      flushPendingAnswer();
       writeQueueRef.current.then(() => refreshStats());
+      setSessionDuration((Date.now() - sessionStartRef.current) / 1000);
       setShowEndSessionModal(true);
+      startSummaryAnimation(summaryAnimation);
 
       // Animations du modal
       Animated.parallel([
@@ -782,13 +811,60 @@ export default function Home() {
     const queue = dueCards.map((c, index) => (index === currentCardIndex ? updatedCard : c));
     if (!knewIt) queue.push(updatedCard);
     setDueCards(queue);
-    setTotalCardsReviewed(prev => prev + 1);
+    // Seule la 1re réponse d'une carte compte pour le résumé ("sue du premier coup")
+    if (!(card.id in sessionResults)) {
+      setSessionResults({ ...sessionResults, [card.id]: knewIt });
+    }
 
+    // La réponse précédente devient définitive, celle-ci reste annulable
+    flushPendingAnswer();
     const studyTime = Math.floor((new Date().getTime() - cardStartTime.getTime()) / 1000);
-    persistReview(card, update, response, studyTime);
+    pendingAnswerRef.current = {
+      persist: () => persistReview(card, update, response, studyTime),
+      previous: { queue: dueCards, index: currentCardIndex, streak, results: sessionResults },
+    };
+    setCanUndo(true);
 
     goToNextCard(queue.length);
     answeringRef.current = false;
+  };
+
+  const flushPendingAnswer = () => {
+    const pending = pendingAnswerRef.current;
+    pendingAnswerRef.current = null;
+    setCanUndo(false);
+    pending?.persist();
+  };
+
+  // Revient sur la dernière réponse : la carte réapparaît face réponse (ou fiche
+  // entièrement dévoilée), prête à être re-swipée.
+  const handleUndo = () => {
+    const pending = pendingAnswerRef.current;
+    if (!pending) return;
+    pendingAnswerRef.current = null;
+    setCanUndo(false);
+
+    const { queue, index, streak: previousStreak, results } = pending.previous;
+    const card = queue[index];
+    setDueCards(queue);
+    setCurrentCardIndex(index);
+    setStreak(previousStreak);
+    setSessionResults(results);
+    setCardStartTime(new Date());
+    if (isFiche(card)) {
+      setRevealedSteps(ficheSteps(card.front).length);
+    } else {
+      setShowAnswer(true);
+      fadeAnimation.setValue(1);
+    }
+
+    scaleAnimation.setValue(0.8);
+    Animated.spring(scaleAnimation, {
+      toValue: 1,
+      tension: 100,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
   };
 
   const handleEndSession = () => {
@@ -851,7 +927,7 @@ export default function Home() {
               bandeau plus bas, qui ne sert qu'au message motivant de l'accueil. */}
           <Animated.View
             style={[styles.headerCenter, { opacity: reviewLayerOpacity }]}
-            pointerEvents="none"
+            pointerEvents={mode === 'review' ? 'box-none' : 'none'}
             needsOffscreenAlphaCompositing
           >
             <Text style={styles.reviewTitleText}>Révision globale</Text>
@@ -860,6 +936,7 @@ export default function Home() {
                 {currentCardIndex + 1} / {dueCards.length}
               </Text>
             )}
+            {mode === 'review' && canUndo && !showEndSessionModal && <UndoButton onPress={handleUndo} />}
           </Animated.View>
 
           {/* Conteneur neutre (sans fond propre) : chaque calque porte son propre
@@ -1095,8 +1172,13 @@ export default function Home() {
             <Text style={styles.endSessionTitle}>Félicitations !</Text>
             <Text style={styles.endSessionSubtitle}>Session terminée</Text>
             <Text style={styles.endSessionMessage}>
-              Vous avez révisé {totalCardsReviewed} cartes aujourd'hui. Excellent travail !
+              {endSessionMessage(sessionResults)}
             </Text>
+            <SessionSummary
+              results={sessionResults}
+              durationSeconds={sessionDuration}
+              progress={summaryAnimation}
+            />
 
             <Pressable style={styles.endSessionButton} onPress={handleEndSession}>
               <Text style={staticStyles.endSessionButtonText}>Retour à l'accueil</Text>

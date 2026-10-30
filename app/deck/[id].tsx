@@ -21,6 +21,8 @@ import StreakFlame from '../../components/StreakFlame';
 import SwipeableCard, { useCardSwipe, CardSwipe, SwipeDirection } from '../../components/SwipeableCard';
 import AnswerButtons from '../../components/AnswerButtons';
 import CardTypeToggle from '../../components/CardTypeToggle';
+import UndoButton from '../../components/UndoButton';
+import SessionSummary, { SessionResults, startSummaryAnimation } from '../../components/SessionSummary';
 
 // Couleurs hardcodées — module level (iOS safe, jamais dans StyleSheet inside component)
 const staticStyles = StyleSheet.create({
@@ -106,6 +108,14 @@ export default function DeckDetail() {
   const [trainingSession, setTrainingSession] = useState(0);
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [streak, setStreak] = useState(0);
+  // Résumé de fin de session : 1re réponse de chaque carte, et durée totale.
+  const [sessionResults, setSessionResults] = useState<SessionResults>({});
+  const [sessionDuration, setSessionDuration] = useState(0);
+  const sessionStartRef = useRef(Date.now());
+  // État juste avant la dernière réponse, rétabli par "Annuler" (rien en base à
+  // défaire ici, l'entraînement n'écrit rien).
+  const undoRef = useRef<{ queue: Card[]; index: number; streak: number; results: SessionResults } | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
   const answeringRef = useRef(false);
   const swipeRef = useRef<CardSwipe | null>(null);
   const ficheScrollRef = useRef<ScrollView>(null);
@@ -120,6 +130,7 @@ export default function DeckDetail() {
   const checkScaleAnimation = useRef(new Animated.Value(0)).current;
   const modalBackgroundAnimation = useRef(new Animated.Value(0)).current;
   const modalScaleAnimation = useRef(new Animated.Value(0.8)).current;
+  const summaryAnimation = useRef(new Animated.Value(0)).current;
 
   const router = useRouter();
   const { user } = useAuth();
@@ -765,7 +776,7 @@ addCategoryButtonInactive: {
     color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 32,
+    marginBottom: 20,
     paddingHorizontal: 16,
   },
   endSessionButtons: {
@@ -1010,9 +1021,17 @@ addCategoryButtonInactive: {
     setShowAnswer(false);
     setRevealedSteps(1);
     setStreak(0);
+    resetSessionTracking();
     fadeAnimation.setValue(0);
     scaleAnimation.setValue(1);
     setMode('training');
+  };
+
+  const resetSessionTracking = () => {
+    setSessionResults({});
+    sessionStartRef.current = Date.now();
+    undoRef.current = null;
+    setCanUndo(false);
   };
 
   // Retour à la liste depuis le mode entraînement (bouton retour ou bouton
@@ -1123,7 +1142,11 @@ addCategoryButtonInactive: {
     // Vérifier si on arrive à la fin du deck
     if (nextIndex >= queueLength) {
       // On a fini toutes les cartes - proposer les options avec animation professionnelle
+      undoRef.current = null;
+      setCanUndo(false);
+      setSessionDuration((Date.now() - sessionStartRef.current) / 1000);
       setShowEndSessionModal(true);
+      startSummaryAnimation(summaryAnimation);
 
       // Animation d'entrée du modal
       Animated.parallel([
@@ -1188,6 +1211,7 @@ addCategoryButtonInactive: {
     const uniqueCards = Array.from(new Map(trainingCards.map(c => [c.id, c])).values());
     setTrainingCards(shuffleCards(uniqueCards));
     setTrainingSession(prev => prev + 1);
+    resetSessionTracking();
 
     // Repartir à la première carte
     setCurrentCardIndex(0);
@@ -1267,9 +1291,45 @@ addCategoryButtonInactive: {
 
     const queue = knewIt ? trainingCards : [...trainingCards, trainingCard];
     if (!knewIt) setTrainingCards(queue);
+    // Seule la 1re réponse d'une carte compte pour le résumé ("sue du premier coup")
+    if (!(trainingCard.id in sessionResults)) {
+      setSessionResults({ ...sessionResults, [trainingCard.id]: knewIt });
+    }
+
+    undoRef.current = { queue: trainingCards, index: currentCardIndex, streak, results: sessionResults };
+    setCanUndo(true);
 
     goToNextCard(queue.length);
     answeringRef.current = false;
+  };
+
+  // Revient sur la dernière réponse : la carte réapparaît face réponse (ou fiche
+  // entièrement dévoilée), prête à être re-swipée.
+  const handleUndo = () => {
+    const previous = undoRef.current;
+    if (!previous) return;
+    undoRef.current = null;
+    setCanUndo(false);
+
+    const card = previous.queue[previous.index];
+    setTrainingCards(previous.queue);
+    setCurrentCardIndex(previous.index);
+    setStreak(previous.streak);
+    setSessionResults(previous.results);
+    if (isFiche(card)) {
+      setRevealedSteps(ficheSteps(card.front).length);
+    } else {
+      setShowAnswer(true);
+      fadeAnimation.setValue(1);
+    }
+
+    scaleAnimation.setValue(0.8);
+    Animated.spring(scaleAnimation, {
+      toValue: 1,
+      tension: 100,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
   };
 
   const editFrontMaxLength = editIsFiche ? FICHE_MAX_LENGTH : CARD_TEXT_MAX_LENGTH;
@@ -1582,6 +1642,7 @@ addCategoryButtonInactive: {
                   {currentCardIndex + 1} / {trainingCards.length}
                 </Text>
               )}
+              {canUndo && !showEndSessionModal && <UndoButton onPress={handleUndo} />}
             </View>
             {/* Largeur fixe 48x48, StreakFlame centré dedans : le badge s'élargit avec
                 le nombre de jours (minWidth 48 + padding), ce qui, laissé en enfant flex
@@ -2006,6 +2067,12 @@ addCategoryButtonInactive: {
             <Text style={styles.endSessionMessage}>
               Continuez pour réviser à nouveau ou terminez votre session.
             </Text>
+
+            <SessionSummary
+              results={sessionResults}
+              durationSeconds={sessionDuration}
+              progress={summaryAnimation}
+            />
 
             <View style={styles.endSessionButtons}>
               {/* Bouton Terminer */}

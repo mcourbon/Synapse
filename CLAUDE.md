@@ -101,7 +101,16 @@ strong flick back cancels even past it — see `swipeDecision()`. `translateX` i
 driver), so `<SwipeableCard swipe>` keeps its own Animated.View, separate from the
 native-driven scale node (cardScaleWrapper). Practice mode's `resetKey` includes a
 `trainingSession` counter so a new session always re-centers the card that flew
-off-screen on the previous last answer.
+off-screen on the previous last answer. Android vibrates on threshold crossing and on
+validation (`utils/haptics.ts`, core `Vibration` API on purpose: expo-haptics is a
+native module and would need a new build instead of an OTA update).
+
+"Annuler" (`components/UndoButton.tsx`, under the card counter) restores the state
+before the last answer, card shown answer-side. In review, the last answer is kept in
+`pendingAnswerRef` and only enters `writeQueueRef` on the next answer, at session end
+or on exit — so undo never has to revert FSRS fields or `user_stats` counters
+server-side. The end-of-session modal shows `components/SessionSummary.tsx`
+(first-try known / to review / duration), animated in while the progress circle fills.
 
 ### Fiches (`utils/fiche.ts`)
 
@@ -124,6 +133,13 @@ see git history.
 ### Supabase (`lib/supabase.ts`)
 
 Single client export. Tables: `decks`, `cards`, `user_stats`. Storage bucket: `avatars` (path pattern: `{userId}/avatar-{timestamp}.{ext}`).
+
+Free-tier project: it pauses after ~7 days without activity (DNS stops resolving, app
+used to spin forever). `.github/workflows/supabase-keepalive.yml` queries it every 3
+days (repo secrets `SUPABASE_URL` / `SUPABASE_ANON_KEY`). Requests time out after 20s
+(`fetchWithTimeout`); a network failure at startup keeps the stored session and shows
+"Serveur injoignable" + retry (`connectionError` / `retryConnection` in AuthContext)
+instead of the login screen.
 
 ### Spaced Repetition (`utils/fsrs.ts`)
 
