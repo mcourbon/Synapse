@@ -1,20 +1,28 @@
 // utils/haptics.ts
-// Retours vibrants du swipe, via l'API Vibration de React Native : rien à installer,
-// donc ça passe par une simple mise à jour OTA (expo-haptics demanderait un nouveau
-// build). Android uniquement : sur iOS, Vibration ignore la durée et vibre ~0,4s,
-// bien trop fort pour un "tic" ; sur web, pas de vibration non plus.
-// Durées : en dessous de ~30 ms, le moteur de beaucoup de téléphones Android n'a pas
-// le temps de démarrer et on ne sent rien (c'était le cas avec 10/20 ms).
-import { Platform, Vibration } from 'react-native';
-
-const enabled = Platform.OS === 'android';
+// Retours haptiques du swipe, via expo-haptics (module natif : nécessite un build
+// qui l'inclut, une mise à jour OTA seule ne suffit pas). On utilise les effets
+// système, comme les apps modernes : sur Android, les retours de l'OS (ceux des
+// boutons / du clavier, réglés pour le moteur du téléphone) ; sur iOS, le Taptic
+// Engine. L'ancienne version passait par Vibration.vibrate(ms) de React Native et
+// ne se sentait pas sur Android. Rien sur web.
+import { Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 /** Tic léger : la carte passe le seuil de validation pendant le glissé. */
 export function hapticTick() {
-  if (enabled) Vibration.vibrate(35);
+  if (Platform.OS === 'android') {
+    // Clock_Tick : disponible sur tous les Android (Segment_Tick demande Android 14).
+    Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Clock_Tick).catch(() => {});
+  } else if (Platform.OS === 'ios') {
+    Haptics.selectionAsync().catch(() => {});
+  }
 }
 
 /** Un peu plus marqué : la réponse est validée. */
 export function hapticConfirm() {
-  if (enabled) Vibration.vibrate(60);
+  if (Platform.OS === 'android') {
+    Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Confirm).catch(() => {});
+  } else if (Platform.OS === 'ios') {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  }
 }

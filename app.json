@@ -2,7 +2,7 @@
   "expo": {
     "name": "synapse",
     "slug": "synapse",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,7 +20,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "runtimeVersion": "1.0.0"
+      "runtimeVersion": "1.1.0"
     },
     "android": {
       "package": "com.tchitchipa.synapse",

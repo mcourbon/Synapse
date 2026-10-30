@@ -101,9 +101,11 @@ strong flick back cancels even past it — see `swipeDecision()`. `translateX` i
 driver), so `<SwipeableCard swipe>` keeps its own Animated.View, separate from the
 native-driven scale node (cardScaleWrapper). Practice mode's `resetKey` includes a
 `trainingSession` counter so a new session always re-centers the card that flew
-off-screen on the previous last answer. Android vibrates on threshold crossing and on
-validation (`utils/haptics.ts`, core `Vibration` API on purpose: expo-haptics is a
-native module and would need a new build instead of an OTA update).
+off-screen on the previous last answer. A haptic tick fires on threshold crossing and on
+validation (`utils/haptics.ts`, expo-haptics system effects; the core `Vibration` API
+was tried first and wasn't felt on Android). expo-haptics is native: it shipped with
+app version / runtime 1.1.0, so OTA updates never reach 1.0.0 builds that lack it —
+bump the version again whenever a native module is added.
 
 "Annuler" (`components/UndoButton.tsx`, under the card counter) restores the state
 before the last answer, card shown answer-side. In review, the last answer is kept in
