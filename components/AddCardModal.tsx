@@ -455,7 +455,7 @@ export default function AddCardModal({
         throw error;
       }
 
-      Alert.alert('Succès', 'Carte ajoutée avec succès !');
+      // Confirmation affichée par l'écran parent (Toast), pas d'Alert native
       closeModal();
       onCardAdded();
     } catch (error: any) {

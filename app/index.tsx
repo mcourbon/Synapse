@@ -8,6 +8,7 @@ import { logError } from '../lib/logger';
 import { Card } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
 import AddCardModal from '../components/AddCardModal';
+import Toast from '../components/Toast';
 import { useTheme } from '../contexts/ThemeContext';
 import { useStats } from '../contexts/StatsContext';
 import { useFocusEffect } from '@react-navigation/native';
@@ -55,6 +56,8 @@ export default function Home() {
   // ---- Écran d'accueil ----
   const [homeCard, setHomeCard] = useState<Card | null>(null);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
+  const [cardAddedToast, setCardAddedToast] = useState(false);
+  const hideCardAddedToast = React.useCallback(() => setCardAddedToast(false), []);
   const [totalCardsCount, setTotalCardsCount] = useState<number>(0);
 
   // ---- Mode accueil <-> révision ----
@@ -1128,10 +1131,18 @@ export default function Home() {
         visible={showQuickAddModal}
         onClose={() => setShowQuickAddModal(false)}
         onCardAdded={async () => {
+          setShowQuickAddModal(false);
+          setCardAddedToast(true);
           await updateHomeScreenCard(); // Attendez que la mise à jour soit finie
           await fetchTotalCardsCount();
-          setShowQuickAddModal(false);
         }}
+      />
+
+      <Toast
+        visible={cardAddedToast}
+        message="Carte ajoutée avec succès !"
+        type="success"
+        onHide={hideCardAddedToast}
       />
 
       {/* Modal de fin de session */}

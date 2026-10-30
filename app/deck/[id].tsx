@@ -1830,6 +1830,7 @@ addCategoryButtonInactive: {
         onCardAdded={() => {
           fetchDeckAndCards();
           setShowAddModal(false);
+          showToast('Carte ajoutée avec succès !', 'success');
         }}
         deckId={id} // Deck spécifique = pas de sélection
       />

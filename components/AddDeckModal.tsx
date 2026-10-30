@@ -284,12 +284,11 @@ export default function AddDeckModal({
       setSelectedColor(DECK_COLORS[0].value);
       
       
+      // Confirmation affichée par l'écran parent (Toast), pas d'Alert native
       await onDeckAdded();
-      
+
       onClose();
-      
-      Alert.alert('Succès', 'Collection créée avec succès !');
-      
+
     } catch (error: any) {
       
       Alert.alert(

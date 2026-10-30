@@ -410,6 +410,7 @@ const handleDeleteDeck = async () => {
   const handleDeckAdded = () => {
     fetchDecks(); // Recharger la liste des decks
     setShowAddModal(false);
+    showToast('Collection créée avec succès !', 'success');
   };
 
   const renderDeck = ({ item }: { item: Deck }) => (
