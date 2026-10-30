@@ -16,6 +16,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { isAuthRetryableFetchError } from '@supabase/supabase-js';
+
+// Réseau coupé ou projet Supabase en pause : plutôt que "Network request failed"
+const SERVER_UNREACHABLE_MESSAGE = 'Serveur injoignable. Vérifiez votre connexion internet et réessayez.';
 
 // Validation du mot de passe
 const validatePassword = (password: string) => {
@@ -202,7 +206,9 @@ export default function AuthScreen() {
           
           // Messages d'erreur personnalisés
           let errorMsg = result.error.message;
-          if (result.error.message.includes('already registered')) {
+          if (isAuthRetryableFetchError(result.error)) {
+            errorMsg = SERVER_UNREACHABLE_MESSAGE;
+          } else if (result.error.message.includes('already registered')) {
             errorMsg = 'Cet email est déjà utilisé. Essayez de vous connecter.';
           } else if (result.error.message.includes('invalid email')) {
             errorMsg = 'Format d\'email invalide';
@@ -228,7 +234,9 @@ export default function AuthScreen() {
           
           // Messages d'erreur personnalisés
           let errorMsg = result.error.message;
-          if (result.error.message.includes('Invalid login credentials')) {
+          if (isAuthRetryableFetchError(result.error)) {
+            errorMsg = SERVER_UNREACHABLE_MESSAGE;
+          } else if (result.error.message.includes('Invalid login credentials')) {
             errorMsg = 'Email ou mot de passe incorrect. Vérifiez vos identifiants ou créez un compte.';
           } else if (result.error.message.includes('Email not confirmed')) {
             errorMsg = 'Veuillez confirmer votre email avant de vous connecter';

@@ -4,10 +4,21 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { StatsProvider } from '../contexts/StatsContext';
 import AuthScreen from '../components/AuthScreen';
-import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
+import { ActivityIndicator, View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 // Import pour effet de bord : enregistre la tâche de fond des rappels de révision
 // (doit être chargé dès le démarrage pour que l'OS puisse la retrouver en arrière-plan).
 import '../lib/notifications';
+
+// Couleurs hardcodées — module level (iOS safe)
+const styles = StyleSheet.create({
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
 
 // Routes accessibles sans connexion (ex: page publique exigée par le Play Store)
 const PUBLIC_ROUTES = ['/politique-de-confidentialite'];
@@ -20,10 +31,22 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 }
 
 function RootLayoutNav() {
-  const { user, loading } = useAuth();
+  const { user, loading, connectionError, retryConnection } = useAuth();
   const { theme } = useTheme();
   const pathname = usePathname();
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+
+  // Chargement qui traîne (serveur lent à se réveiller) : un mot sous le spinner
+  // pour montrer que l'app n'est pas figée, avant l'éventuel "Serveur injoignable".
+  const [slowLoading, setSlowLoading] = useState(false);
+  useEffect(() => {
+    if (!loading || connectionError) {
+      setSlowLoading(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlowLoading(true), 5000);
+    return () => clearTimeout(timer);
+  }, [loading, connectionError]);
 
   // Créer les styles avec le thème dynamique
   const dynamicStyles = StyleSheet.create({
@@ -31,7 +54,27 @@ function RootLayoutNav() {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
+      paddingHorizontal: 32,
       backgroundColor: theme.background,
+    },
+    loadingTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: theme.text,
+      marginTop: 16,
+    },
+    loadingMessage: {
+      fontSize: 15,
+      color: theme.textSecondary,
+      textAlign: 'center',
+      marginTop: 12,
+    },
+    retryButton: {
+      backgroundColor: theme.primary,
+      paddingVertical: 14,
+      paddingHorizontal: 32,
+      borderRadius: 12,
+      marginTop: 24,
     },
   });
 
@@ -39,7 +82,28 @@ function RootLayoutNav() {
     if (loading) {
       return (
         <View style={dynamicStyles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
+          {connectionError ? (
+            <>
+              <Ionicons name="cloud-offline-outline" size={48} color={theme.textSecondary} />
+              <Text style={dynamicStyles.loadingTitle}>Serveur injoignable</Text>
+              <Text style={dynamicStyles.loadingMessage}>
+                Vérifiez votre connexion internet puis réessayez.
+              </Text>
+              <Pressable
+                style={({ pressed }) => [dynamicStyles.retryButton, pressed && { opacity: 0.7 }]}
+                onPress={retryConnection}
+              >
+                <Text style={styles.retryButtonText}>Réessayer</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <ActivityIndicator size="large" color={theme.primary} />
+              {slowLoading && (
+                <Text style={dynamicStyles.loadingMessage}>Connexion au serveur…</Text>
+              )}
+            </>
+          )}
         </View>
       );
     }

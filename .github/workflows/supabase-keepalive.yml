@@ -1,0 +1,24 @@
+# Garde le projet Supabase (offre gratuite) éveillé : il est mis en pause après
+# ~7 jours sans activité, et l'app tourne alors dans le vide au démarrage. Une
+# requête tous les 3 jours suffit. Secrets à définir dans le repo GitHub :
+# SUPABASE_URL et SUPABASE_ANON_KEY (les mêmes valeurs que .env).
+name: Supabase keepalive
+
+on:
+  schedule:
+    - cron: '0 8 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query the database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          curl --fail --silent --show-error --max-time 30 \
+            "$SUPABASE_URL/rest/v1/decks?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY"

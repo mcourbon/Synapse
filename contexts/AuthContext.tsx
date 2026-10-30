@@ -1,6 +1,6 @@
 // contexts/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User, AuthError } from '@supabase/supabase-js';
+import { Session, User, AuthError, isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setGuestMode, isGuestMode } from '../lib/guestMode';
@@ -11,6 +11,9 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  /** Le serveur n'a pas répondu au démarrage — voir loadSession. */
+  connectionError: boolean;
+  retryConnection: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<{ data: any; error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ data: any; error: AuthError | null }>;
   signOut: () => Promise<void>;
@@ -21,6 +24,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
+  connectionError: false,
+  retryConnection: async () => {},
   signUp: async () => ({ data: null, error: null }),
   signIn: async () => ({ data: null, error: null }),
   signOut: async () => {},
@@ -43,6 +48,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
+
+  // Session Supabase normale. Serveur injoignable (réseau coupé, projet en pause) :
+  // on reste sur l'écran de chargement avec un message et "Réessayer", plutôt que
+  // d'afficher l'écran de connexion comme si l'utilisateur était déconnecté.
+  const loadSession = async () => {
+    setConnectionError(false);
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) {
+      logError('AuthContext.getSession', error);
+      if (isAuthRetryableFetchError(error)) {
+        setConnectionError(true);
+        return;
+      }
+    }
+
+    setSession(session);
+    setUser(session?.user ?? null);
+    setLoading(false);
+  };
 
   useEffect(() => {
     
@@ -65,16 +90,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         logError('AuthContext.checkDemoMode', error);
       }
 
-      // Récupérer la session Supabase normale
-      supabase.auth.getSession().then(({ data: { session }, error }) => {
-        if (error) {
-          logError('AuthContext.getSession', error);
-        }
-
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      });
+      await loadSession();
     };
 
     checkDemoMode();
@@ -85,6 +101,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (isGuestMode()) return;
+      // La session de départ est gérée par loadSession() : en cas d'erreur réseau,
+      // cet événement arrive avec une session nulle et enverrait vers l'écran de
+      // connexion alors que l'utilisateur est toujours connecté sur l'appareil.
+      if (event === 'INITIAL_SESSION') return;
 
       setSession(session);
       setUser(session?.user ?? null);
@@ -214,6 +234,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     session,
     loading,
+    connectionError,
+    retryConnection: loadSession,
     signUp,
     signIn,
     signOut,
