@@ -8,6 +8,8 @@
 // Un geste vif ("lancer") valide aussi sur une courte distance, comme sur les apps de
 // swipe, et un lancer franc dans l'autre sens annule même au-delà du seuil : voir
 // swipeDecision(). Un glissé lent relâché avant le seuil revient toujours au centre.
+// Vibrations (Android) : un tic au passage du seuil, un plus marqué à la validation
+// (utils/haptics.ts).
 //
 // Le geste et le visuel sont séparés :
 // - useCardSwipe() fournit les panHandlers, à poser sur une vue qui ENGLOBE la zone
@@ -31,6 +33,7 @@
 // commentaire sur cardScaleWrapper dans app/deck/[id].tsx).
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, GestureResponderHandlers, PanResponder, useWindowDimensions } from 'react-native';
+import { hapticConfirm, hapticTick } from '../utils/haptics';
 
 export type SwipeDirection = 'left' | 'right';
 
@@ -81,6 +84,7 @@ export function useCardSwipe({ enabled, resetKey, onSwipe }: UseCardSwipeOptions
   // nécessaires pour reconnaître un geste horizontal : on les rajoute pour que la
   // carte colle au doigt au lieu de traîner derrière.
   const slopRef = useRef(0);
+  const pastThresholdRef = useRef(false);
 
   // Le PanResponder est créé une seule fois : il lit les dernières valeurs via ces refs.
   const enabledRef = useRef(enabled);
@@ -102,6 +106,7 @@ export function useCardSwipe({ enabled, resetKey, onSwipe }: UseCardSwipeOptions
   const flyOut = (direction: SwipeDirection, from = 0, velocity = 0) => {
     if (flyingRef.current) return;
     flyingRef.current = true;
+    hapticConfirm();
     const toValue = (direction === 'right' ? 1 : -1) * widthRef.current * 1.5;
     const speed = Math.abs(velocity);
     const duration = speed > FLICK_VELOCITY
@@ -140,10 +145,16 @@ export function useCardSwipe({ enabled, resetKey, onSwipe }: UseCardSwipeOptions
         },
         onPanResponderGrant: () => {
           translateX.stopAnimation(); // reprendre la carte en plein retour au centre
+          pastThresholdRef.current = false;
         },
         onPanResponderTerminationRequest: () => false,
         onPanResponderMove: (_, g) => {
-          translateX.setValue(g.dx + slopRef.current);
+          const dx = g.dx + slopRef.current;
+          translateX.setValue(dx);
+          // Tic à chaque passage du seuil vers l'extérieur (pas au retour)
+          const past = Math.abs(dx) >= swipeThreshold(widthRef.current);
+          if (past && !pastThresholdRef.current) hapticTick();
+          pastThresholdRef.current = past;
         },
         onPanResponderRelease: (_, g) => {
           const threshold = swipeThreshold(widthRef.current);
