@@ -1,6 +1,7 @@
 # Garde le projet Supabase (offre gratuite) éveillé : il est mis en pause après
 # ~7 jours sans activité, et l'app tourne alors dans le vide au démarrage. Une
-# requête tous les 3 jours suffit. Secrets à définir dans le repo GitHub :
+# requête par jour, à une minute peu chargée : GitHub saute parfois des déclenchements
+# programmés (aucun n'était parti du 30/10 au 20/11 avec '0 8 */3 * *'). Secrets à définir dans le repo GitHub :
 # SUPABASE_URL et SUPABASE_ANON_KEY (clé anon ou publishable `sb_publishable_…`,
 # jamais la clé secrète). Seulement l'en-tête apikey : les nouvelles clés ne sont pas
 # des JWT et seraient refusées dans Authorization.
@@ -8,7 +9,7 @@ name: Supabase keepalive
 
 on:
   schedule:
-    - cron: '0 8 */3 * *'
+    - cron: '23 6 * * *'
   workflow_dispatch:
 
 jobs:
@@ -20,6 +21,6 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          curl --fail --silent --show-error --max-time 30 \
+          curl --fail --silent --show-error --max-time 30 --retry 3 --retry-delay 20 \
             "$SUPABASE_URL/rest/v1/decks?select=id&limit=1" \
             -H "apikey: $SUPABASE_ANON_KEY"
